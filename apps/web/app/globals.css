@@ -1,0 +1,218 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* IronMan design tokens (docs/05 §2.2). Single source of truth, mirrored
+   in packages/tokens/src/index.ts for anything that needs the raw values
+   in JS (charts, canvas, the future React Native app). */
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  /* ---- brand ---- */
+  --brand-yellow: #f5c518;
+  --brand-yellow-dim: #d9ae13;
+  --brand-ink: #0b0b0c;
+
+  /* ---- surfaces & text (light) ---- */
+  --surface-base: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-sunken: #f4f3ee;
+  --surface-inverse: #0b0b0c;
+
+  --text-primary: #17171b;
+  --text-secondary: #54545c;
+  --text-muted: #84838c;
+  --text-inverse: #f3f2ed;
+  --text-on-brand: #0b0b0c;
+
+  --border-subtle: #ecebe5;
+  --border-default: #dedbd1;
+  --border-strong: #c7c3b6;
+  --border-focus: #f5c518;
+
+  /* ---- semantic status (separate from the brand accent) ---- */
+  --status-success: #1b6349;
+  --status-success-bg: #e4f0ea;
+  --status-warning: #92620a;
+  --status-warning-bg: #fbeed4;
+  --status-danger: #a32a20;
+  --status-danger-bg: #f8e9e7;
+  --status-info: #2a5a82;
+  --status-info-bg: #e6eef5;
+  --status-neutral: #54545c;
+  --status-neutral-bg: #eeece5;
+
+  /* ---- garment / order stage colors — one meaning everywhere:
+     the production board, the timeline, the job card, the tracking page */
+  --stage-booked: #6b7280;
+  --stage-pickup: #2563eb;
+  --stage-at-hub: #7c3aed;
+  --stage-pressing: #d97706;
+  --stage-ready: #0d9488;
+  --stage-out: #2563eb;
+  --stage-delivered: #16a34a;
+  --stage-failed: #dc2626;
+  --stage-hold: #dc2626;
+
+  /* ---- radius / shadow / motion ---- */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-pill: 999px;
+
+  --shadow-xs: 0 1px 2px rgba(23, 23, 27, 0.05);
+  --shadow-sm: 0 1px 3px rgba(23, 23, 27, 0.08), 0 1px 2px rgba(23, 23, 27, 0.04);
+  --shadow-md: 0 4px 10px -2px rgba(23, 23, 27, 0.1), 0 2px 4px -2px rgba(23, 23, 27, 0.06);
+  --shadow-lg: 0 12px 24px -8px rgba(23, 23, 27, 0.16), 0 4px 8px -4px rgba(23, 23, 27, 0.08);
+
+  --motion-fast: 120ms;
+  --motion-base: 180ms;
+  --motion-slow: 260ms;
+  --motion-easing: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.dark {
+  --surface-base: #111114;
+  --surface-raised: #1a1a20;
+  --surface-sunken: #0c0c0f;
+  --surface-inverse: #f3f2ed;
+
+  --text-primary: #edece7;
+  --text-secondary: #adacb4;
+  --text-muted: #7c7b85;
+  --text-inverse: #17171b;
+  --text-on-brand: #0b0b0c;
+
+  --border-subtle: #202027;
+  --border-default: #2e2e36;
+  --border-strong: #3d3d47;
+  --border-focus: #f5c518;
+
+  --status-success: #6fcfa8;
+  --status-success-bg: #12241d;
+  --status-warning: #e8b653;
+  --status-warning-bg: #2a2013;
+  --status-danger: #f09189;
+  --status-danger-bg: #2c1815;
+  --status-info: #8fbee4;
+  --status-info-bg: #141f29;
+  --status-neutral: #adacb4;
+  --status-neutral-bg: #1f1f26;
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 6px 14px -4px rgba(0, 0, 0, 0.55), 0 2px 6px -2px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 16px 32px -10px rgba(0, 0, 0, 0.65), 0 6px 12px -6px rgba(0, 0, 0, 0.45);
+}
+
+/* Tailwind v4 CSS-first theme: exposes every token above as a utility
+   (bg-surface-base, text-text-primary, border-border-default, ...) so
+   components style themselves from tokens, never from a literal color —
+   arbitrary Tailwind values are additionally banned by eslint (see
+   eslint.config.mjs). */
+@theme inline {
+  --color-brand-yellow: var(--brand-yellow);
+  --color-brand-yellow-dim: var(--brand-yellow-dim);
+  --color-brand-ink: var(--brand-ink);
+
+  --color-surface-base: var(--surface-base);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-inverse: var(--surface-inverse);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-text-inverse: var(--text-inverse);
+  --color-text-on-brand: var(--text-on-brand);
+
+  --color-border-subtle: var(--border-subtle);
+  --color-border-default: var(--border-default);
+  --color-border-strong: var(--border-strong);
+  --color-border-focus: var(--border-focus);
+
+  --color-status-success: var(--status-success);
+  --color-status-success-bg: var(--status-success-bg);
+  --color-status-warning: var(--status-warning);
+  --color-status-warning-bg: var(--status-warning-bg);
+  --color-status-danger: var(--status-danger);
+  --color-status-danger-bg: var(--status-danger-bg);
+  --color-status-info: var(--status-info);
+  --color-status-info-bg: var(--status-info-bg);
+  --color-status-neutral: var(--status-neutral);
+  --color-status-neutral-bg: var(--status-neutral-bg);
+
+  --color-stage-booked: var(--stage-booked);
+  --color-stage-pickup: var(--stage-pickup);
+  --color-stage-at-hub: var(--stage-at-hub);
+  --color-stage-pressing: var(--stage-pressing);
+  --color-stage-ready: var(--stage-ready);
+  --color-stage-out: var(--stage-out);
+  --color-stage-delivered: var(--stage-delivered);
+  --color-stage-failed: var(--stage-failed);
+  --color-stage-hold: var(--stage-hold);
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-pill: var(--radius-pill);
+
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+
+  /* Self-hosted via @fontsource (docs/05 §8) — installed as npm packages
+     rather than fetched from Google's CDN at build time, so the build
+     never depends on that CDN being reachable. */
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Inter Tight Variable", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  /* Tailwind v4 theme namespaces: --duration-* -> duration-* utilities,
+     --ease-* -> ease-* utilities (docs/05 §2.2 motion tokens). */
+  --duration-fast: var(--motion-fast);
+  --duration-base: var(--motion-base);
+  --duration-slow: var(--motion-slow);
+  --ease-brand: var(--motion-easing);
+}
+
+body {
+  background: var(--surface-base);
+  color: var(--text-primary);
+  font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
+}
+
+* {
+  border-color: var(--border-default);
+}
+
+/* Money and quantity columns always line up (docs/05 §2.2) */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Visible focus ring on every interactive element (docs/05 §7) */
+:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+::selection {
+  background: var(--brand-yellow);
+  color: var(--text-on-brand);
+}
