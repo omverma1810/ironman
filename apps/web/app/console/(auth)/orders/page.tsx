@@ -151,7 +151,7 @@ export default function OrdersListPage() {
           <Input
             placeholder="Search by order ref, customer name or phone…"
             className="pl-9"
-            defaultValue={filters.search}
+            value={filters.search}
             onChange={(e) => setFilters({ search: e.target.value || null })}
           />
         </div>

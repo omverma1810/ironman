@@ -12,7 +12,9 @@ test.describe("Authentication", () => {
     await page.getByLabel("Email", { exact: true }).fill(DEMO_USERS.operator.email);
     await page.getByLabel("Password", { exact: true }).fill("wrong-password");
     await page.getByRole("button", { name: "Log in" }).click();
-    await expect(page.getByRole("alert")).toContainText(/incorrect/i);
+    // Not getByRole("alert") — Next.js's own route announcer also carries
+    // role="alert" and collides with it under strict mode.
+    await expect(page.getByText(/incorrect/i)).toBeVisible();
   });
 
   test("admin login without MFA setup is refused with a clear message", async ({ page }) => {

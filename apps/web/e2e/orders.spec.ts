@@ -5,7 +5,13 @@ test.describe("Orders", () => {
     await loginAs(page, DEMO_USERS.operator);
   });
 
-  test("the orders list renders seeded data with working status and channel filters", async ({ page }) => {
+  test("the orders list renders seeded data with working status and channel filters", async ({
+    page,
+    isMobile,
+  }) => {
+    // Table-structure assertions below are desktop-specific; the mobile
+    // card layout has its own dedicated test further down.
+    test.skip(isMobile, "desktop-only: asserts the <table> structure directly");
     await page.goto("/console/orders");
     await expect(page.getByRole("heading", { name: "Orders" })).toBeVisible();
     await expect(page.getByText(/ORD-\d{4}-\d{4}/).first()).toBeVisible();
@@ -26,7 +32,11 @@ test.describe("Orders", () => {
     await expect(page.getByPlaceholder(/search by order ref/i)).toHaveValue("");
   });
 
-  test("clicking an order opens its detail page with items and a timeline", async ({ page }) => {
+  test("clicking an order opens its detail page with items and a timeline", async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(isMobile, "desktop-only: clicks the <table> row directly");
     await page.goto("/console/orders");
     await page.locator("table tbody tr").first().click();
     await page.waitForURL(/\/console\/orders\/[0-9a-f-]+$/);
@@ -42,7 +52,12 @@ test.describe("Orders", () => {
     test.skip(!isMobile, "desktop project already covers the table view");
     await page.goto("/console/orders");
     await expect(page.locator("table")).toBeHidden();
-    await expect(page.getByText(/ORD-\d{4}-\d{4}/).first()).toBeVisible();
+    // The hidden desktop <table> still contains matching text nodes
+    // earlier in the DOM than the visible mobile card list, so a bare
+    // `.first()` resolves there — scope explicitly to the visible card
+    // container instead of relying on DOM order.
+    const mobileCards = page.locator(".md\\:hidden");
+    await expect(mobileCards.getByText(/ORD-\d{4}-\d{4}/).first()).toBeVisible();
     const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
     const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
     expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 1);

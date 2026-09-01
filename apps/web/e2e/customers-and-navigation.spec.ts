@@ -5,7 +5,11 @@ test.describe("Customers", () => {
     await loginAs(page, DEMO_USERS.operator);
   });
 
-  test("the customers list renders seeded customers and opens a detail page", async ({ page }) => {
+  test("the customers list renders seeded customers and opens a detail page", async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(isMobile, "desktop-only: asserts the <table> structure directly");
     await page.goto("/console/customers");
     await expect(page.getByRole("heading", { name: "Customers" })).toBeVisible();
     await expect(page.locator("table tbody tr").first()).toBeVisible();
@@ -35,7 +39,10 @@ test.describe("Navigation & error states", () => {
     await loginAs(page, DEMO_USERS.operator);
     await page.getByRole("link", { name: "Apartments" }).click();
     await expect(page.getByText(/apartment management ui/i)).toBeVisible();
-    await expect(page.getByText(/phase 2/i)).toBeVisible();
+    // The badge's "Phase 2 — Ops console" and the body copy's prose
+    // mention of "Phase 2" both match a bare /phase 2/i — anchor on the
+    // badge's distinctive em-dash phrasing to disambiguate.
+    await expect(page.getByText(/phase 2 —/i)).toBeVisible();
   });
 
   test("the sidebar hides founder-only items from an operator", async ({ page }) => {
