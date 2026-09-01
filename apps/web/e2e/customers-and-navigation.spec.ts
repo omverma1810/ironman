@@ -35,9 +35,21 @@ test.describe("Navigation & error states", () => {
     await page.waitForURL("**/console");
   });
 
-  test("phase-2+ nav items render an honest coming-soon state, not a dead link", async ({ page }) => {
+  test("phase-2+ nav items render an honest coming-soon state, not a dead link", async ({
+    page,
+    isMobile,
+  }) => {
     await loginAs(page, DEMO_USERS.operator);
-    await page.getByRole("link", { name: "Apartments" }).click();
+    // Below `lg`, the sidebar lives behind the hamburger drawer (docs/05
+    // §3). The desktop <aside> copy stays in the DOM (just hidden) even
+    // once the drawer opens, so scope the click to the dialog specifically
+    // on mobile rather than matching both copies of the link.
+    if (isMobile) {
+      await page.getByRole("button", { name: "Open navigation" }).click();
+      await page.getByRole("dialog").getByRole("link", { name: "Apartments" }).click();
+    } else {
+      await page.getByRole("link", { name: "Apartments" }).click();
+    }
     await expect(page.getByText(/apartment management ui/i)).toBeVisible();
     // The badge's "Phase 2 — Ops console" and the body copy's prose
     // mention of "Phase 2" both match a bare /phase 2/i — anchor on the
