@@ -1,0 +1,15 @@
+{
+  "name": "ironman",
+  "private": true,
+  "packageManager": "npm@10.9.7",
+  "workspaces": [
+    "apps/web",
+    "packages/*"
+  ],
+  "scripts": {
+    "web:dev": "npm run dev --workspace=apps/web",
+    "web:build": "npm run build --workspace=apps/web",
+    "web:lint": "npm run lint --workspace=apps/web",
+    "web:test:e2e": "npm run test:e2e --workspace=apps/web"
+  }
+}

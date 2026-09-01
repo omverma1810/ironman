@@ -201,8 +201,11 @@ order while the rider was offline) are surfaced to the rider rather than silentl
 ### 3.8 Billing (`billing`)
 
 ```
+TaxSettings          hub (unique), gst_enabled(bool), gstin?, default_rate_bps,
+                     updated_by, updated_at        # D-04: admin-configurable, per hub
 Invoice              ref, order, customer, hub, issued_at, subtotal_minor, discount_minor,
-                     tax_minor, total_minor, status(DRAFT|ISSUED|PAID|CANCELLED),
+                     tax_minor, gst_applied(bool), gstin_snapshot?, total_minor,
+                     status(DRAFT|ISSUED|PAID|CANCELLED),
                      pdf_file, price_list_version, snapshot(jsonb)        [IMMUTABLE once ISSUED]
 CreditNote           invoice, reason, amount_minor, issued_by, at, pdf_file
 Payment              invoice, method(CASH|UPI_QR|GATEWAY|CREDIT|ADJUSTMENT), amount_minor,

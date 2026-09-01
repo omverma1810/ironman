@@ -1,0 +1,19 @@
+from django.contrib import admin
+from django.urls import include, path
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+
+api_v1_patterns = [
+    path("", include("identity.urls")),
+    path("", include("platform_core.urls")),
+    path("", include("territory.urls")),
+    path("", include("catalog.urls")),
+    path("", include("customers.urls")),
+    path("", include("ordering.urls")),
+    path("schema/", SpectacularAPIView.as_view(), name="schema"),
+    path("docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="docs"),
+]
+
+urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("api/v1/", include(api_v1_patterns)),
+]

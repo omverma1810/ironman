@@ -1,0 +1,6708 @@
+openapi: 3.0.3
+info:
+  title: IronMan API
+  version: 1.0.0
+  description: Inventory, order, billing and growth platform for IronMan.
+paths:
+  /api/v1/auth/email/verify/confirm:
+    post:
+      operationId: auth_email_verify_confirm_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailVerifyConfirmRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EmailVerifyConfirmRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EmailVerifyConfirmRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: Verified
+  /api/v1/auth/email/verify/request:
+    post:
+      operationId: auth_email_verify_request_create
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: Verification email sent
+  /api/v1/auth/invite/accept:
+    post:
+      operationId: auth_invite_accept_create
+      description: Console registration is invite-only (docs/06 §2.2).
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StaffInviteAcceptRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StaffInviteAcceptRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StaffInviteAcceptRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '201':
+          description: Staff account created
+  /api/v1/auth/login:
+    post:
+      operationId: auth_login_create
+      description: |-
+        POST /auth/login — session-cookie auth for console users
+        (docs/06 §2.2). Mandatory TOTP for ADMIN/FOUNDER.
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StaffLoginRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StaffLoginRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StaffLoginRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+          description: ''
+  /api/v1/auth/logout:
+    post:
+      operationId: auth_logout_create
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: Logged out
+  /api/v1/auth/mfa/enroll:
+    post:
+      operationId: auth_mfa_enroll_create
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: TOTP secret + provisioning URI
+  /api/v1/auth/mfa/verify:
+    post:
+      operationId: auth_mfa_verify_create
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: MFA enabled
+  /api/v1/auth/otp/request:
+    post:
+      operationId: auth_otp_request_create
+      description: |-
+        POST /auth/otp/request — docs/04 §3.1. Phone-first, no password;
+        this is the entry point for the WhatsApp-link booking flow (R-101/R-102).
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OtpRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OtpRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OtpRequestRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: Challenge issued
+  /api/v1/auth/otp/verify:
+    post:
+      operationId: auth_otp_verify_create
+      description: |-
+        POST /auth/otp/verify — creates the customer on first verification
+        (docs/04 §3.1).
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OtpVerifyRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OtpVerifyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OtpVerifyRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+          description: ''
+  /api/v1/auth/password/reset/confirm:
+    post:
+      operationId: auth_password_reset_confirm_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirmRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirmRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirmRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: Password reset
+  /api/v1/auth/password/reset/request:
+    post:
+      operationId: auth_password_reset_request_create
+      description: Always returns 200 — no account enumeration (docs/06 §2.2).
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequestRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: Always 200 — no account enumeration
+  /api/v1/auth/refresh:
+    post:
+      operationId: auth_refresh_create
+      description: |-
+        Takes a refresh type JSON web token and returns an access type JSON web
+        token if the refresh token is valid.
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+  /api/v1/catalog/garment-types/:
+    get:
+      operationId: catalog_garment_types_list
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: service
+        schema:
+          type: string
+          format: uuid
+      tags:
+      - catalog
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedGarmentTypeList'
+          description: ''
+    post:
+      operationId: catalog_garment_types_create
+      tags:
+      - catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GarmentTypeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GarmentTypeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GarmentTypeRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GarmentType'
+          description: ''
+  /api/v1/catalog/garment-types/{id}/:
+    get:
+      operationId: catalog_garment_types_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this garment type.
+        required: true
+      tags:
+      - catalog
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GarmentType'
+          description: ''
+    put:
+      operationId: catalog_garment_types_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this garment type.
+        required: true
+      tags:
+      - catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GarmentTypeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GarmentTypeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GarmentTypeRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GarmentType'
+          description: ''
+    patch:
+      operationId: catalog_garment_types_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this garment type.
+        required: true
+      tags:
+      - catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedGarmentTypeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedGarmentTypeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedGarmentTypeRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GarmentType'
+          description: ''
+    delete:
+      operationId: catalog_garment_types_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this garment type.
+        required: true
+      tags:
+      - catalog
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/catalog/offers/:
+    get:
+      operationId: catalog_offers_list
+      parameters:
+      - in: query
+        name: apartment
+        schema:
+          type: string
+          format: uuid
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - in: query
+        name: kind
+        schema:
+          type: string
+          enum:
+          - APARTMENT_PROMO
+          - FIRST_ORDER
+          - FLAT
+          - PERCENT
+          - REFERRAL_CREDIT
+        description: |-
+          * `FIRST_ORDER` - First order discount
+          * `REFERRAL_CREDIT` - Referral credit
+          * `APARTMENT_PROMO` - Apartment promotion
+          * `FLAT` - Flat discount
+          * `PERCENT` - Percent discount
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - catalog
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedOfferList'
+          description: ''
+    post:
+      operationId: catalog_offers_create
+      tags:
+      - catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OfferRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OfferRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OfferRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Offer'
+          description: ''
+  /api/v1/catalog/offers/{id}/:
+    get:
+      operationId: catalog_offers_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this offer.
+        required: true
+      tags:
+      - catalog
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Offer'
+          description: ''
+    put:
+      operationId: catalog_offers_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this offer.
+        required: true
+      tags:
+      - catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OfferRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OfferRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OfferRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Offer'
+          description: ''
+    patch:
+      operationId: catalog_offers_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this offer.
+        required: true
+      tags:
+      - catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedOfferRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedOfferRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedOfferRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Offer'
+          description: ''
+    delete:
+      operationId: catalog_offers_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this offer.
+        required: true
+      tags:
+      - catalog
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/catalog/packages/:
+    get:
+      operationId: catalog_packages_list
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - catalog
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPackageList'
+          description: ''
+    post:
+      operationId: catalog_packages_create
+      tags:
+      - catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PackageRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PackageRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PackageRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Package'
+          description: ''
+  /api/v1/catalog/packages/{id}/:
+    get:
+      operationId: catalog_packages_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this package.
+        required: true
+      tags:
+      - catalog
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Package'
+          description: ''
+    put:
+      operationId: catalog_packages_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this package.
+        required: true
+      tags:
+      - catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PackageRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PackageRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PackageRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Package'
+          description: ''
+    patch:
+      operationId: catalog_packages_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this package.
+        required: true
+      tags:
+      - catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPackageRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedPackageRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedPackageRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Package'
+          description: ''
+    delete:
+      operationId: catalog_packages_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this package.
+        required: true
+      tags:
+      - catalog
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/catalog/price-lists/:
+    get:
+      operationId: catalog_price_lists_list
+      description: |-
+        Only FOUNDER may create/activate — pricing is one of the RBAC
+        matrix's money-visibility rows (docs/06 §3.1).
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: hub
+        schema:
+          type: string
+          format: uuid
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: service
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - ACTIVE
+          - DRAFT
+          - SUPERSEDED
+        description: |-
+          * `DRAFT` - Draft
+          * `ACTIVE` - Active
+          * `SUPERSEDED` - Superseded
+      tags:
+      - catalog
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPriceListList'
+          description: ''
+    post:
+      operationId: catalog_price_lists_create
+      description: |-
+        Only FOUNDER may create/activate — pricing is one of the RBAC
+        matrix's money-visibility rows (docs/06 §3.1).
+      tags:
+      - catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PriceListRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PriceListRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PriceListRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceList'
+          description: ''
+  /api/v1/catalog/price-lists/{id}/:
+    get:
+      operationId: catalog_price_lists_retrieve
+      description: |-
+        Only FOUNDER may create/activate — pricing is one of the RBAC
+        matrix's money-visibility rows (docs/06 §3.1).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this price list.
+        required: true
+      tags:
+      - catalog
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceList'
+          description: ''
+    put:
+      operationId: catalog_price_lists_update
+      description: |-
+        Only FOUNDER may create/activate — pricing is one of the RBAC
+        matrix's money-visibility rows (docs/06 §3.1).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this price list.
+        required: true
+      tags:
+      - catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PriceListRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PriceListRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PriceListRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceList'
+          description: ''
+    patch:
+      operationId: catalog_price_lists_partial_update
+      description: |-
+        Only FOUNDER may create/activate — pricing is one of the RBAC
+        matrix's money-visibility rows (docs/06 §3.1).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this price list.
+        required: true
+      tags:
+      - catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPriceListRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedPriceListRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedPriceListRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceList'
+          description: ''
+    delete:
+      operationId: catalog_price_lists_destroy
+      description: |-
+        Only FOUNDER may create/activate — pricing is one of the RBAC
+        matrix's money-visibility rows (docs/06 §3.1).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this price list.
+        required: true
+      tags:
+      - catalog
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/catalog/price-lists/{id}/activate/:
+    post:
+      operationId: catalog_price_lists_activate_create
+      description: |-
+        Only FOUNDER may create/activate — pricing is one of the RBAC
+        matrix's money-visibility rows (docs/06 §3.1).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this price list.
+        required: true
+      tags:
+      - catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PriceListRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PriceListRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PriceListRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceList'
+          description: ''
+  /api/v1/catalog/quote:
+    post:
+      operationId: catalog_quote_create
+      description: POST /catalog/quote — public, no side effects (docs/04 §3.3).
+      tags:
+      - catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/QuoteRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/QuoteRequestRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/catalog/services/:
+    get:
+      operationId: catalog_services_list
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - catalog
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedServiceList'
+          description: ''
+    post:
+      operationId: catalog_services_create
+      tags:
+      - catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ServiceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ServiceRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Service'
+          description: ''
+  /api/v1/catalog/services/{id}/:
+    get:
+      operationId: catalog_services_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this service.
+        required: true
+      tags:
+      - catalog
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Service'
+          description: ''
+    put:
+      operationId: catalog_services_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this service.
+        required: true
+      tags:
+      - catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ServiceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ServiceRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Service'
+          description: ''
+    patch:
+      operationId: catalog_services_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this service.
+        required: true
+      tags:
+      - catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedServiceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedServiceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedServiceRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Service'
+          description: ''
+    delete:
+      operationId: catalog_services_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this service.
+        required: true
+      tags:
+      - catalog
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/customer-addresses/:
+    get:
+      operationId: customer_addresses_list
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: customer
+        schema:
+          type: string
+          format: uuid
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - customer-addresses
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAddressList'
+          description: ''
+    post:
+      operationId: customer_addresses_create
+      tags:
+      - customer-addresses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddressRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AddressRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AddressRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Address'
+          description: ''
+  /api/v1/customer-addresses/{id}/:
+    get:
+      operationId: customer_addresses_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this address.
+        required: true
+      tags:
+      - customer-addresses
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Address'
+          description: ''
+    put:
+      operationId: customer_addresses_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this address.
+        required: true
+      tags:
+      - customer-addresses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddressRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AddressRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AddressRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Address'
+          description: ''
+    patch:
+      operationId: customer_addresses_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this address.
+        required: true
+      tags:
+      - customer-addresses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAddressRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedAddressRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAddressRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Address'
+          description: ''
+    delete:
+      operationId: customer_addresses_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this address.
+        required: true
+      tags:
+      - customer-addresses
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/customer-consents/:
+    get:
+      operationId: customer_consents_list
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: customer
+        schema:
+          type: string
+          format: uuid
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: purpose
+        schema:
+          type: string
+          enum:
+          - MARKETING
+          - SERVICE
+          - WHATSAPP
+        description: |-
+          * `SERVICE` - Service communication
+          * `MARKETING` - Marketing
+          * `WHATSAPP` - WhatsApp messaging
+      tags:
+      - customer-consents
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedConsentRecordList'
+          description: ''
+    post:
+      operationId: customer_consents_create
+      tags:
+      - customer-consents
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConsentRecordRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ConsentRecordRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ConsentRecordRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentRecord'
+          description: ''
+  /api/v1/customer-consents/{id}/:
+    get:
+      operationId: customer_consents_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this consent record.
+        required: true
+      tags:
+      - customer-consents
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentRecord'
+          description: ''
+    put:
+      operationId: customer_consents_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this consent record.
+        required: true
+      tags:
+      - customer-consents
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConsentRecordRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ConsentRecordRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ConsentRecordRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentRecord'
+          description: ''
+    patch:
+      operationId: customer_consents_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this consent record.
+        required: true
+      tags:
+      - customer-consents
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedConsentRecordRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedConsentRecordRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedConsentRecordRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentRecord'
+          description: ''
+    delete:
+      operationId: customer_consents_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this consent record.
+        required: true
+      tags:
+      - customer-consents
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/customer-notes/:
+    get:
+      operationId: customer_notes_list
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: customer
+        schema:
+          type: string
+          format: uuid
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - customer-notes
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCustomerNoteList'
+          description: ''
+    post:
+      operationId: customer_notes_create
+      tags:
+      - customer-notes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerNoteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CustomerNoteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CustomerNoteRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerNote'
+          description: ''
+  /api/v1/customer-notes/{id}/:
+    get:
+      operationId: customer_notes_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this customer note.
+        required: true
+      tags:
+      - customer-notes
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerNote'
+          description: ''
+    put:
+      operationId: customer_notes_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this customer note.
+        required: true
+      tags:
+      - customer-notes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerNoteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CustomerNoteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CustomerNoteRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerNote'
+          description: ''
+    patch:
+      operationId: customer_notes_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this customer note.
+        required: true
+      tags:
+      - customer-notes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCustomerNoteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedCustomerNoteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCustomerNoteRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerNote'
+          description: ''
+    delete:
+      operationId: customer_notes_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this customer note.
+        required: true
+      tags:
+      - customer-notes
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/customers/:
+    get:
+      operationId: customers_list
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - in: query
+        name: acquisition_channel
+        schema:
+          type: string
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - ACTIVE
+          - BLOCKED
+          - LAPSED
+          - LEAD
+        description: |-
+          * `LEAD` - Lead
+          * `ACTIVE` - Active
+          * `LAPSED` - Lapsed
+          * `BLOCKED` - Blocked
+      tags:
+      - customers
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCustomerListList'
+          description: ''
+    post:
+      operationId: customers_create
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      tags:
+      - customers
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerDetailRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CustomerDetailRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CustomerDetailRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerDetail'
+          description: ''
+  /api/v1/customers/{id}/:
+    get:
+      operationId: customers_retrieve
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this customer.
+        required: true
+      tags:
+      - customers
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerDetail'
+          description: ''
+    put:
+      operationId: customers_update
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this customer.
+        required: true
+      tags:
+      - customers
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerDetailRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CustomerDetailRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CustomerDetailRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerDetail'
+          description: ''
+    patch:
+      operationId: customers_partial_update
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this customer.
+        required: true
+      tags:
+      - customers
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCustomerDetailRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedCustomerDetailRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCustomerDetailRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerDetail'
+          description: ''
+    delete:
+      operationId: customers_destroy
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this customer.
+        required: true
+      tags:
+      - customers
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/customers/{id}/duplicates/:
+    get:
+      operationId: customers_duplicates_retrieve
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this customer.
+        required: true
+      tags:
+      - customers
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerList'
+          description: ''
+  /api/v1/customers/{id}/merge/:
+    post:
+      operationId: customers_merge_create
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this customer.
+        required: true
+      tags:
+      - customers
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerListRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CustomerListRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CustomerListRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerList'
+          description: ''
+  /api/v1/healthz:
+    get:
+      operationId: healthz_retrieve
+      tags:
+      - healthz
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: OK
+  /api/v1/me:
+    get:
+      operationId: me_retrieve
+      tags:
+      - me
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+          description: ''
+    patch:
+      operationId: me_partial_update
+      tags:
+      - me
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedMeUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedMeUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedMeUpdateRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+          description: ''
+  /api/v1/order-exceptions/:
+    get:
+      operationId: order_exceptions_list
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: kind
+        schema:
+          type: string
+          enum:
+          - COMPLAINT
+          - DAMAGED
+          - LOST
+          - MISSING
+          - REPRESS
+          - WRONG_ITEM
+        description: |-
+          * `DAMAGED` - Damaged
+          * `LOST` - Lost
+          * `MISSING` - Missing
+          * `WRONG_ITEM` - Wrong item
+          * `REPRESS` - Re-press requested
+          * `COMPLAINT` - Complaint
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: order
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: severity
+        schema:
+          type: string
+          enum:
+          - HIGH
+          - LOW
+          - MEDIUM
+        description: |-
+          * `LOW` - Low
+          * `MEDIUM` - Medium
+          * `HIGH` - High
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - INVESTIGATING
+          - OPEN
+          - RESOLVED
+          - WRITTEN_OFF
+        description: |-
+          * `OPEN` - Open
+          * `INVESTIGATING` - Investigating
+          * `RESOLVED` - Resolved
+          * `WRITTEN_OFF` - Written off
+      tags:
+      - order-exceptions
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedOrderExceptionList'
+          description: ''
+    post:
+      operationId: order_exceptions_create
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      tags:
+      - order-exceptions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderExceptionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OrderExceptionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OrderExceptionRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderException'
+          description: ''
+  /api/v1/order-exceptions/{id}/:
+    get:
+      operationId: order_exceptions_retrieve
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this order exception.
+        required: true
+      tags:
+      - order-exceptions
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderException'
+          description: ''
+    put:
+      operationId: order_exceptions_update
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this order exception.
+        required: true
+      tags:
+      - order-exceptions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderExceptionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OrderExceptionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OrderExceptionRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderException'
+          description: ''
+    patch:
+      operationId: order_exceptions_partial_update
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this order exception.
+        required: true
+      tags:
+      - order-exceptions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedOrderExceptionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedOrderExceptionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedOrderExceptionRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderException'
+          description: ''
+    delete:
+      operationId: order_exceptions_destroy
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this order exception.
+        required: true
+      tags:
+      - order-exceptions
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/orders/:
+    get:
+      operationId: orders_list
+      description: |-
+        docs/04 §3.4. Customers see only their own orders; staff see their
+        hub scope (docs/06 §3.2, enforced by ScopedQuerysetMixin).
+      parameters:
+      - in: query
+        name: apartment
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: channel
+        schema:
+          type: string
+          enum:
+          - APP
+          - COUNTER
+          - PHONE
+          - WEB
+          - WHATSAPP
+        description: |-
+          * `WEB` - Web
+          * `WHATSAPP` - WhatsApp
+          * `COUNTER` - Counter / walk-in
+          * `PHONE` - Phone
+          * `APP` - Mobile app
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: hub
+        schema:
+          type: string
+          format: uuid
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - AT_HUB
+          - CANCELLED
+          - CLOSED
+          - DELIVERED
+          - DELIVERY_ASSIGNED
+          - DELIVERY_FAILED
+          - DRAFT
+          - INTAKE_VERIFIED
+          - IN_PRODUCTION
+          - ON_HOLD
+          - OUT_FOR_DELIVERY
+          - PENDING_CONFIRMATION
+          - PICKED_UP
+          - PICKUP_ASSIGNED
+          - PICKUP_EN_ROUTE
+          - PICKUP_FAILED
+          - READY
+          - RETURNED_TO_HUB
+          - SCHEDULED
+        description: |-
+          * `DRAFT` - Draft
+          * `PENDING_CONFIRMATION` - Pending confirmation
+          * `SCHEDULED` - Scheduled
+          * `PICKUP_ASSIGNED` - Pickup assigned
+          * `PICKUP_EN_ROUTE` - Pickup en route
+          * `PICKUP_FAILED` - Pickup failed
+          * `PICKED_UP` - Picked up
+          * `AT_HUB` - At hub
+          * `INTAKE_VERIFIED` - Intake verified
+          * `IN_PRODUCTION` - In production
+          * `READY` - Ready
+          * `DELIVERY_ASSIGNED` - Delivery assigned
+          * `OUT_FOR_DELIVERY` - Out for delivery
+          * `DELIVERY_FAILED` - Delivery failed
+          * `RETURNED_TO_HUB` - Returned to hub
+          * `DELIVERED` - Delivered
+          * `ON_HOLD` - On hold
+          * `CANCELLED` - Cancelled
+          * `CLOSED` - Closed
+      tags:
+      - orders
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedOrderListList'
+          description: ''
+    post:
+      operationId: orders_create
+      description: |-
+        docs/04 §3.4. Customers see only their own orders; staff see their
+        hub scope (docs/06 §3.2, enforced by ScopedQuerysetMixin).
+      tags:
+      - orders
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderListRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OrderListRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OrderListRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderList'
+          description: ''
+  /api/v1/orders/{id}/:
+    get:
+      operationId: orders_retrieve
+      description: |-
+        docs/04 §3.4. Customers see only their own orders; staff see their
+        hub scope (docs/06 §3.2, enforced by ScopedQuerysetMixin).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this order.
+        required: true
+      tags:
+      - orders
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderDetail'
+          description: ''
+    patch:
+      operationId: orders_partial_update
+      description: |-
+        docs/04 §3.4. Customers see only their own orders; staff see their
+        hub scope (docs/06 §3.2, enforced by ScopedQuerysetMixin).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this order.
+        required: true
+      tags:
+      - orders
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedOrderListRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedOrderListRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedOrderListRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderList'
+          description: ''
+  /api/v1/orders/{id}/advance/:
+    post:
+      operationId: orders_advance_create
+      description: |-
+        Generic ops-driven advance for stages not yet covered by a
+        dedicated custody/fulfilment endpoint (those land in Phase 2).
+        Still fully guarded by the same state machine.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this order.
+        required: true
+      tags:
+      - orders
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderListRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OrderListRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OrderListRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderList'
+          description: ''
+  /api/v1/orders/{id}/cancel/:
+    post:
+      operationId: orders_cancel_create
+      description: |-
+        docs/04 §3.4. Customers see only their own orders; staff see their
+        hub scope (docs/06 §3.2, enforced by ScopedQuerysetMixin).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this order.
+        required: true
+      tags:
+      - orders
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderListRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OrderListRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OrderListRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderList'
+          description: ''
+  /api/v1/orders/{id}/events/:
+    get:
+      operationId: orders_events_retrieve
+      description: |-
+        docs/04 §3.4. Customers see only their own orders; staff see their
+        hub scope (docs/06 §3.2, enforced by ScopedQuerysetMixin).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this order.
+        required: true
+      tags:
+      - orders
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderList'
+          description: ''
+  /api/v1/orders/{id}/intake/:
+    post:
+      operationId: orders_intake_create
+      description: |-
+        docs/04 §3.4. Customers see only their own orders; staff see their
+        hub scope (docs/06 §3.2, enforced by ScopedQuerysetMixin).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this order.
+        required: true
+      tags:
+      - orders
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderListRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OrderListRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OrderListRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderList'
+          description: ''
+  /api/v1/orders/{id}/reschedule/:
+    post:
+      operationId: orders_reschedule_create
+      description: |-
+        docs/04 §3.4. Customers see only their own orders; staff see their
+        hub scope (docs/06 §3.2, enforced by ScopedQuerysetMixin).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this order.
+        required: true
+      tags:
+      - orders
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderListRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OrderListRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OrderListRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderList'
+          description: ''
+  /api/v1/orders/counter:
+    post:
+      operationId: orders_counter_create
+      description: |-
+        POST /orders/counter — walk-in intake in one call (R-103, docs/00
+        §4 G-7). The store sits inside the neighbourhood it serves; SRC-B had
+        no non-pickup order path at all.
+      tags:
+      - orders
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OrderCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OrderCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderDetail'
+          description: ''
+  /api/v1/platform/config:
+    get:
+      operationId: platform_config_retrieve
+      description: |-
+        Public constants and enums the frontend needs without hardcoding
+        them twice (docs/04 §3.11).
+      tags:
+      - platform
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: Public platform constants
+  /api/v1/readyz:
+    get:
+      operationId: readyz_retrieve
+      tags:
+      - readyz
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: Ready
+        '503':
+          description: Not ready
+  /api/v1/requotes/:
+    get:
+      operationId: requotes_list
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: decision
+        schema:
+          type: string
+          enum:
+          - APPROVED
+          - PENDING
+          - REJECTED
+        description: |-
+          * `PENDING` - Pending
+          * `APPROVED` - Approved
+          * `REJECTED` - Rejected
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: order
+        schema:
+          type: string
+          format: uuid
+      tags:
+      - requotes
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedReQuoteList'
+          description: ''
+  /api/v1/requotes/{id}/:
+    get:
+      operationId: requotes_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this re quote.
+        required: true
+      tags:
+      - requotes
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReQuote'
+          description: ''
+  /api/v1/requotes/{id}/respond/:
+    post:
+      operationId: requotes_respond_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this re quote.
+        required: true
+      tags:
+      - requotes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReQuoteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReQuoteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReQuoteRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReQuote'
+          description: ''
+  /api/v1/territory/apartment-contacts/:
+    get:
+      operationId: territory_apartment_contacts_list
+      parameters:
+      - in: query
+        name: apartment
+        schema:
+          type: string
+          format: uuid
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: kind
+        schema:
+          type: string
+          enum:
+          - MANAGER
+          - RWA
+          - WATCHMAN
+        description: |-
+          * `WATCHMAN` - Watchman / Security
+          * `MANAGER` - Property Manager
+          * `RWA` - Resident Welfare Association
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - territory
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedApartmentContactList'
+          description: ''
+    post:
+      operationId: territory_apartment_contacts_create
+      tags:
+      - territory
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApartmentContactRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ApartmentContactRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ApartmentContactRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApartmentContact'
+          description: ''
+  /api/v1/territory/apartment-contacts/{id}/:
+    get:
+      operationId: territory_apartment_contacts_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this apartment contact.
+        required: true
+      tags:
+      - territory
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApartmentContact'
+          description: ''
+    put:
+      operationId: territory_apartment_contacts_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this apartment contact.
+        required: true
+      tags:
+      - territory
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApartmentContactRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ApartmentContactRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ApartmentContactRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApartmentContact'
+          description: ''
+    patch:
+      operationId: territory_apartment_contacts_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this apartment contact.
+        required: true
+      tags:
+      - territory
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedApartmentContactRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedApartmentContactRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedApartmentContactRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApartmentContact'
+          description: ''
+    delete:
+      operationId: territory_apartment_contacts_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this apartment contact.
+        required: true
+      tags:
+      - territory
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/territory/apartments:
+    get:
+      operationId: territory_apartments_list
+      description: Public search used by the booking wizard (docs/04 §3.2).
+      parameters:
+      - in: query
+        name: cluster
+        schema:
+          type: string
+      - in: query
+        name: q
+        schema:
+          type: string
+      tags:
+      - territory
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApartmentPublic'
+          description: ''
+  /api/v1/territory/apartments-admin/:
+    get:
+      operationId: territory_apartments_admin_list
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - in: query
+        name: cluster
+        schema:
+          type: string
+          format: uuid
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - territory
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedApartmentList'
+          description: ''
+    post:
+      operationId: territory_apartments_admin_create
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      tags:
+      - territory
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApartmentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ApartmentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ApartmentRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Apartment'
+          description: ''
+  /api/v1/territory/apartments-admin/{id}/:
+    get:
+      operationId: territory_apartments_admin_retrieve
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this apartment.
+        required: true
+      tags:
+      - territory
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Apartment'
+          description: ''
+    put:
+      operationId: territory_apartments_admin_update
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this apartment.
+        required: true
+      tags:
+      - territory
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApartmentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ApartmentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ApartmentRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Apartment'
+          description: ''
+    patch:
+      operationId: territory_apartments_admin_partial_update
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this apartment.
+        required: true
+      tags:
+      - territory
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedApartmentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedApartmentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedApartmentRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Apartment'
+          description: ''
+    delete:
+      operationId: territory_apartments_admin_destroy
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this apartment.
+        required: true
+      tags:
+      - territory
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/territory/capacity:
+    get:
+      operationId: territory_capacity_list
+      description: Public slot-availability check for the booking wizard.
+      parameters:
+      - in: query
+        name: cluster
+        schema:
+          type: string
+      - in: query
+        name: from
+        schema:
+          type: string
+      - in: query
+        name: kind
+        schema:
+          type: string
+      - in: query
+        name: to
+        schema:
+          type: string
+      tags:
+      - territory
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RouteDayCapacity'
+          description: ''
+  /api/v1/territory/capacity-admin/:
+    get:
+      operationId: territory_capacity_admin_list
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - in: query
+        name: cluster
+        schema:
+          type: string
+          format: uuid
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: date
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: kind
+        schema:
+          type: string
+          enum:
+          - DELIVERY
+          - PICKUP
+        description: |-
+          * `PICKUP` - Pickup
+          * `DELIVERY` - Delivery
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - territory
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedRouteDayCapacityList'
+          description: ''
+    post:
+      operationId: territory_capacity_admin_create
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      tags:
+      - territory
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RouteDayCapacityRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RouteDayCapacityRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RouteDayCapacityRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RouteDayCapacity'
+          description: ''
+  /api/v1/territory/capacity-admin/{id}/:
+    get:
+      operationId: territory_capacity_admin_retrieve
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this route day capacity.
+        required: true
+      tags:
+      - territory
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RouteDayCapacity'
+          description: ''
+    put:
+      operationId: territory_capacity_admin_update
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this route day capacity.
+        required: true
+      tags:
+      - territory
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RouteDayCapacityRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RouteDayCapacityRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RouteDayCapacityRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RouteDayCapacity'
+          description: ''
+    patch:
+      operationId: territory_capacity_admin_partial_update
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this route day capacity.
+        required: true
+      tags:
+      - territory
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedRouteDayCapacityRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedRouteDayCapacityRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedRouteDayCapacityRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RouteDayCapacity'
+          description: ''
+    delete:
+      operationId: territory_capacity_admin_destroy
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this route day capacity.
+        required: true
+      tags:
+      - territory
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/territory/clusters/:
+    get:
+      operationId: territory_clusters_list
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: hub
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - territory
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedClusterList'
+          description: ''
+    post:
+      operationId: territory_clusters_create
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      tags:
+      - territory
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClusterRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ClusterRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ClusterRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cluster'
+          description: ''
+  /api/v1/territory/clusters/{id}/:
+    get:
+      operationId: territory_clusters_retrieve
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this cluster.
+        required: true
+      tags:
+      - territory
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cluster'
+          description: ''
+    put:
+      operationId: territory_clusters_update
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this cluster.
+        required: true
+      tags:
+      - territory
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClusterRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ClusterRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ClusterRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cluster'
+          description: ''
+    patch:
+      operationId: territory_clusters_partial_update
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this cluster.
+        required: true
+      tags:
+      - territory
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedClusterRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedClusterRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedClusterRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cluster'
+          description: ''
+    delete:
+      operationId: territory_clusters_destroy
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this cluster.
+        required: true
+      tags:
+      - territory
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/territory/hubs/:
+    get:
+      operationId: territory_hubs_list
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - territory
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedHubList'
+          description: ''
+    post:
+      operationId: territory_hubs_create
+      tags:
+      - territory
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HubRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/HubRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/HubRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Hub'
+          description: ''
+  /api/v1/territory/hubs/{id}/:
+    get:
+      operationId: territory_hubs_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this hub.
+        required: true
+      tags:
+      - territory
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Hub'
+          description: ''
+    put:
+      operationId: territory_hubs_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this hub.
+        required: true
+      tags:
+      - territory
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HubRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/HubRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/HubRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Hub'
+          description: ''
+    patch:
+      operationId: territory_hubs_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this hub.
+        required: true
+      tags:
+      - territory
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedHubRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedHubRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedHubRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Hub'
+          description: ''
+    delete:
+      operationId: territory_hubs_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this hub.
+        required: true
+      tags:
+      - territory
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/territory/serviceability:
+    get:
+      operationId: territory_serviceability_retrieve
+      parameters:
+      - in: query
+        name: pincode
+        schema:
+          type: string
+      tags:
+      - territory
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+components:
+  schemas:
+    Address:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        apartment:
+          type: string
+          format: uuid
+          nullable: true
+        apartment_name:
+          type: string
+          readOnly: true
+        flat_no:
+          type: string
+          maxLength: 32
+        block:
+          type: string
+          maxLength: 32
+        landmark:
+          type: string
+          maxLength: 160
+        free_text_address:
+          type: string
+        label:
+          type: string
+          maxLength: 32
+        is_default:
+          type: boolean
+      required:
+      - apartment_name
+      - id
+    AddressRequest:
+      type: object
+      properties:
+        apartment:
+          type: string
+          format: uuid
+          nullable: true
+        flat_no:
+          type: string
+          maxLength: 32
+        block:
+          type: string
+          maxLength: 32
+        landmark:
+          type: string
+          maxLength: 160
+        free_text_address:
+          type: string
+        label:
+          type: string
+          minLength: 1
+          maxLength: 32
+        is_default:
+          type: boolean
+    Apartment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        cluster:
+          type: string
+          format: uuid
+        cluster_name:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          maxLength: 160
+        address:
+          type: string
+        pincode:
+          type: string
+          maxLength: 10
+        gate_notes:
+          type: string
+        is_active:
+          type: boolean
+        launched_on:
+          type: string
+          format: date
+          nullable: true
+        contacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApartmentContact'
+          readOnly: true
+      required:
+      - cluster
+      - cluster_name
+      - contacts
+      - id
+      - name
+    ApartmentContact:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        kind:
+          $ref: '#/components/schemas/ApartmentContactKindEnum'
+        name:
+          type: string
+          maxLength: 120
+        phone:
+          type: string
+          maxLength: 20
+        notes:
+          type: string
+      required:
+      - id
+      - kind
+      - name
+    ApartmentContactKindEnum:
+      enum:
+      - WATCHMAN
+      - MANAGER
+      - RWA
+      type: string
+      description: |-
+        * `WATCHMAN` - Watchman / Security
+        * `MANAGER` - Property Manager
+        * `RWA` - Resident Welfare Association
+    ApartmentContactRequest:
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/ApartmentContactKindEnum'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        phone:
+          type: string
+          maxLength: 20
+        notes:
+          type: string
+      required:
+      - kind
+      - name
+    ApartmentPublic:
+      type: object
+      description: |-
+        Minimal fields for the public booking search (docs/04 §3.2) — no
+        gate notes or contacts exposed pre-authentication.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 160
+        cluster:
+          type: string
+          format: uuid
+      required:
+      - cluster
+      - id
+      - name
+    ApartmentRequest:
+      type: object
+      properties:
+        cluster:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 160
+        address:
+          type: string
+        pincode:
+          type: string
+          maxLength: 10
+        gate_notes:
+          type: string
+        is_active:
+          type: boolean
+        launched_on:
+          type: string
+          format: date
+          nullable: true
+      required:
+      - cluster
+      - name
+    ChannelEnum:
+      enum:
+      - WEB
+      - WHATSAPP
+      - COUNTER
+      - PHONE
+      - APP
+      type: string
+      description: |-
+        * `WEB` - Web
+        * `WHATSAPP` - WhatsApp
+        * `COUNTER` - Counter / walk-in
+        * `PHONE` - Phone
+        * `APP` - Mobile app
+    Cluster:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        hub:
+          type: string
+          format: uuid
+        hub_code:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          maxLength: 120
+        notes:
+          type: string
+        is_active:
+          type: boolean
+      required:
+      - hub
+      - hub_code
+      - id
+      - name
+    ClusterRequest:
+      type: object
+      properties:
+        hub:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        notes:
+          type: string
+        is_active:
+          type: boolean
+      required:
+      - hub
+      - name
+    ConsentRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        purpose:
+          $ref: '#/components/schemas/ConsentRecordPurposeEnum'
+        granted:
+          type: boolean
+        source:
+          type: string
+          maxLength: 64
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - purpose
+    ConsentRecordPurposeEnum:
+      enum:
+      - SERVICE
+      - MARKETING
+      - WHATSAPP
+      type: string
+      description: |-
+        * `SERVICE` - Service communication
+        * `MARKETING` - Marketing
+        * `WHATSAPP` - WhatsApp messaging
+    ConsentRecordRequest:
+      type: object
+      properties:
+        purpose:
+          $ref: '#/components/schemas/ConsentRecordPurposeEnum'
+        granted:
+          type: boolean
+        source:
+          type: string
+          maxLength: 64
+      required:
+      - purpose
+    CustomerDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 150
+        phone:
+          type: string
+          maxLength: 20
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        preferred_language:
+          type: string
+          maxLength: 8
+        status:
+          $ref: '#/components/schemas/CustomerStatusEnum'
+        first_order_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        last_order_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        lifetime_orders:
+          type: integer
+          readOnly: true
+        lifetime_gross_minor:
+          type: integer
+          readOnly: true
+        acquisition_channel:
+          type: string
+          readOnly: true
+        acquisition_apartment:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        addresses:
+          type: array
+          items:
+            $ref: '#/components/schemas/Address'
+          readOnly: true
+        notes:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomerNote'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - acquisition_apartment
+      - acquisition_channel
+      - addresses
+      - created_at
+      - first_order_at
+      - id
+      - last_order_at
+      - lifetime_gross_minor
+      - lifetime_orders
+      - notes
+      - phone
+    CustomerDetailRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 150
+        phone:
+          type: string
+          minLength: 1
+          maxLength: 20
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        preferred_language:
+          type: string
+          minLength: 1
+          maxLength: 8
+        status:
+          $ref: '#/components/schemas/CustomerStatusEnum'
+      required:
+      - phone
+    CustomerList:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 150
+        phone:
+          type: string
+          maxLength: 20
+        status:
+          $ref: '#/components/schemas/CustomerStatusEnum'
+        first_order_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_order_at:
+          type: string
+          format: date-time
+          nullable: true
+        lifetime_orders:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        lifetime_gross_minor:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        acquisition_channel:
+          type: string
+          maxLength: 32
+      required:
+      - id
+      - phone
+    CustomerListRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 150
+        phone:
+          type: string
+          minLength: 1
+          maxLength: 20
+        status:
+          $ref: '#/components/schemas/CustomerStatusEnum'
+        first_order_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_order_at:
+          type: string
+          format: date-time
+          nullable: true
+        lifetime_orders:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        lifetime_gross_minor:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        acquisition_channel:
+          type: string
+          maxLength: 32
+      required:
+      - phone
+    CustomerNote:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        body:
+          type: string
+        is_internal:
+          type: boolean
+        author:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        author_name:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - author
+      - author_name
+      - body
+      - created_at
+      - id
+    CustomerNoteRequest:
+      type: object
+      properties:
+        body:
+          type: string
+          minLength: 1
+        is_internal:
+          type: boolean
+      required:
+      - body
+    CustomerStatusEnum:
+      enum:
+      - LEAD
+      - ACTIVE
+      - LAPSED
+      - BLOCKED
+      type: string
+      description: |-
+        * `LEAD` - Lead
+        * `ACTIVE` - Active
+        * `LAPSED` - Lapsed
+        * `BLOCKED` - Blocked
+    CycleEnum:
+      enum:
+      - WEEKLY
+      - MONTHLY
+      type: string
+      description: |-
+        * `WEEKLY` - Weekly
+        * `MONTHLY` - Monthly
+    DecisionEnum:
+      enum:
+      - PENDING
+      - APPROVED
+      - REJECTED
+      type: string
+      description: |-
+        * `PENDING` - Pending
+        * `APPROVED` - Approved
+        * `REJECTED` - Rejected
+    EmailVerifyConfirmRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          minLength: 1
+      required:
+      - token
+    GarmentType:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        service:
+          type: string
+          format: uuid
+        code:
+          type: string
+          maxLength: 32
+        name:
+          type: string
+          maxLength: 120
+        default_press_seconds:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        is_active:
+          type: boolean
+      required:
+      - code
+      - id
+      - name
+      - service
+    GarmentTypeRequest:
+      type: object
+      properties:
+        service:
+          type: string
+          format: uuid
+        code:
+          type: string
+          minLength: 1
+          maxLength: 32
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        default_press_seconds:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        is_active:
+          type: boolean
+      required:
+      - code
+      - name
+      - service
+    Hub:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        code:
+          type: string
+          maxLength: 16
+        name:
+          type: string
+          maxLength: 120
+        address:
+          type: string
+        timezone:
+          type: string
+          maxLength: 64
+        cutoff_time:
+          type: string
+          format: time
+        daily_pressing_capacity:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        is_active:
+          type: boolean
+      required:
+      - code
+      - id
+      - name
+    HubRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 16
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        address:
+          type: string
+        timezone:
+          type: string
+          minLength: 1
+          maxLength: 64
+        cutoff_time:
+          type: string
+          format: time
+        daily_pressing_capacity:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        is_active:
+          type: boolean
+      required:
+      - code
+      - name
+    Me:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+          nullable: true
+        phone:
+          type: string
+          readOnly: true
+          nullable: true
+        full_name:
+          type: string
+          readOnly: true
+        preferred_language:
+          type: string
+          readOnly: true
+        email_verified_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        phone_verified_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        mfa_enabled:
+          type: boolean
+          readOnly: true
+        roles:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        hub_scope:
+          oneOf:
+          - type: array
+            items:
+              type: string
+          - type: string
+          readOnly: true
+        requires_mfa:
+          type: boolean
+          readOnly: true
+      required:
+      - email
+      - email_verified_at
+      - full_name
+      - hub_scope
+      - id
+      - mfa_enabled
+      - phone
+      - phone_verified_at
+      - preferred_language
+      - requires_mfa
+      - roles
+    Offer:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        code:
+          type: string
+          maxLength: 32
+        kind:
+          $ref: '#/components/schemas/OfferKindEnum'
+        value_bps:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: Basis points for PERCENT; ignored otherwise
+        value_minor:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          description: Minor units for FLAT/credit offers
+        cap_minor:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          nullable: true
+        apartment:
+          type: string
+          format: uuid
+          nullable: true
+        effective_from:
+          type: string
+          format: date-time
+        effective_to:
+          type: string
+          format: date-time
+          nullable: true
+        max_redemptions:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        redemptions_count:
+          type: integer
+          readOnly: true
+        is_active:
+          type: boolean
+      required:
+      - code
+      - effective_from
+      - id
+      - kind
+      - redemptions_count
+    OfferKindEnum:
+      enum:
+      - FIRST_ORDER
+      - REFERRAL_CREDIT
+      - APARTMENT_PROMO
+      - FLAT
+      - PERCENT
+      type: string
+      description: |-
+        * `FIRST_ORDER` - First order discount
+        * `REFERRAL_CREDIT` - Referral credit
+        * `APARTMENT_PROMO` - Apartment promotion
+        * `FLAT` - Flat discount
+        * `PERCENT` - Percent discount
+    OfferRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 32
+        kind:
+          $ref: '#/components/schemas/OfferKindEnum'
+        value_bps:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: Basis points for PERCENT; ignored otherwise
+        value_minor:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          description: Minor units for FLAT/credit offers
+        cap_minor:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          nullable: true
+        apartment:
+          type: string
+          format: uuid
+          nullable: true
+        effective_from:
+          type: string
+          format: date-time
+        effective_to:
+          type: string
+          format: date-time
+          nullable: true
+        max_redemptions:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        is_active:
+          type: boolean
+      required:
+      - code
+      - effective_from
+      - kind
+    OrderCreateRequest:
+      type: object
+      properties:
+        hub:
+          type: string
+          format: uuid
+        customer:
+          type: string
+          format: uuid
+        service:
+          type: string
+          format: uuid
+        address:
+          type: string
+          format: uuid
+          nullable: true
+        apartment:
+          type: string
+          format: uuid
+          nullable: true
+        channel:
+          $ref: '#/components/schemas/ChannelEnum'
+        pickup_capacity:
+          type: string
+          format: uuid
+          nullable: true
+        lines:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+        notes:
+          type: string
+        special_instructions:
+          type: string
+        referral_code:
+          type: string
+      required:
+      - channel
+      - customer
+      - hub
+      - lines
+      - service
+    OrderDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        ref:
+          type: string
+          readOnly: true
+        status:
+          $ref: '#/components/schemas/OrderStatusEnum'
+        payment_status:
+          $ref: '#/components/schemas/PaymentStatusEnum'
+        channel:
+          $ref: '#/components/schemas/ChannelEnum'
+        customer:
+          type: string
+          format: uuid
+        customer_name:
+          type: string
+          readOnly: true
+        customer_phone:
+          type: string
+          readOnly: true
+        apartment:
+          type: string
+          format: uuid
+          nullable: true
+        apartment_name:
+          type: string
+          readOnly: true
+        service:
+          type: string
+          format: uuid
+        service_name:
+          type: string
+          readOnly: true
+        pickup_slot_start:
+          type: string
+          format: date-time
+          nullable: true
+        pickup_slot_end:
+          type: string
+          format: date-time
+          nullable: true
+        delivery_slot_start:
+          type: string
+          format: date-time
+          nullable: true
+        delivery_slot_end:
+          type: string
+          format: date-time
+          nullable: true
+        declared_total_qty:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        verified_total_qty:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        total_minor:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        is_late_pickup:
+          type: boolean
+          readOnly: true
+        hub:
+          type: string
+          format: uuid
+        address:
+          type: string
+          format: uuid
+          nullable: true
+        subtotal_minor:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        discount_minor:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        tax_minor:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        offers_applied: {}
+        notes:
+          type: string
+        special_instructions:
+          type: string
+        referral_code:
+          type: string
+          maxLength: 32
+        picked_up_at:
+          type: string
+          format: date-time
+          nullable: true
+        delivered_at:
+          type: string
+          format: date-time
+          nullable: true
+        pickup_promised_at:
+          type: string
+          format: date-time
+          nullable: true
+        delivery_promised_at:
+          type: string
+          format: date-time
+          nullable: true
+        cancelled_reason:
+          type: string
+          maxLength: 255
+        cancelled_at:
+          type: string
+          format: date-time
+          nullable: true
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderLine'
+          readOnly: true
+      required:
+      - apartment_name
+      - created_at
+      - customer
+      - customer_name
+      - customer_phone
+      - hub
+      - id
+      - is_late_pickup
+      - lines
+      - ref
+      - service
+      - service_name
+    OrderException:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        order:
+          type: string
+          format: uuid
+        order_ref:
+          type: string
+          readOnly: true
+        kind:
+          $ref: '#/components/schemas/OrderExceptionKindEnum'
+        severity:
+          $ref: '#/components/schemas/SeverityEnum'
+        description:
+          type: string
+        raised_by:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        assigned_to:
+          type: string
+          format: uuid
+          nullable: true
+        sla_due_at:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          $ref: '#/components/schemas/OrderExceptionStatusEnum'
+        resolution:
+          type: string
+        cost_minor:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        resolved_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - description
+      - id
+      - kind
+      - order
+      - order_ref
+      - raised_by
+    OrderExceptionKindEnum:
+      enum:
+      - DAMAGED
+      - LOST
+      - MISSING
+      - WRONG_ITEM
+      - REPRESS
+      - COMPLAINT
+      type: string
+      description: |-
+        * `DAMAGED` - Damaged
+        * `LOST` - Lost
+        * `MISSING` - Missing
+        * `WRONG_ITEM` - Wrong item
+        * `REPRESS` - Re-press requested
+        * `COMPLAINT` - Complaint
+    OrderExceptionRequest:
+      type: object
+      properties:
+        order:
+          type: string
+          format: uuid
+        kind:
+          $ref: '#/components/schemas/OrderExceptionKindEnum'
+        severity:
+          $ref: '#/components/schemas/SeverityEnum'
+        description:
+          type: string
+          minLength: 1
+        assigned_to:
+          type: string
+          format: uuid
+          nullable: true
+        sla_due_at:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          $ref: '#/components/schemas/OrderExceptionStatusEnum'
+        resolution:
+          type: string
+        cost_minor:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        resolved_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - description
+      - kind
+      - order
+    OrderExceptionStatusEnum:
+      enum:
+      - OPEN
+      - INVESTIGATING
+      - RESOLVED
+      - WRITTEN_OFF
+      type: string
+      description: |-
+        * `OPEN` - Open
+        * `INVESTIGATING` - Investigating
+        * `RESOLVED` - Resolved
+        * `WRITTEN_OFF` - Written off
+    OrderLine:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        garment_type:
+          type: string
+          format: uuid
+        garment_type_name:
+          type: string
+          readOnly: true
+        declared_qty:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        verified_qty:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        unit_price_minor:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        line_total_minor:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        notes:
+          type: string
+          maxLength: 255
+      required:
+      - garment_type
+      - garment_type_name
+      - id
+      - unit_price_minor
+    OrderList:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        ref:
+          type: string
+          readOnly: true
+        status:
+          $ref: '#/components/schemas/OrderStatusEnum'
+        payment_status:
+          $ref: '#/components/schemas/PaymentStatusEnum'
+        channel:
+          $ref: '#/components/schemas/ChannelEnum'
+        customer:
+          type: string
+          format: uuid
+        customer_name:
+          type: string
+          readOnly: true
+        customer_phone:
+          type: string
+          readOnly: true
+        apartment:
+          type: string
+          format: uuid
+          nullable: true
+        apartment_name:
+          type: string
+          readOnly: true
+        service:
+          type: string
+          format: uuid
+        service_name:
+          type: string
+          readOnly: true
+        pickup_slot_start:
+          type: string
+          format: date-time
+          nullable: true
+        pickup_slot_end:
+          type: string
+          format: date-time
+          nullable: true
+        delivery_slot_start:
+          type: string
+          format: date-time
+          nullable: true
+        delivery_slot_end:
+          type: string
+          format: date-time
+          nullable: true
+        declared_total_qty:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        verified_total_qty:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        total_minor:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        is_late_pickup:
+          type: boolean
+          readOnly: true
+      required:
+      - apartment_name
+      - created_at
+      - customer
+      - customer_name
+      - customer_phone
+      - id
+      - is_late_pickup
+      - ref
+      - service
+      - service_name
+    OrderListRequest:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/OrderStatusEnum'
+        payment_status:
+          $ref: '#/components/schemas/PaymentStatusEnum'
+        channel:
+          $ref: '#/components/schemas/ChannelEnum'
+        customer:
+          type: string
+          format: uuid
+        apartment:
+          type: string
+          format: uuid
+          nullable: true
+        service:
+          type: string
+          format: uuid
+        pickup_slot_start:
+          type: string
+          format: date-time
+          nullable: true
+        pickup_slot_end:
+          type: string
+          format: date-time
+          nullable: true
+        delivery_slot_start:
+          type: string
+          format: date-time
+          nullable: true
+        delivery_slot_end:
+          type: string
+          format: date-time
+          nullable: true
+        declared_total_qty:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        verified_total_qty:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        total_minor:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+      required:
+      - customer
+      - service
+    OrderStatusEnum:
+      enum:
+      - DRAFT
+      - PENDING_CONFIRMATION
+      - SCHEDULED
+      - PICKUP_ASSIGNED
+      - PICKUP_EN_ROUTE
+      - PICKUP_FAILED
+      - PICKED_UP
+      - AT_HUB
+      - INTAKE_VERIFIED
+      - IN_PRODUCTION
+      - READY
+      - DELIVERY_ASSIGNED
+      - OUT_FOR_DELIVERY
+      - DELIVERY_FAILED
+      - RETURNED_TO_HUB
+      - DELIVERED
+      - ON_HOLD
+      - CANCELLED
+      - CLOSED
+      type: string
+      description: |-
+        * `DRAFT` - Draft
+        * `PENDING_CONFIRMATION` - Pending confirmation
+        * `SCHEDULED` - Scheduled
+        * `PICKUP_ASSIGNED` - Pickup assigned
+        * `PICKUP_EN_ROUTE` - Pickup en route
+        * `PICKUP_FAILED` - Pickup failed
+        * `PICKED_UP` - Picked up
+        * `AT_HUB` - At hub
+        * `INTAKE_VERIFIED` - Intake verified
+        * `IN_PRODUCTION` - In production
+        * `READY` - Ready
+        * `DELIVERY_ASSIGNED` - Delivery assigned
+        * `OUT_FOR_DELIVERY` - Out for delivery
+        * `DELIVERY_FAILED` - Delivery failed
+        * `RETURNED_TO_HUB` - Returned to hub
+        * `DELIVERED` - Delivered
+        * `ON_HOLD` - On hold
+        * `CANCELLED` - Cancelled
+        * `CLOSED` - Closed
+    OtpRequestPurposeEnum:
+      enum:
+      - LOGIN
+      - VERIFY
+      type: string
+      description: |-
+        * `LOGIN` - LOGIN
+        * `VERIFY` - VERIFY
+    OtpRequestRequest:
+      type: object
+      properties:
+        phone:
+          type: string
+          minLength: 1
+          pattern: ^\+?[1-9]\d{7,14}$
+        purpose:
+          allOf:
+          - $ref: '#/components/schemas/OtpRequestPurposeEnum'
+          default: LOGIN
+      required:
+      - phone
+    OtpVerifyRequest:
+      type: object
+      properties:
+        phone:
+          type: string
+          minLength: 1
+          pattern: ^\+?[1-9]\d{7,14}$
+        code:
+          type: string
+          minLength: 1
+          pattern: ^\d{6}$
+        full_name:
+          type: string
+          maxLength: 150
+      required:
+      - code
+      - phone
+    Package:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        service:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 120
+        cycle:
+          $ref: '#/components/schemas/CycleEnum'
+        included_qty:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        price_minor:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        effective_from:
+          type: string
+          format: date-time
+        effective_to:
+          type: string
+          format: date-time
+          nullable: true
+        is_active:
+          type: boolean
+      required:
+      - cycle
+      - effective_from
+      - id
+      - included_qty
+      - name
+      - price_minor
+      - service
+    PackageRequest:
+      type: object
+      properties:
+        service:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        cycle:
+          $ref: '#/components/schemas/CycleEnum'
+        included_qty:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        price_minor:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        effective_from:
+          type: string
+          format: date-time
+        effective_to:
+          type: string
+          format: date-time
+          nullable: true
+        is_active:
+          type: boolean
+      required:
+      - cycle
+      - effective_from
+      - included_qty
+      - name
+      - price_minor
+      - service
+    PaginatedAddressList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Address'
+    PaginatedApartmentContactList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApartmentContact'
+    PaginatedApartmentList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Apartment'
+    PaginatedClusterList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Cluster'
+    PaginatedConsentRecordList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConsentRecord'
+    PaginatedCustomerListList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomerList'
+    PaginatedCustomerNoteList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomerNote'
+    PaginatedGarmentTypeList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/GarmentType'
+    PaginatedHubList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Hub'
+    PaginatedOfferList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Offer'
+    PaginatedOrderExceptionList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderException'
+    PaginatedOrderListList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderList'
+    PaginatedPackageList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Package'
+    PaginatedPriceListList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PriceList'
+    PaginatedReQuoteList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReQuote'
+    PaginatedRouteDayCapacityList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/RouteDayCapacity'
+    PaginatedServiceList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Service'
+    PasswordResetConfirmRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          minLength: 1
+        new_password:
+          type: string
+          minLength: 1
+      required:
+      - new_password
+      - token
+    PasswordResetRequestRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+      required:
+      - email
+    PatchedAddressRequest:
+      type: object
+      properties:
+        apartment:
+          type: string
+          format: uuid
+          nullable: true
+        flat_no:
+          type: string
+          maxLength: 32
+        block:
+          type: string
+          maxLength: 32
+        landmark:
+          type: string
+          maxLength: 160
+        free_text_address:
+          type: string
+        label:
+          type: string
+          minLength: 1
+          maxLength: 32
+        is_default:
+          type: boolean
+    PatchedApartmentContactRequest:
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/ApartmentContactKindEnum'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        phone:
+          type: string
+          maxLength: 20
+        notes:
+          type: string
+    PatchedApartmentRequest:
+      type: object
+      properties:
+        cluster:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 160
+        address:
+          type: string
+        pincode:
+          type: string
+          maxLength: 10
+        gate_notes:
+          type: string
+        is_active:
+          type: boolean
+        launched_on:
+          type: string
+          format: date
+          nullable: true
+    PatchedClusterRequest:
+      type: object
+      properties:
+        hub:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        notes:
+          type: string
+        is_active:
+          type: boolean
+    PatchedConsentRecordRequest:
+      type: object
+      properties:
+        purpose:
+          $ref: '#/components/schemas/ConsentRecordPurposeEnum'
+        granted:
+          type: boolean
+        source:
+          type: string
+          maxLength: 64
+    PatchedCustomerDetailRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 150
+        phone:
+          type: string
+          minLength: 1
+          maxLength: 20
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        preferred_language:
+          type: string
+          minLength: 1
+          maxLength: 8
+        status:
+          $ref: '#/components/schemas/CustomerStatusEnum'
+    PatchedCustomerNoteRequest:
+      type: object
+      properties:
+        body:
+          type: string
+          minLength: 1
+        is_internal:
+          type: boolean
+    PatchedGarmentTypeRequest:
+      type: object
+      properties:
+        service:
+          type: string
+          format: uuid
+        code:
+          type: string
+          minLength: 1
+          maxLength: 32
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        default_press_seconds:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        is_active:
+          type: boolean
+    PatchedHubRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 16
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        address:
+          type: string
+        timezone:
+          type: string
+          minLength: 1
+          maxLength: 64
+        cutoff_time:
+          type: string
+          format: time
+        daily_pressing_capacity:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        is_active:
+          type: boolean
+    PatchedMeUpdateRequest:
+      type: object
+      properties:
+        full_name:
+          type: string
+          maxLength: 150
+        preferred_language:
+          type: string
+          minLength: 1
+          maxLength: 8
+    PatchedOfferRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 32
+        kind:
+          $ref: '#/components/schemas/OfferKindEnum'
+        value_bps:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: Basis points for PERCENT; ignored otherwise
+        value_minor:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          description: Minor units for FLAT/credit offers
+        cap_minor:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          nullable: true
+        apartment:
+          type: string
+          format: uuid
+          nullable: true
+        effective_from:
+          type: string
+          format: date-time
+        effective_to:
+          type: string
+          format: date-time
+          nullable: true
+        max_redemptions:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        is_active:
+          type: boolean
+    PatchedOrderExceptionRequest:
+      type: object
+      properties:
+        order:
+          type: string
+          format: uuid
+        kind:
+          $ref: '#/components/schemas/OrderExceptionKindEnum'
+        severity:
+          $ref: '#/components/schemas/SeverityEnum'
+        description:
+          type: string
+          minLength: 1
+        assigned_to:
+          type: string
+          format: uuid
+          nullable: true
+        sla_due_at:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          $ref: '#/components/schemas/OrderExceptionStatusEnum'
+        resolution:
+          type: string
+        cost_minor:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        resolved_at:
+          type: string
+          format: date-time
+          nullable: true
+    PatchedOrderListRequest:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/OrderStatusEnum'
+        payment_status:
+          $ref: '#/components/schemas/PaymentStatusEnum'
+        channel:
+          $ref: '#/components/schemas/ChannelEnum'
+        customer:
+          type: string
+          format: uuid
+        apartment:
+          type: string
+          format: uuid
+          nullable: true
+        service:
+          type: string
+          format: uuid
+        pickup_slot_start:
+          type: string
+          format: date-time
+          nullable: true
+        pickup_slot_end:
+          type: string
+          format: date-time
+          nullable: true
+        delivery_slot_start:
+          type: string
+          format: date-time
+          nullable: true
+        delivery_slot_end:
+          type: string
+          format: date-time
+          nullable: true
+        declared_total_qty:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        verified_total_qty:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        total_minor:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+    PatchedPackageRequest:
+      type: object
+      properties:
+        service:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        cycle:
+          $ref: '#/components/schemas/CycleEnum'
+        included_qty:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        price_minor:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        effective_from:
+          type: string
+          format: date-time
+        effective_to:
+          type: string
+          format: date-time
+          nullable: true
+        is_active:
+          type: boolean
+    PatchedPriceListRequest:
+      type: object
+      properties:
+        hub:
+          type: string
+          format: uuid
+        service:
+          type: string
+          format: uuid
+        effective_from:
+          type: string
+          format: date-time
+          nullable: true
+        effective_to:
+          type: string
+          format: date-time
+          nullable: true
+        notes:
+          type: string
+    PatchedRouteDayCapacityRequest:
+      type: object
+      properties:
+        hub:
+          type: string
+          format: uuid
+        cluster:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        window_start:
+          type: string
+          format: time
+        window_end:
+          type: string
+          format: time
+        kind:
+          $ref: '#/components/schemas/RouteDayCapacityKindEnum'
+        capacity:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+    PatchedServiceRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 32
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        unit:
+          $ref: '#/components/schemas/UnitEnum'
+        sla_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        is_active:
+          type: boolean
+    PaymentStatusEnum:
+      enum:
+      - UNPAID
+      - PARTIALLY_PAID
+      - PAID
+      - WRITTEN_OFF
+      type: string
+      description: |-
+        * `UNPAID` - Unpaid
+        * `PARTIALLY_PAID` - Partially paid
+        * `PAID` - Paid
+        * `WRITTEN_OFF` - Written off
+    PriceLine:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        garment_type:
+          type: string
+          format: uuid
+        garment_type_name:
+          type: string
+          readOnly: true
+        unit_price_minor:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        min_qty:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+      required:
+      - garment_type
+      - garment_type_name
+      - id
+      - unit_price_minor
+    PriceLineRequest:
+      type: object
+      properties:
+        garment_type:
+          type: string
+          format: uuid
+        unit_price_minor:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        min_qty:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+      required:
+      - garment_type
+      - unit_price_minor
+    PriceList:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        hub:
+          type: string
+          format: uuid
+        service:
+          type: string
+          format: uuid
+        service_name:
+          type: string
+          readOnly: true
+        version:
+          type: integer
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/PriceListStatusEnum'
+          readOnly: true
+        effective_from:
+          type: string
+          format: date-time
+          nullable: true
+        effective_to:
+          type: string
+          format: date-time
+          nullable: true
+        notes:
+          type: string
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/PriceLine'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - hub
+      - id
+      - lines
+      - service
+      - service_name
+      - status
+      - version
+    PriceListRequest:
+      type: object
+      properties:
+        hub:
+          type: string
+          format: uuid
+        service:
+          type: string
+          format: uuid
+        effective_from:
+          type: string
+          format: date-time
+          nullable: true
+        effective_to:
+          type: string
+          format: date-time
+          nullable: true
+        notes:
+          type: string
+      required:
+      - hub
+      - service
+    PriceListStatusEnum:
+      enum:
+      - DRAFT
+      - ACTIVE
+      - SUPERSEDED
+      type: string
+      description: |-
+        * `DRAFT` - Draft
+        * `ACTIVE` - Active
+        * `SUPERSEDED` - Superseded
+    QuoteRequestRequest:
+      type: object
+      properties:
+        hub:
+          type: string
+          format: uuid
+        service:
+          type: string
+          format: uuid
+        apartment:
+          type: string
+          format: uuid
+          nullable: true
+        is_first_order:
+          type: boolean
+          default: false
+        offer_codes:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        lines:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+      required:
+      - hub
+      - lines
+      - service
+    ReQuote:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        order:
+          type: string
+          format: uuid
+        order_ref:
+          type: string
+          readOnly: true
+        reason:
+          type: string
+          maxLength: 255
+        old_total_minor:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        new_total_minor:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        decision:
+          $ref: '#/components/schemas/DecisionEnum'
+        sent_at:
+          type: string
+          format: date-time
+        decided_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - id
+      - new_total_minor
+      - old_total_minor
+      - order
+      - order_ref
+      - reason
+    ReQuoteRequest:
+      type: object
+      properties:
+        order:
+          type: string
+          format: uuid
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 255
+        old_total_minor:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        new_total_minor:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        decision:
+          $ref: '#/components/schemas/DecisionEnum'
+        sent_at:
+          type: string
+          format: date-time
+        decided_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - new_total_minor
+      - old_total_minor
+      - order
+      - reason
+    RouteDayCapacity:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        hub:
+          type: string
+          format: uuid
+        cluster:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        window_start:
+          type: string
+          format: time
+        window_end:
+          type: string
+          format: time
+        kind:
+          $ref: '#/components/schemas/RouteDayCapacityKindEnum'
+        capacity:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        booked_count:
+          type: integer
+          readOnly: true
+        available:
+          type: integer
+          readOnly: true
+      required:
+      - available
+      - booked_count
+      - cluster
+      - date
+      - hub
+      - id
+      - kind
+      - window_end
+      - window_start
+    RouteDayCapacityKindEnum:
+      enum:
+      - PICKUP
+      - DELIVERY
+      type: string
+      description: |-
+        * `PICKUP` - Pickup
+        * `DELIVERY` - Delivery
+    RouteDayCapacityRequest:
+      type: object
+      properties:
+        hub:
+          type: string
+          format: uuid
+        cluster:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        window_start:
+          type: string
+          format: time
+        window_end:
+          type: string
+          format: time
+        kind:
+          $ref: '#/components/schemas/RouteDayCapacityKindEnum'
+        capacity:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+      required:
+      - cluster
+      - date
+      - hub
+      - kind
+      - window_end
+      - window_start
+    Service:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        code:
+          type: string
+          maxLength: 32
+        name:
+          type: string
+          maxLength: 120
+        unit:
+          $ref: '#/components/schemas/UnitEnum'
+        sla_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        is_active:
+          type: boolean
+      required:
+      - code
+      - id
+      - name
+    ServiceRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 32
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        unit:
+          $ref: '#/components/schemas/UnitEnum'
+        sla_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        is_active:
+          type: boolean
+      required:
+      - code
+      - name
+    SeverityEnum:
+      enum:
+      - LOW
+      - MEDIUM
+      - HIGH
+      type: string
+      description: |-
+        * `LOW` - Low
+        * `MEDIUM` - Medium
+        * `HIGH` - High
+    StaffInviteAcceptRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          minLength: 1
+        full_name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        password:
+          type: string
+          minLength: 1
+      required:
+      - full_name
+      - password
+      - token
+    StaffLoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+        totp_code:
+          type: string
+      required:
+      - email
+      - password
+    TokenRefresh:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+      required:
+      - access
+      - refresh
+    TokenRefreshRequest:
+      type: object
+      properties:
+        refresh:
+          type: string
+          minLength: 1
+      required:
+      - refresh
+    UnitEnum:
+      enum:
+      - PER_ITEM
+      - PER_KG
+      - PER_PAIR
+      type: string
+      description: |-
+        * `PER_ITEM` - Per item
+        * `PER_KG` - Per kilogram
+        * `PER_PAIR` - Per pair
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

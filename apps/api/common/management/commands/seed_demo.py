@@ -1,0 +1,329 @@
+"""Seeds a realistic pilot scenario: one hub, two clusters, six apartments,
+the ironing service catalogue, an active price list, a few staff accounts
+and a batch of demo orders spanning most lifecycle states — so the console
+UI (Phase 2) has something real to render from the first page load.
+"""
+
+from __future__ import annotations
+
+import random
+from datetime import timedelta
+
+from django.contrib.auth.hashers import make_password
+from django.core.management.base import BaseCommand
+from django.db import transaction
+from django.utils import timezone
+
+from catalog.models import GarmentType, Offer, PriceLine, PriceList, Service
+from customers.models import Address, Customer
+from identity.models import Role, RoleCode, User, UserRole
+from ordering import services as ordering_services
+from ordering.models import Order, OrderStatus
+from territory.models import Apartment, Cluster, Hub, RouteDayCapacity, TaxSettings
+
+
+class Command(BaseCommand):
+    help = "Seed a demo hub with clusters, apartments, catalogue, staff and orders."
+
+    @transaction.atomic
+    def handle(self, *args, **options):
+        self.stdout.write("Seeding roles...")
+        roles = {}
+        for code in RoleCode:
+            roles[code], _ = Role.objects.get_or_create(code=code, defaults={"name": code.label})
+
+        self.stdout.write("Seeding hub, clusters, apartments...")
+        hub, _ = Hub.objects.update_or_create(
+            code="BLR-KOR",
+            defaults=dict(
+                name="IronMan — Koramangala",
+                address="80 Feet Road, Koramangala, Bengaluru",
+                daily_pressing_capacity=150,
+                is_active=True,
+            ),
+        )
+        TaxSettings.objects.update_or_create(
+            hub=hub, defaults=dict(gst_enabled=False, default_rate_bps=1800)
+        )
+
+        cluster_a, _ = Cluster.objects.update_or_create(
+            hub=hub, name="Koramangala 4th Block", defaults={"is_active": True}
+        )
+        cluster_b, _ = Cluster.objects.update_or_create(
+            hub=hub, name="Koramangala 5th Block", defaults={"is_active": True}
+        )
+
+        apartment_names = [
+            (cluster_a, "Prestige Lakeside Habitat", "560095"),
+            (cluster_a, "Adarsh Palm Retreat", "560095"),
+            (cluster_a, "Sobha Silicon Oasis", "560095"),
+            (cluster_b, "Purva Skywood", "560034"),
+            (cluster_b, "Brigade Meadows", "560034"),
+            (cluster_b, "Salarpuria Sattva Greenage", "560034"),
+        ]
+        apartments = []
+        for i, (cluster, name, pincode) in enumerate(apartment_names):
+            apt, _ = Apartment.objects.update_or_create(
+                cluster=cluster,
+                name=name,
+                defaults=dict(
+                    address=f"{name}, Koramangala",
+                    pincode=pincode,
+                    is_active=True,
+                    launched_on=timezone.localdate() - timedelta(days=30 - i * 4),
+                ),
+            )
+            apartments.append(apt)
+
+        self.stdout.write("Seeding catalogue...")
+        service, _ = Service.objects.update_or_create(
+            code="IRONING",
+            defaults=dict(name="Ironing", unit=Service.Unit.PER_ITEM, sla_hours=24, is_active=True),
+        )
+        garment_specs = [
+            ("SHIRT", "Shirt", 1500),
+            ("TROUSER", "Trouser", 1800),
+            ("SAREE", "Saree", 4000),
+            ("KURTA", "Kurta", 2000),
+            ("BEDSHEET", "Bedsheet", 3000),
+        ]
+        garment_types = {}
+        for code, name, price in garment_specs:
+            gt, _ = GarmentType.objects.update_or_create(
+                service=service, code=code, defaults=dict(name=name, is_active=True)
+            )
+            garment_types[code] = (gt, price)
+
+        price_list = PriceList.objects.filter(
+            hub=hub, service=service, status=PriceList.Status.ACTIVE
+        ).first()
+        if not price_list:
+            price_list = PriceList.objects.create(
+                hub=hub, service=service, version=1, status=PriceList.Status.DRAFT
+            )
+            for code, (gt, price) in garment_types.items():
+                PriceLine.objects.create(
+                    price_list=price_list, garment_type=gt, unit_price_minor=price
+                )
+            price_list.status = PriceList.Status.ACTIVE
+            price_list.effective_from = timezone.now() - timedelta(days=45)
+            price_list.save(update_fields=["status", "effective_from"])
+
+        Offer.objects.update_or_create(
+            code="FIRST20",
+            defaults=dict(
+                kind=Offer.Kind.FIRST_ORDER,
+                value_bps=2000,
+                value_minor=0,
+                effective_from=timezone.now() - timedelta(days=60),
+                is_active=True,
+            ),
+        )
+
+        self.stdout.write("Seeding capacity...")
+        today = timezone.localdate()
+        windows = [("08:00", "10:00"), ("10:00", "12:00"), ("16:00", "18:00"), ("18:00", "20:00")]
+        for cluster in (cluster_a, cluster_b):
+            for day_offset in range(14):
+                date = today + timedelta(days=day_offset)
+                for start, end in windows:
+                    for kind in (RouteDayCapacity.Kind.PICKUP, RouteDayCapacity.Kind.DELIVERY):
+                        RouteDayCapacity.objects.get_or_create(
+                            hub=hub,
+                            cluster=cluster,
+                            date=date,
+                            window_start=start,
+                            window_end=end,
+                            kind=kind,
+                            defaults={"capacity": 12},
+                        )
+
+        self.stdout.write("Seeding staff...")
+        staff_specs = [
+            ("founder@ironman.test", RoleCode.FOUNDER, "Aditi Rao"),
+            ("admin@ironman.test", RoleCode.ADMIN, "Rahul Iyer"),
+            ("operator@ironman.test", RoleCode.OPERATOR, "Suman Naik"),
+            ("field@ironman.test", RoleCode.FIELD, "Vikram Singh"),
+        ]
+        for email, role_code, name in staff_specs:
+            user, created = User.objects.get_or_create(
+                email=email,
+                defaults=dict(
+                    full_name=name,
+                    is_staff=True,
+                    password=make_password("IronMan@2026"),
+                    email_verified_at=timezone.now(),
+                ),
+            )
+            UserRole.objects.get_or_create(user=user, role=roles[role_code], hub=hub)
+
+        self.stdout.write("Seeding customers + demo orders...")
+        first_names = [
+            "Priya",
+            "Arjun",
+            "Kavya",
+            "Rohan",
+            "Ananya",
+            "Karthik",
+            "Divya",
+            "Sanjay",
+            "Meera",
+            "Vivek",
+            "Nisha",
+            "Aditya",
+        ]
+        random.seed(42)
+        customers = []
+        for i in range(24):
+            apt = apartments[i % len(apartments)]
+            phone = f"+91987000{i:04d}"
+            customer, _ = Customer.objects.get_or_create(
+                hub=hub,
+                phone=phone,
+                defaults=dict(
+                    name=f"{first_names[i % len(first_names)]} {['Sharma','Reddy','Nair','Gupta'][i % 4]}",
+                    status=Customer.Status.LEAD,
+                    acquisition_channel=random.choice(
+                        ["WATCHMAN", "WALK_IN", "CUSTOMER_REFERRAL", "ORGANIC"]
+                    ),
+                    acquisition_apartment=apt,
+                ),
+            )
+            Address.objects.get_or_create(
+                customer=customer,
+                apartment=apt,
+                defaults=dict(flat_no=f"{i%9+1}0{i%4+1}", label="Home", is_default=True),
+            )
+            customers.append(customer)
+
+        garment_codes = list(garment_types.keys())
+        demo_states = [
+            OrderStatus.SCHEDULED,
+            OrderStatus.PICKUP_ASSIGNED,
+            OrderStatus.AT_HUB,
+            OrderStatus.IN_PRODUCTION,
+            OrderStatus.READY,
+            OrderStatus.OUT_FOR_DELIVERY,
+            OrderStatus.DELIVERED,
+            OrderStatus.DELIVERED,
+            OrderStatus.CLOSED,
+            OrderStatus.CANCELLED,
+        ]
+        founder = User.objects.get(email="founder@ironman.test")
+        created_count = 0
+        for i, customer in enumerate(customers):
+            for j in range(random.randint(1, 3)):
+                if Order.objects.filter(customer=customer).count() >= 3:
+                    break
+                lines = [
+                    {"garment_type": garment_types[c][0].id, "qty": random.randint(1, 5)}
+                    for c in random.sample(garment_codes, k=random.randint(1, 3))
+                ]
+                order = ordering_services.create_order(
+                    hub=hub,
+                    customer=customer,
+                    service=service,
+                    lines=lines,
+                    channel=random.choice(["WEB", "WHATSAPP", "COUNTER"]),
+                    address=customer.addresses.first(),
+                    apartment=customer.acquisition_apartment,
+                    notes="",
+                    actor=founder,
+                )
+                target = random.choice(demo_states)
+                self._fast_forward(order, target, founder)
+                created_count += 1
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Seed complete: 1 hub, 2 clusters, {len(apartments)} apartments, "
+                f"{len(customers)} customers, {created_count} orders, 4 staff accounts "
+                f"(password: IronMan@2026)."
+            )
+        )
+
+    def _fast_forward(self, order, target, actor):
+        """Drive a freshly-created order through the state machine to a
+        target demo state, taking a plausible path rather than jumping
+        straight there — every OrderEvent this writes is real."""
+        from ordering.state_machine import transition
+
+        if order.status == OrderStatus.PENDING_CONFIRMATION:
+            order = transition(
+                order, OrderStatus.SCHEDULED, actor=actor, event_type="seed.confirmed"
+            )
+
+        path_by_target = {
+            OrderStatus.SCHEDULED: [],
+            OrderStatus.PICKUP_ASSIGNED: [OrderStatus.PICKUP_ASSIGNED],
+            OrderStatus.AT_HUB: [
+                OrderStatus.PICKUP_ASSIGNED,
+                OrderStatus.PICKUP_EN_ROUTE,
+                OrderStatus.PICKED_UP,
+                OrderStatus.AT_HUB,
+            ],
+            OrderStatus.IN_PRODUCTION: [
+                OrderStatus.PICKUP_ASSIGNED,
+                OrderStatus.PICKUP_EN_ROUTE,
+                OrderStatus.PICKED_UP,
+                OrderStatus.AT_HUB,
+                OrderStatus.INTAKE_VERIFIED,
+                OrderStatus.IN_PRODUCTION,
+            ],
+            OrderStatus.READY: [
+                OrderStatus.PICKUP_ASSIGNED,
+                OrderStatus.PICKUP_EN_ROUTE,
+                OrderStatus.PICKED_UP,
+                OrderStatus.AT_HUB,
+                OrderStatus.INTAKE_VERIFIED,
+                OrderStatus.IN_PRODUCTION,
+                OrderStatus.READY,
+            ],
+            OrderStatus.OUT_FOR_DELIVERY: [
+                OrderStatus.PICKUP_ASSIGNED,
+                OrderStatus.PICKUP_EN_ROUTE,
+                OrderStatus.PICKED_UP,
+                OrderStatus.AT_HUB,
+                OrderStatus.INTAKE_VERIFIED,
+                OrderStatus.IN_PRODUCTION,
+                OrderStatus.READY,
+                OrderStatus.DELIVERY_ASSIGNED,
+                OrderStatus.OUT_FOR_DELIVERY,
+            ],
+            OrderStatus.DELIVERED: [
+                OrderStatus.PICKUP_ASSIGNED,
+                OrderStatus.PICKUP_EN_ROUTE,
+                OrderStatus.PICKED_UP,
+                OrderStatus.AT_HUB,
+                OrderStatus.INTAKE_VERIFIED,
+                OrderStatus.IN_PRODUCTION,
+                OrderStatus.READY,
+                OrderStatus.DELIVERY_ASSIGNED,
+                OrderStatus.OUT_FOR_DELIVERY,
+                OrderStatus.DELIVERED,
+            ],
+            OrderStatus.CLOSED: [
+                OrderStatus.PICKUP_ASSIGNED,
+                OrderStatus.PICKUP_EN_ROUTE,
+                OrderStatus.PICKED_UP,
+                OrderStatus.AT_HUB,
+                OrderStatus.INTAKE_VERIFIED,
+                OrderStatus.IN_PRODUCTION,
+                OrderStatus.READY,
+                OrderStatus.DELIVERY_ASSIGNED,
+                OrderStatus.OUT_FOR_DELIVERY,
+                OrderStatus.DELIVERED,
+            ],
+            OrderStatus.CANCELLED: [OrderStatus.CANCELLED],
+        }
+        for step in path_by_target.get(target, []):
+            if step == OrderStatus.CLOSED or (
+                target == OrderStatus.CLOSED and step == OrderStatus.DELIVERED
+            ):
+                order.payment_status = "PAID"
+                order.save(update_fields=["payment_status"])
+            order = transition(order, step, actor=actor, event_type=f"seed.{step.lower()}")
+        if target == OrderStatus.CLOSED:
+            order.payment_status = "PAID"
+            order.save(update_fields=["payment_status"])
+            transition(order, OrderStatus.CLOSED, actor=actor, event_type="seed.closed")
