@@ -45,7 +45,13 @@ jobs:
       - name: Decode service account key
         id: decode-key
         run: |
-          KEY_JSON=$(echo "${{ secrets.GCP_SA_KEY_B64 }}" | base64 -d)
+          # -i (--ignore-garbage): drop stray whitespace/control characters
+          # a paste can pick up, rather than hard-failing on them.
+          KEY_JSON=$(echo "${{ secrets.GCP_SA_KEY_B64 }}" | base64 -d -i)
+          if ! echo "$KEY_JSON" | python3 -c "import json,sys; json.load(sys.stdin)" 2>/dev/null; then
+            echo "::error::GCP_SA_KEY_B64 did not decode to valid JSON. This means the pasted secret isn't a clean base64 encoding of the key file — see DEPLOYMENT.md §2 for the copy method that avoids terminal-selection artifacts."
+            exit 1
+          fi
           echo "key_json<<GCP_KEY_EOF" >> "$GITHUB_OUTPUT"
           echo "$KEY_JSON" >> "$GITHUB_OUTPUT"
           echo "GCP_KEY_EOF" >> "$GITHUB_OUTPUT"
@@ -122,7 +128,13 @@ jobs:
       - name: Decode service account key
         id: decode-key
         run: |
-          KEY_JSON=$(echo "${{ secrets.GCP_SA_KEY_B64 }}" | base64 -d)
+          # -i (--ignore-garbage): drop stray whitespace/control characters
+          # a paste can pick up, rather than hard-failing on them.
+          KEY_JSON=$(echo "${{ secrets.GCP_SA_KEY_B64 }}" | base64 -d -i)
+          if ! echo "$KEY_JSON" | python3 -c "import json,sys; json.load(sys.stdin)" 2>/dev/null; then
+            echo "::error::GCP_SA_KEY_B64 did not decode to valid JSON. This means the pasted secret isn't a clean base64 encoding of the key file — see DEPLOYMENT.md §2 for the copy method that avoids terminal-selection artifacts."
+            exit 1
+          fi
           echo "key_json<<GCP_KEY_EOF" >> "$GITHUB_OUTPUT"
           echo "$KEY_JSON" >> "$GITHUB_OUTPUT"
           echo "GCP_KEY_EOF" >> "$GITHUB_OUTPUT"

@@ -105,9 +105,22 @@ gcloud iam service-accounts keys create ironman-deployer-key.json \
   --iam-account="$SA"
 ```
 
-Open `ironman-deployer-key.json` and copy its full contents — you'll paste
-it into one GitHub secret in the next step, then you can delete the local
-file.
+Then get a clean copy of it as base64 — **use Cloud Shell's editor, not a
+terminal copy.** Selecting text out of a terminal is where this reliably
+goes wrong: it's easy to also grab part of the command you ran or the
+next prompt line without noticing, and a decoder has no way to tell your
+shell prompt apart from real key data — it just fails, sometimes
+cryptically.
+
+```bash
+base64 -w0 ironman-deployer-key.json > ironman-deployer-key.b64
+cloudshell edit ironman-deployer-key.b64
+```
+
+That opens the file in Cloud Shell's built-in code editor (a real text
+buffer, not a terminal). Click into it, Ctrl+A (Cmd+A on Mac) to select
+everything, Ctrl+C to copy — guaranteed to be exactly the file's bytes,
+nothing appended. That's what goes into the `GCP_SA_KEY_B64` secret below.
 
 ---
 
@@ -122,7 +135,7 @@ New repository secret**, one per row:
 | `GCP_REGION` | `asia-south1` |
 | `GCP_ARTIFACT_REPO` | `ironman` |
 | `CLOUD_RUN_SERVICE` | `ironman-api` |
-| `GCP_SA_KEY_B64` | `base64 -w0 ironman-deployer-key.json` (Cloud Shell) — paste that one-line output, not the raw JSON. The JSON's `private_key` field is full of quotes and `\n` escapes that GitHub's secret textarea (and browsers generally) reliably mangle on paste; base64 has no characters that can get corrupted that way. |
+| `GCP_SA_KEY_B64` | base64 of the key file — see the copy method below, not a plain terminal copy |
 | `DATABASE_URL` | the Supabase pooled connection string from step 1 |
 | `DJANGO_SECRET_KEY` | a fresh random value — generate with `python -c "import secrets; print(secrets.token_urlsafe(50))"` and never reuse the dev one |
 | `DJANGO_ALLOWED_HOSTS` | `.run.app` for now (the leading dot matches any Cloud Run URL; switch to a real domain once you attach one) |
