@@ -24,7 +24,8 @@ concurrency:
 # not Secrets: a project ID, region, and service name aren't sensitive,
 # and putting them in `secrets` made GitHub mask them out of every log
 # line that mentions them — including the deployed URL this workflow
-# prints, since it contains the service name as a substring.
+# prints, since it contains the service name as a substring. The actual
+# credential (GCP_SA_KEY_B64) stays a Secret, always — see DEPLOYMENT.md §3.
 env:
   REGION: ${{ vars.GCP_REGION }}
   REPOSITORY: ${{ vars.GCP_ARTIFACT_REPO }}
