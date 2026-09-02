@@ -1,0 +1,127 @@
+name: Deploy API to Cloud Run
+
+# Master is the production branch (docs/03 §5) — this only touches the API,
+# only when the API actually changed, and only after CI has already run on
+# the merge commit via ci.yml.
+on:
+  push:
+    branches: [master]
+    paths:
+      - "apps/api/**"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-api-production
+  cancel-in-progress: false
+
+env:
+  REGION: ${{ secrets.GCP_REGION }}
+  REPOSITORY: ${{ secrets.GCP_ARTIFACT_REPO }}
+  SERVICE: ${{ secrets.CLOUD_RUN_SERVICE }}
+
+jobs:
+  deploy:
+    name: Build, migrate, deploy
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      - name: Build image
+        run: |
+          IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}"
+          docker build -t "$IMAGE:${{ github.sha }}" -t "$IMAGE:latest" .
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      - name: Push image
+        run: |
+          docker push "$IMAGE:${{ github.sha }}"
+          docker push "$IMAGE:latest"
+
+      # Auto migrations: run inside the exact image being deployed, against
+      # the real (Supabase) database, before traffic ever reaches it —
+      # never migrate from the runner's own checkout, which could drift
+      # from what's actually in the container.
+      - name: Run database migrations
+        run: |
+          docker run --rm \
+            -e DJANGO_SETTINGS_MODULE=config.settings.prod \
+            -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+            -e DJANGO_SECRET_KEY="${{ secrets.DJANGO_SECRET_KEY }}" \
+            -e DJANGO_ALLOWED_HOSTS="${{ secrets.DJANGO_ALLOWED_HOSTS }}" \
+            "$IMAGE:${{ github.sha }}" \
+            python manage.py migrate --noinput
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy "${{ env.SERVICE }}" \
+            --image "$IMAGE:${{ github.sha }}" \
+            --project "${{ secrets.GCP_PROJECT_ID }}" \
+            --region "${{ env.REGION }}" \
+            --platform managed \
+            --allow-unauthenticated \
+            --port 8080 \
+            --cpu 1 \
+            --memory 512Mi \
+            --min-instances 0 \
+            --max-instances 4 \
+            --update-env-vars "^##^DJANGO_SETTINGS_MODULE=config.settings.prod##DJANGO_ALLOWED_HOSTS=${{ secrets.DJANGO_ALLOWED_HOSTS }}##CORS_ALLOWED_ORIGINS=${{ secrets.CORS_ALLOWED_ORIGINS }}##DATABASE_URL=${{ secrets.DATABASE_URL }}##DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}"
+          # Plain env vars, not Secret Manager: keeps setup to "paste GitHub
+          # secrets" for the pilot, at the cost of DATABASE_URL/SECRET_KEY
+          # being readable by anyone with Cloud Run viewer access on the
+          # project. Revisit with `--set-secrets` + Secret Manager before
+          # onboarding anyone beyond the founding team (docs/DEPLOYMENT.md).
+          # min-instances is deliberately 0 here — the Cloud Scheduler jobs
+          # (docs/DEPLOYMENT.md "Cost-saving schedule") own the 5am–8pm IST
+          # warm window from here on; a deploy never resets it back to 0
+          # via this default because the scheduler re-applies it hourly.
+
+      - name: Show deployed URL
+        run: gcloud run services describe "${{ env.SERVICE }}" --region "${{ env.REGION }}" --format "value(status.url)"
+
+  cleanup-old-images:
+    name: Keep only the latest 3 images
+    needs: deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Delete Artifact Registry images beyond the latest 3
+        run: |
+          IMAGE="${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_ARTIFACT_REPO }}/${{ secrets.CLOUD_RUN_SERVICE }}"
+          # Digests, newest first; "latest" and the current SHA tag both
+          # point at the same digest as this run's image, so this keeps 3
+          # distinct builds, not 3 tags.
+          DIGESTS=$(gcloud artifacts docker images list "$IMAGE" \
+            --include-tags \
+            --sort-by="~CREATE_TIME" \
+            --format="value(DIGEST)" | awk '!seen[$0]++')
+          KEEP=$(echo "$DIGESTS" | head -n 3)
+          for digest in $DIGESTS; do
+            if ! echo "$KEEP" | grep -q "$digest"; then
+              gcloud artifacts docker images delete "$IMAGE@$digest" --quiet --delete-tags || true
+            fi
+          done
