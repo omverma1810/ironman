@@ -11,15 +11,20 @@ import type {
   GarmentStage,
   GarmentType,
   Hub,
+  DeclaredLine,
   Job,
   JobAttempt,
   JobKind,
   Me,
+  OfflineOpResult,
   OrderDetail,
   OrderEvent,
   OrderException,
   OrderListItem,
   Paginated,
+  Proof,
+  ProofKind,
+  ProofMeta,
   Quote,
   ReQuote,
   Role,
@@ -291,6 +296,42 @@ export const fulfilmentApi = {
     apiFetch<Job>(`/fulfilment/jobs/${jobId}/fail/`, {
       method: "POST",
       body: { reason_code, note },
+    }),
+  // ── Field PWA (docs/08 batch 2.11/2.12) ─────────────────────────────
+  myJobs: (date?: string) =>
+    apiFetch<Job[]>("/fulfilment/jobs/mine/", { params: date ? { date } : undefined }),
+  job: (jobId: string) => apiFetch<Job>(`/fulfilment/jobs/${jobId}/`),
+  arriveJob: (jobId: string) =>
+    apiFetch<Job>(`/fulfilment/jobs/${jobId}/arrive/`, { method: "POST" }),
+  completeJob: (
+    jobId: string,
+    body: { declared_lines?: DeclaredLine[]; bag_codes?: string[]; proof?: ProofMeta | null }
+  ) => apiFetch<Job>(`/fulfilment/jobs/${jobId}/complete/`, { method: "POST", body }),
+  jobProofs: (jobId: string) => apiFetch<Proof[]>(`/fulfilment/jobs/${jobId}/proofs/`),
+  createProof: (input: {
+    job: string;
+    kind: ProofKind;
+    file?: File | Blob | null;
+    otp_verified?: boolean;
+    geo_lat?: number | null;
+    geo_lng?: number | null;
+  }) => {
+    const form = new FormData();
+    form.set("job", input.job);
+    form.set("kind", input.kind);
+    if (input.file) form.set("file", input.file);
+    if (input.otp_verified !== undefined) form.set("otp_verified", String(input.otp_verified));
+    if (input.geo_lat != null) form.set("geo_lat", String(input.geo_lat));
+    if (input.geo_lng != null) form.set("geo_lng", String(input.geo_lng));
+    return apiFetch<Proof>("/fulfilment/proofs", { method: "POST", body: form });
+  },
+  offlineSync: (
+    device_id: string,
+    ops: { client_op_id: string; op_type: string; payload: Record<string, unknown>; client_ts: string }[]
+  ) =>
+    apiFetch<OfflineOpResult[]>("/fulfilment/sync", {
+      method: "POST",
+      body: { device_id, ops },
     }),
 };
 

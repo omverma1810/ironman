@@ -22,7 +22,16 @@ import {
   type OrderListParams,
 } from "./endpoints";
 import { ApiError } from "./errors";
-import type { CreateOrderInput, GarmentStage, OrderException } from "./types";
+import type {
+  CreateOrderInput,
+  DeclaredLine,
+  GarmentStage,
+  Job,
+  OrderException,
+  ProofKind,
+} from "./types";
+import { newClientOpId, opsStore, proofsStore, type QueuedOpType } from "@/lib/offline/db";
+import { flushOfflineQueue, pendingCount } from "@/lib/offline/sync";
 
 function errorToast(err: unknown, fallback = "Something went wrong.") {
   const message = ApiError.isApiError(err) ? err.message : fallback;
@@ -635,5 +644,250 @@ export function useFailJob(routeDayId: string) {
       toast.success(`${job.order_ref} marked failed`);
     },
     onError: (err) => errorToast(err, "Couldn't mark this job failed."),
+  });
+}
+
+// ── Field PWA (docs/08 batch 2.11/2.12) ─────────────────────────────────
+// Every mutation below is offline-aware: a real network failure (not a
+// domain rejection — an `ApiError` always means the server was reached and
+// said no) queues the same action in IndexedDB instead of failing, and the
+// UI applies the same optimistic status change either way. `flushOfflineQueue`
+// replays the queue once connectivity is back.
+
+function patchJobCaches(queryClient: ReturnType<typeof useQueryClient>, jobId: string, patch: Partial<Job>) {
+  queryClient.setQueryData<Job>(["job", jobId], (job) => (job ? { ...job, ...patch } : job));
+  queryClient.setQueriesData<Job[]>({ queryKey: ["my-jobs"] }, (jobs) =>
+    jobs?.map((j) => (j.id === jobId ? { ...j, ...patch } : j))
+  );
+}
+
+async function runOfflineAwareAction<T>(opts: {
+  jobId: string;
+  opType: QueuedOpType;
+  payload: Record<string, unknown>;
+  online: () => Promise<T>;
+}): Promise<{ job: T | null; queued: boolean }> {
+  try {
+    return { job: await opts.online(), queued: false };
+  } catch (err) {
+    if (ApiError.isApiError(err)) throw err; // a real rejection — never queue those
+    await opsStore.enqueue({
+      client_op_id: newClientOpId(),
+      op_type: opts.opType,
+      job_id: opts.jobId,
+      payload: { job_id: opts.jobId, ...opts.payload },
+      client_ts: new Date().toISOString(),
+    });
+    return { job: null, queued: true };
+  }
+}
+
+export function useMyJobs(date?: string) {
+  return useQuery({
+    queryKey: ["my-jobs", date],
+    queryFn: () => fulfilmentApi.myJobs(date),
+    refetchInterval: 60_000,
+  });
+}
+
+export function useJob(id: string | undefined) {
+  return useQuery({
+    queryKey: ["job", id],
+    queryFn: () => fulfilmentApi.job(id as string),
+    enabled: !!id,
+  });
+}
+
+export function usePendingSyncCount() {
+  return useQuery({
+    queryKey: ["offline-pending-count"],
+    queryFn: pendingCount,
+    refetchInterval: 5_000,
+  });
+}
+
+function useOfflineAwareStatusMutation(opType: QueuedOpType, statusPatch: (jobId: string) => Partial<Job>) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    // TanStack Query's default `networkMode: "online"` pauses a mutation
+    // — never even calling `mutationFn` — for as long as it thinks the
+    // browser is offline, which would make the offline/online branch
+    // inside `runOfflineAwareAction` dead code. `"always"` runs it
+    // unconditionally so our own try/catch is what decides that, exactly
+    // once, immediately.
+    networkMode: "always",
+    mutationFn: async ({
+      jobId,
+      payload = {},
+      online,
+    }: {
+      jobId: string;
+      payload?: Record<string, unknown>;
+      online: () => Promise<Job>;
+    }) => runOfflineAwareAction({ jobId, opType, payload, online }),
+    onSuccess: ({ job, queued }, { jobId }) => {
+      patchJobCaches(queryClient, jobId, job ?? statusPatch(jobId));
+      queryClient.invalidateQueries({ queryKey: ["offline-pending-count"] });
+      if (queued) toast.info("No signal — saved on this phone, will sync automatically.");
+    },
+  });
+}
+
+export function useStartJobField() {
+  const mutation = useOfflineAwareStatusMutation("job.start", () => ({
+    status: "EN_ROUTE",
+    started_at: new Date().toISOString(),
+  }));
+  return {
+    ...mutation,
+    mutate: (jobId: string) =>
+      mutation.mutate(
+        { jobId, online: () => fulfilmentApi.startJob(jobId) },
+        { onError: (err) => errorToast(err, "Couldn't start this job.") }
+      ),
+  };
+}
+
+export function useArriveJobField() {
+  const mutation = useOfflineAwareStatusMutation("job.arrive", () => ({
+    status: "ARRIVED",
+    arrived_at: new Date().toISOString(),
+  }));
+  return {
+    ...mutation,
+    mutate: (jobId: string) =>
+      mutation.mutate(
+        { jobId, online: () => fulfilmentApi.arriveJob(jobId) },
+        { onError: (err) => errorToast(err, "Couldn't mark this job arrived.") }
+      ),
+  };
+}
+
+export type CompleteJobFieldInput = {
+  jobId: string;
+  declared_lines?: DeclaredLine[];
+  bag_codes?: string[];
+  otp_verified?: boolean;
+};
+
+export function useCompleteJobField() {
+  const mutation = useOfflineAwareStatusMutation("job.complete", () => ({
+    status: "DONE",
+    completed_at: new Date().toISOString(),
+  }));
+  return {
+    ...mutation,
+    mutate: (input: CompleteJobFieldInput) => {
+      const proof = input.otp_verified ? { kind: "OTP" as ProofKind, otp_verified: true } : null;
+      const payload = {
+        declared_lines: input.declared_lines ?? [],
+        bag_codes: input.bag_codes ?? [],
+        proof,
+      };
+      mutation.mutate(
+        {
+          jobId: input.jobId,
+          payload,
+          online: () => fulfilmentApi.completeJob(input.jobId, payload),
+        },
+        { onError: (err) => errorToast(err, "Couldn't complete this job.") }
+      );
+    },
+  };
+}
+
+export function useFailJobField() {
+  const mutation = useOfflineAwareStatusMutation("job.fail", () => ({ status: "FAILED" }));
+  return {
+    ...mutation,
+    mutate: (input: { jobId: string; reason_code: string; note?: string }) => {
+      const payload = { reason_code: input.reason_code, note: input.note ?? "" };
+      mutation.mutate(
+        {
+          jobId: input.jobId,
+          payload,
+          online: () => fulfilmentApi.failJob(input.jobId, input.reason_code, input.note),
+        },
+        { onError: (err) => errorToast(err, "Couldn't mark this job failed.") }
+      );
+    },
+  };
+}
+
+/** Photo/signature/OTP capture — a standalone call outside the JSON
+ * offline-sync contract (`fulfilment.services._OP_HANDLERS` has no
+ * "proof.create" op), so it gets its own blob-capable queue
+ * (`lib/offline/db`'s `proofs` store) instead of the ops one above. */
+export function useCreateProofField() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    networkMode: "always", // see useOfflineAwareStatusMutation's comment
+    mutationFn: async (input: {
+      jobId: string;
+      kind: ProofKind;
+      file?: File | null;
+      otp_verified?: boolean;
+      geo_lat?: number | null;
+      geo_lng?: number | null;
+    }) => {
+      try {
+        return {
+          proof: await fulfilmentApi.createProof({
+            job: input.jobId,
+            kind: input.kind,
+            file: input.file,
+            otp_verified: input.otp_verified,
+            geo_lat: input.geo_lat,
+            geo_lng: input.geo_lng,
+          }),
+          queued: false,
+        };
+      } catch (err) {
+        if (ApiError.isApiError(err)) throw err;
+        await proofsStore.enqueue({
+          job_id: input.jobId,
+          kind: input.kind,
+          file: input.file ?? null,
+          otp_verified: input.otp_verified ?? false,
+          geo_lat: input.geo_lat ?? null,
+          geo_lng: input.geo_lng ?? null,
+        });
+        return { proof: null, queued: true };
+      }
+    },
+    onSuccess: ({ queued }, { jobId }) => {
+      queryClient.invalidateQueries({ queryKey: ["job-proofs", jobId] });
+      queryClient.invalidateQueries({ queryKey: ["offline-pending-count"] });
+      toast.success(queued ? "Saved — will upload once you're back online." : "Proof captured.");
+    },
+    onError: (err) => errorToast(err, "Couldn't save this proof."),
+  });
+}
+
+export function useJobProofs(jobId: string | undefined) {
+  return useQuery({
+    queryKey: ["job-proofs", jobId],
+    queryFn: () => fulfilmentApi.jobProofs(jobId as string),
+    enabled: !!jobId,
+  });
+}
+
+export function useSyncOfflineQueue() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: flushOfflineQueue,
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["offline-pending-count"] });
+      queryClient.invalidateQueries({ queryKey: ["my-jobs"] });
+      queryClient.invalidateQueries({ queryKey: ["job"] });
+      const synced = result.appliedOps + result.uploadedProofs;
+      if (result.conflicts.length > 0 || result.rejected.length > 0) {
+        toast.warning(
+          `Synced ${synced} — ${result.conflicts.length + result.rejected.length} couldn't apply (check those jobs).`
+        );
+      } else if (synced > 0) {
+        toast.success(`Synced ${synced} queued action${synced === 1 ? "" : "s"}.`);
+      }
+    },
   });
 }

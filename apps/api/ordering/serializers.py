@@ -56,6 +56,28 @@ class OrderListSerializer(serializers.ModelSerializer):
 
 class OrderDetailSerializer(OrderListSerializer):
     lines = OrderLineSerializer(many=True, read_only=True)
+    # `Order.address` is a FK to `customers.Address` — left to a plain
+    # ModelSerializer field this would just be the row's id (a UUID string,
+    # useless to a field rider or a maps deep link), so it's resolved into
+    # the text a human actually needs to find the door.
+    address = serializers.SerializerMethodField()
+
+    def get_address(self, obj: Order) -> str | None:
+        addr = obj.address
+        if not addr:
+            return None
+        parts: list[str] = []
+        if addr.flat_no:
+            parts.append(f"Flat {addr.flat_no}" + (f", Block {addr.block}" if addr.block else ""))
+        if addr.apartment:
+            parts.append(addr.apartment.name)
+            if addr.apartment.address:
+                parts.append(addr.apartment.address)
+        elif addr.free_text_address:
+            parts.append(addr.free_text_address)
+        if addr.landmark:
+            parts.append(f"Near {addr.landmark}")
+        return ", ".join(parts) if parts else None
 
     class Meta(OrderListSerializer.Meta):
         fields = OrderListSerializer.Meta.fields + [

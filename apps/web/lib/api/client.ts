@@ -17,6 +17,10 @@ export type RequestOptions = {
   accessToken?: string;
 };
 
+function isFormData(body: unknown): body is FormData {
+  return typeof FormData !== "undefined" && body instanceof FormData;
+}
+
 function buildUrl(path: string, params?: RequestOptions["params"]): string {
   const url = new URL(
     path.startsWith("http") ? path : `${API_BASE_URL}${path}`
@@ -40,10 +44,13 @@ function buildUrl(path: string, params?: RequestOptions["params"]): string {
 export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = "GET", body, params, idempotencyKey, signal, accessToken } = options;
 
+  const bodyIsFormData = isFormData(body);
   const headers: Record<string, string> = {
     Accept: "application/json",
   };
-  if (body !== undefined) headers["Content-Type"] = "application/json";
+  // A FormData body sets its own multipart Content-Type (with boundary) —
+  // letting fetch do that itself is why we skip the header here.
+  if (body !== undefined && !bodyIsFormData) headers["Content-Type"] = "application/json";
   if (idempotencyKey) headers["Idempotency-Key"] = idempotencyKey;
   if (accessToken) {
     headers["Authorization"] = `Bearer ${accessToken}`;
@@ -56,7 +63,7 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
     method,
     headers,
     credentials: "include",
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    body: body === undefined ? undefined : bodyIsFormData ? body : JSON.stringify(body),
     signal,
   });
 

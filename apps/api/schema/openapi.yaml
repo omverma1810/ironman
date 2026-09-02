@@ -6664,8 +6664,8 @@ components:
           format: uuid
         address:
           type: string
-          format: uuid
           nullable: true
+          readOnly: true
         subtotal_minor:
           type: integer
           maximum: 9223372036854775807
@@ -6718,6 +6718,7 @@ components:
             $ref: '#/components/schemas/OrderLine'
           readOnly: true
       required:
+      - address
       - apartment_name
       - created_at
       - customer

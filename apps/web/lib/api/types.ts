@@ -410,6 +410,37 @@ export type JobAttempt = {
   at: string;
 };
 
+export type ProofKind = "PHOTO" | "OTP" | "SIGNATURE";
+
+export type Proof = {
+  id: string;
+  job: string;
+  kind: ProofKind;
+  file_url: string | null;
+  otp_verified: boolean;
+  geo_lat: string | null;
+  geo_lng: string | null;
+  at: string;
+};
+
+export type ProofMeta = {
+  kind: ProofKind;
+  otp_verified?: boolean;
+  geo_lat?: number | null;
+  geo_lng?: number | null;
+};
+
+export type DeclaredLine = { garment_type: string; qty: number };
+
+export type OfflineOpStatus = "PENDING" | "APPLIED" | "CONFLICT" | "REJECTED";
+
+export type OfflineOpResult = {
+  client_op_id: string;
+  op_type: string;
+  status: OfflineOpStatus;
+  result_detail: string;
+};
+
 export type OrderLineInput = { garment_type: string; qty: number };
 
 export type CreateOrderInput = {

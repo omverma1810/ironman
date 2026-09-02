@@ -197,12 +197,19 @@ class Command(BaseCommand):
             customers.append(customer)
 
         garment_codes = list(garment_types.keys())
+        # PICKUP_ASSIGNED/OUT_FOR_DELIVERY appear twice each — someone
+        # exploring the field PWA or route-day planning needs several
+        # still-untouched pickup/delivery jobs to have anything to do, not
+        # just one or two left over after the rest of this list has mostly
+        # been driven straight through to DELIVERED/CLOSED.
         demo_states = [
             OrderStatus.SCHEDULED,
+            OrderStatus.PICKUP_ASSIGNED,
             OrderStatus.PICKUP_ASSIGNED,
             OrderStatus.AT_HUB,
             OrderStatus.IN_PRODUCTION,
             OrderStatus.READY,
+            OrderStatus.OUT_FOR_DELIVERY,
             OrderStatus.OUT_FOR_DELIVERY,
             OrderStatus.DELIVERED,
             OrderStatus.DELIVERED,
