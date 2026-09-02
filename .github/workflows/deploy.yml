@@ -38,10 +38,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # GCP_SA_KEY_B64 (not raw JSON): the key's `private_key` field is
+      # full of literal quotes and \n escapes that GitHub's secret
+      # textarea — and browsers generally — mangle on paste. Base64 has
+      # no characters that can get mangled that way.
+      - name: Decode service account key
+        id: decode-key
+        run: |
+          KEY_JSON=$(echo "${{ secrets.GCP_SA_KEY_B64 }}" | base64 -d)
+          echo "key_json<<GCP_KEY_EOF" >> "$GITHUB_OUTPUT"
+          echo "$KEY_JSON" >> "$GITHUB_OUTPUT"
+          echo "GCP_KEY_EOF" >> "$GITHUB_OUTPUT"
+
       - id: auth
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          credentials_json: ${{ steps.decode-key.outputs.key_json }}
 
       - uses: google-github-actions/setup-gcloud@v2
 
@@ -107,10 +119,18 @@ jobs:
     permissions:
       contents: read
     steps:
+      - name: Decode service account key
+        id: decode-key
+        run: |
+          KEY_JSON=$(echo "${{ secrets.GCP_SA_KEY_B64 }}" | base64 -d)
+          echo "key_json<<GCP_KEY_EOF" >> "$GITHUB_OUTPUT"
+          echo "$KEY_JSON" >> "$GITHUB_OUTPUT"
+          echo "GCP_KEY_EOF" >> "$GITHUB_OUTPUT"
+
       - id: auth
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          credentials_json: ${{ steps.decode-key.outputs.key_json }}
 
       - uses: google-github-actions/setup-gcloud@v2
 
