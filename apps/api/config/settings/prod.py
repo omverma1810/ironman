@@ -4,6 +4,7 @@ pilot: Postgres (Supabase) is required, everything else degrades
 gracefully so the container never crashes at import time over an
 integration that isn't wired up yet.
 """
+
 from .base import *  # noqa: F401,F403
 
 DEBUG = False
