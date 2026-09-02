@@ -4,6 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { AsyncBoundary } from "@/components/patterns/async-boundary";
 import { CustodySection } from "@/components/custody/custody-section";
+import { IntakeDialog } from "@/components/orders/intake-dialog";
 import { PageHeader } from "@/components/patterns/page-header";
 import { StageBadge } from "@/components/patterns/stage-badge";
 import { MoneyText } from "@/components/patterns/money-text";
@@ -59,6 +60,7 @@ export default function OrderDetailPage() {
   const respondToRequote = useRespondToRequote();
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+  const [intakeOpen, setIntakeOpen] = useState(false);
 
   const canManage = me.data && canManageOrders(me.data.roles);
 
@@ -97,6 +99,11 @@ export default function OrderDetailPage() {
                     <StageBadge status={order.status} className="text-sm" />
                     {canManage && !isTerminal && (
                       <>
+                        {order.status === "AT_HUB" && (
+                          <Button size="sm" onClick={() => setIntakeOpen(true)}>
+                            <Icon name="check-circle" /> Verify intake
+                          </Button>
+                        )}
                         {nextAction && (
                           <Button
                             size="sm"
@@ -312,6 +319,8 @@ export default function OrderDetailPage() {
                   )}
                 </div>
               </div>
+
+              <IntakeDialog order={order} open={intakeOpen} onOpenChange={setIntakeOpen} />
             </>
           );
         }}
