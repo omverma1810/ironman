@@ -17,9 +17,10 @@ directly; they call that context's `services` module (enforced by
 | `customers` | Customers, addresses, consent, notes, duplicate detection & merge |
 | `ordering` | Orders, order lines, the three-state-machine lifecycle, re-quotes, exceptions, counter intake |
 | `custody` | Bags, garment lines, the scan-driven stage state machine (`docs/01 §5.3`), QC pass/fail, append-only StageEvent history |
+| `fulfilment` | Route-day planning, pickup/delivery jobs, proof of delivery, the offline-sync endpoint (`docs/02 §3.7`) — drives the order's own pickup/delivery states, never writes `Order.status` directly |
 
-`fulfilment`, `billing` (beyond the tax-settings stub), `supplies`, `growth`,
-`analytics` and `notifications` are Phase 2+ per `docs/08-delivery-plan.md`
+`billing` (beyond the tax-settings stub), `supplies`, `growth`,
+`analytics` and `notifications` are Phase 2+/3 per `docs/08-delivery-plan.md`
 and are not yet built.
 
 ## Local setup

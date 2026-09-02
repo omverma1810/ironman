@@ -50,6 +50,21 @@ class MeUpdateSerializer(serializers.ModelSerializer):
         fields = ["full_name", "preferred_language"]
 
 
+class StaffSerializer(serializers.ModelSerializer):
+    """A minimal staff-picker shape (docs/04) — for assigning a route-day
+    job to a rider, not the full staff-management screen (Phase 2+)."""
+
+    roles = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ["id", "full_name", "email", "phone", "roles"]
+        read_only_fields = fields
+
+    def get_roles(self, obj) -> list[str]:
+        return sorted(obj.role_codes)
+
+
 class OtpRequestSerializer(serializers.Serializer):
     phone = serializers.RegexField(r"^\+?[1-9]\d{7,14}$")
     purpose = serializers.ChoiceField(choices=["LOGIN", "VERIFY"], default="LOGIN")

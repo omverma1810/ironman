@@ -210,6 +210,7 @@ class Command(BaseCommand):
             OrderStatus.CANCELLED,
         ]
         founder = User.objects.get(email="founder@ironman.test")
+        field_staff = User.objects.get(email="field@ironman.test")
         created_count = 0
         for i, customer in enumerate(customers):
             for j in range(random.randint(1, 3)):
@@ -231,7 +232,7 @@ class Command(BaseCommand):
                     actor=founder,
                 )
                 target = random.choice(demo_states)
-                self._fast_forward(order, target, founder)
+                self._fast_forward(order, target, founder, field_staff)
                 created_count += 1
 
         self.stdout.write(
@@ -242,10 +243,35 @@ class Command(BaseCommand):
             )
         )
 
-    def _fast_forward(self, order, target, actor):
+    # Targets whose path reaches at least PICKUP_ASSIGNED / DELIVERY_ASSIGNED
+    # — everything except the two ends of the lifecycle (still-just-booked,
+    # and cancelled before anyone was ever dispatched).
+    _NEEDS_PICKUP = {
+        OrderStatus.PICKUP_ASSIGNED,
+        OrderStatus.AT_HUB,
+        OrderStatus.IN_PRODUCTION,
+        OrderStatus.READY,
+        OrderStatus.OUT_FOR_DELIVERY,
+        OrderStatus.DELIVERED,
+        OrderStatus.CLOSED,
+    }
+    _NEEDS_DELIVERY = {OrderStatus.OUT_FOR_DELIVERY, OrderStatus.DELIVERED, OrderStatus.CLOSED}
+    _NEEDS_PRODUCTION = {
+        OrderStatus.IN_PRODUCTION,
+        OrderStatus.READY,
+        OrderStatus.OUT_FOR_DELIVERY,
+        OrderStatus.DELIVERED,
+        OrderStatus.CLOSED,
+    }
+
+    def _fast_forward(self, order, target, actor, field_staff):
         """Drive a freshly-created order through the state machine to a
         target demo state, taking a plausible path rather than jumping
-        straight there — every OrderEvent this writes is real."""
+        straight there — every OrderEvent this writes is real. The
+        pickup/delivery legs go through real `fulfilment` Jobs (not a raw
+        `transition()` injection like the rest of this path) so the
+        route-day planning screen and the production board tell the same
+        story about the same orders."""
         from ordering.state_machine import transition
 
         if order.status == OrderStatus.PENDING_CONFIRMATION:
@@ -253,83 +279,90 @@ class Command(BaseCommand):
                 order, OrderStatus.SCHEDULED, actor=actor, event_type="seed.confirmed"
             )
 
-        path_by_target = {
-            OrderStatus.SCHEDULED: [],
-            OrderStatus.PICKUP_ASSIGNED: [OrderStatus.PICKUP_ASSIGNED],
-            OrderStatus.AT_HUB: [
-                OrderStatus.PICKUP_ASSIGNED,
-                OrderStatus.PICKUP_EN_ROUTE,
-                OrderStatus.PICKED_UP,
-                OrderStatus.AT_HUB,
-            ],
-            OrderStatus.IN_PRODUCTION: [
-                OrderStatus.PICKUP_ASSIGNED,
-                OrderStatus.PICKUP_EN_ROUTE,
-                OrderStatus.PICKED_UP,
-                OrderStatus.AT_HUB,
-                OrderStatus.INTAKE_VERIFIED,
-                OrderStatus.IN_PRODUCTION,
-            ],
+        if target in self._NEEDS_PICKUP:
+            order = self._seed_pickup_job(order, target, actor, field_staff)
+
+        production_path = {
+            OrderStatus.IN_PRODUCTION: [OrderStatus.INTAKE_VERIFIED, OrderStatus.IN_PRODUCTION],
             OrderStatus.READY: [
-                OrderStatus.PICKUP_ASSIGNED,
-                OrderStatus.PICKUP_EN_ROUTE,
-                OrderStatus.PICKED_UP,
-                OrderStatus.AT_HUB,
                 OrderStatus.INTAKE_VERIFIED,
                 OrderStatus.IN_PRODUCTION,
                 OrderStatus.READY,
             ],
-            OrderStatus.OUT_FOR_DELIVERY: [
-                OrderStatus.PICKUP_ASSIGNED,
-                OrderStatus.PICKUP_EN_ROUTE,
-                OrderStatus.PICKED_UP,
-                OrderStatus.AT_HUB,
-                OrderStatus.INTAKE_VERIFIED,
-                OrderStatus.IN_PRODUCTION,
-                OrderStatus.READY,
-                OrderStatus.DELIVERY_ASSIGNED,
-                OrderStatus.OUT_FOR_DELIVERY,
-            ],
-            OrderStatus.DELIVERED: [
-                OrderStatus.PICKUP_ASSIGNED,
-                OrderStatus.PICKUP_EN_ROUTE,
-                OrderStatus.PICKED_UP,
-                OrderStatus.AT_HUB,
-                OrderStatus.INTAKE_VERIFIED,
-                OrderStatus.IN_PRODUCTION,
-                OrderStatus.READY,
-                OrderStatus.DELIVERY_ASSIGNED,
-                OrderStatus.OUT_FOR_DELIVERY,
-                OrderStatus.DELIVERED,
-            ],
-            OrderStatus.CLOSED: [
-                OrderStatus.PICKUP_ASSIGNED,
-                OrderStatus.PICKUP_EN_ROUTE,
-                OrderStatus.PICKED_UP,
-                OrderStatus.AT_HUB,
-                OrderStatus.INTAKE_VERIFIED,
-                OrderStatus.IN_PRODUCTION,
-                OrderStatus.READY,
-                OrderStatus.DELIVERY_ASSIGNED,
-                OrderStatus.OUT_FOR_DELIVERY,
-                OrderStatus.DELIVERED,
-            ],
-            OrderStatus.CANCELLED: [OrderStatus.CANCELLED],
         }
-        for step in path_by_target.get(target, []):
-            if step == OrderStatus.CLOSED or (
-                target == OrderStatus.CLOSED and step == OrderStatus.DELIVERED
-            ):
-                order.payment_status = "PAID"
-                order.save(update_fields=["payment_status"])
-            order = transition(order, step, actor=actor, event_type=f"seed.{step.lower()}")
+        # OUT_FOR_DELIVERY/DELIVERED/CLOSED all pass through READY first.
+        steps = production_path.get(target, production_path[OrderStatus.READY])
+        if target in self._NEEDS_PRODUCTION:
+            for step in steps:
+                order = transition(order, step, actor=actor, event_type=f"seed.{step.lower()}")
+            self._seed_bag(order, target, actor)
+
+        if target in self._NEEDS_DELIVERY:
+            order = self._seed_delivery_job(order, target, actor, field_staff)
+
+        if target == OrderStatus.CANCELLED:
+            order = transition(
+                order, OrderStatus.CANCELLED, actor=actor, event_type="seed.cancelled"
+            )
+
         if target == OrderStatus.CLOSED:
             order.payment_status = "PAID"
             order.save(update_fields=["payment_status"])
             transition(order, OrderStatus.CLOSED, actor=actor, event_type="seed.closed")
 
-        if OrderStatus.INTAKE_VERIFIED in path_by_target.get(target, []):
-            self._seed_bag(order, target, actor)
+    def _seed_pickup_job(self, order, target, actor, field_staff):
+        """PICKUP_ASSIGNED, and — for any target beyond it — through to
+        AT_HUB, via a real RouteDay + Job rather than an injected order
+        transition (docs/02 §3.7)."""
+        import fulfilment.services as fulfilment_services
+
+        cluster = order.apartment.cluster
+        date = order.pickup_slot_start.date() if order.pickup_slot_start else timezone.localdate()
+        route_day = fulfilment_services.create_route_day(
+            hub=order.hub, cluster=cluster, date=date, actor=actor
+        )
+        fulfilment_services.assign_route_day(
+            route_day,
+            staff_ids=[field_staff.id],
+            jobs=[{"order_id": order.id, "kind": "PICKUP", "assigned_to": field_staff.id}],
+            actor=actor,
+        )
+        order.refresh_from_db()
+        if target == OrderStatus.PICKUP_ASSIGNED:
+            return order
+
+        job = order.jobs.get(kind="PICKUP")
+        fulfilment_services.start_job(job, actor=actor)
+        fulfilment_services.complete_job(job, declared_lines=[], actor=actor)
+        order.refresh_from_db()
+        return order
+
+    def _seed_delivery_job(self, order, target, actor, field_staff):
+        """DELIVERY_ASSIGNED, and — for DELIVERED/CLOSED — through to
+        DELIVERED, scanning the order's own seeded bag as proof."""
+        import fulfilment.services as fulfilment_services
+
+        cluster = order.apartment.cluster
+        route_day = fulfilment_services.create_route_day(
+            hub=order.hub, cluster=cluster, date=timezone.localdate(), actor=actor
+        )
+        fulfilment_services.assign_route_day(
+            route_day,
+            staff_ids=[field_staff.id],
+            jobs=[{"order_id": order.id, "kind": "DELIVERY", "assigned_to": field_staff.id}],
+            actor=actor,
+        )
+        order.refresh_from_db()
+        job = order.jobs.get(kind="DELIVERY")
+        fulfilment_services.start_job(job, actor=actor)
+        if target == OrderStatus.OUT_FOR_DELIVERY:
+            order.refresh_from_db()
+            return order
+
+        bag = order.bags.first()
+        fulfilment_services.complete_job(job, bag_codes=[bag.code], actor=actor)
+        order.refresh_from_db()
+        return order
 
     # docs/01 §5.3 — how far a bag's garments travel tracks how far the
     # order itself got, so the production board and this order's own

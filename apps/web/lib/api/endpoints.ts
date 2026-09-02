@@ -10,6 +10,9 @@ import type {
   GarmentStage,
   GarmentType,
   Hub,
+  Job,
+  JobAttempt,
+  JobKind,
   Me,
   OrderDetail,
   OrderEvent,
@@ -18,9 +21,13 @@ import type {
   Paginated,
   Quote,
   ReQuote,
+  Role,
+  RouteDay,
   RouteDayCapacity,
+  RouteDayDetail,
   ScanResult,
   Service,
+  Staff,
   StageEvent,
 } from "./types";
 
@@ -57,6 +64,10 @@ export const authApi = {
       method: "POST",
       body: { token, new_password },
     }),
+};
+
+export const identityApi = {
+  staff: (role?: Role) => apiFetch<Staff[]>("/identity/staff", { params: { role } }),
 };
 
 // ── Territory ──────────────────────────────────────────────────────────
@@ -188,6 +199,38 @@ export const custodyApi = {
     apiFetch<GarmentLine>(`/custody/garment-lines/${garmentLineId}/qc/`, {
       method: "POST",
       body: { result, reason },
+    }),
+};
+
+// ── Fulfilment ─────────────────────────────────────────────────────────
+export type JobAssignEntry = {
+  order_id: string;
+  kind: JobKind;
+  assigned_to?: string;
+  sequence?: number;
+};
+
+export const fulfilmentApi = {
+  routeDays: (params?: { cluster?: string; date?: string }) =>
+    apiFetch<Paginated<RouteDay>>("/fulfilment/route-days/", { params }),
+  routeDay: (id: string) => apiFetch<RouteDayDetail>(`/fulfilment/route-days/${id}/`),
+  createRouteDay: (cluster: string, date: string) =>
+    apiFetch<RouteDayDetail>("/fulfilment/route-days/", {
+      method: "POST",
+      body: { cluster, date },
+    }),
+  assignRouteDay: (routeDayId: string, staff: string[], jobs: JobAssignEntry[]) =>
+    apiFetch<RouteDayDetail>(`/fulfilment/route-days/${routeDayId}/assign/`, {
+      method: "POST",
+      body: { staff, jobs },
+    }),
+  jobAttempts: (jobId: string) => apiFetch<JobAttempt[]>(`/fulfilment/jobs/${jobId}/attempts/`),
+  startJob: (jobId: string) =>
+    apiFetch<Job>(`/fulfilment/jobs/${jobId}/start/`, { method: "POST" }),
+  failJob: (jobId: string, reason_code: string, note?: string) =>
+    apiFetch<Job>(`/fulfilment/jobs/${jobId}/fail/`, {
+      method: "POST",
+      body: { reason_code, note },
     }),
 };
 
