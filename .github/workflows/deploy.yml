@@ -9,6 +9,11 @@ on:
     paths:
       - "apps/api/**"
       - ".github/workflows/deploy.yml"
+  # workflow_dispatch is declared for completeness, but the repo's
+  # automation account has no `actions: write` scope, so it can't
+  # actually fire this trigger via the API (403 on both dispatch and
+  # rerun) — a manual redeploy has to go through a real push to master
+  # touching apps/api/** (docs/DEPLOYMENT.md).
   workflow_dispatch: {}
 
 concurrency:
