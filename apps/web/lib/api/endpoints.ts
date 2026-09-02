@@ -29,6 +29,7 @@ import type {
   Service,
   Staff,
   StageEvent,
+  WipSummary,
 } from "./types";
 
 // ── Auth / identity ────────────────────────────────────────────────────
@@ -175,9 +176,22 @@ export const exceptionsApi = {
 };
 
 // ── Custody ────────────────────────────────────────────────────────────
+export type GarmentLineListParams = {
+  hub?: string;
+  stage?: GarmentStage;
+  due?: "today" | "overdue";
+  exclude_terminal?: boolean;
+  is_rework?: boolean;
+  cursor?: string;
+};
+
 export const custodyApi = {
   bagsForOrder: (orderId: string) =>
     apiFetch<Paginated<BagDetail>>("/custody/bags/", { params: { order: orderId } }),
+  garmentLines: (params?: GarmentLineListParams) =>
+    apiFetch<Paginated<GarmentLine>>("/custody/garment-lines/", { params }),
+  wipSummary: (params?: Pick<GarmentLineListParams, "hub" | "due" | "exclude_terminal">) =>
+    apiFetch<WipSummary>("/custody/garment-lines/wip_summary/", { params }),
   createBag: (orderId: string, orderLineIds?: string[]) =>
     apiFetch<BagDetail>(`/orders/${orderId}/bags`, {
       method: "POST",

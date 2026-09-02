@@ -8,7 +8,10 @@ Founder only).
 
 from __future__ import annotations
 
+import django_filters
+from django.db.models import Count, OuterRef, Subquery
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema
 from rest_framework import viewsets
@@ -19,7 +22,7 @@ from rest_framework.views import APIView
 import ordering.services as ordering_services
 from common.permissions import IsOpsStaff, ScopedQuerysetMixin
 from custody import services
-from custody.models import Bag, GarmentLine, QcCheck
+from custody.models import TERMINAL_STAGES, Bag, GarmentLine, GarmentStage, QcCheck, StageEvent
 from custody.serializers import (
     BagCreateSerializer,
     BagDetailSerializer,
@@ -117,14 +120,73 @@ class ScanView(APIView):
         )
 
 
+class GarmentLineFilterSet(django_filters.FilterSet):
+    """`due` powers the production board's today/overdue filters (docs/08
+    batch 2.6) — a garment already DELIVERED (or diverted to an exception
+    branch) is no longer a *production* concern, so it's excluded from
+    both regardless of how late its order's promise is."""
+
+    due = django_filters.CharFilter(method="filter_due")
+    # The board's default view — everything currently moving through the
+    # shop, not a growing pile of every garment ever DELIVERED. A caller
+    # asking for a specific `stage` (DELIVERED included) wants exactly
+    # that stage, so this only applies when nothing else narrows it.
+    exclude_terminal = django_filters.BooleanFilter(method="filter_exclude_terminal")
+
+    class Meta:
+        model = GarmentLine
+        fields = ["bag", "hub", "stage", "is_rework"]
+
+    def filter_exclude_terminal(self, queryset, name, value):
+        if value:
+            return queryset.exclude(stage__in=TERMINAL_STAGES)
+        return queryset
+
+    def filter_due(self, queryset, name, value):
+        queryset = queryset.exclude(stage__in=TERMINAL_STAGES)
+        now = timezone.localtime()
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        today_end = today_start + timezone.timedelta(days=1)
+        if value == "overdue":
+            return queryset.filter(bag__order__delivery_promised_at__lt=now)
+        if value == "today":
+            return queryset.filter(
+                bag__order__delivery_promised_at__gte=today_start,
+                bag__order__delivery_promised_at__lt=today_end,
+            )
+        return queryset
+
+
 class GarmentLineViewSet(ScopedQuerysetMixin, viewsets.ReadOnlyModelViewSet):
-    queryset = GarmentLine.objects.filter(deleted_at__isnull=True).select_related(
-        "bag", "garment_type", "hub"
+    queryset = (
+        GarmentLine.objects.filter(deleted_at__isnull=True)
+        .select_related("bag", "bag__order", "garment_type", "hub")
+        .annotate(
+            stage_entered_at=Subquery(
+                StageEvent.objects.filter(garment_line=OuterRef("pk"))
+                .order_by("-occurred_at")
+                .values("occurred_at")[:1]
+            )
+        )
     )
     serializer_class = GarmentLineSerializer
     permission_classes = [IsOpsStaff]
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ["bag", "hub", "stage", "is_rework"]
+    filterset_class = GarmentLineFilterSet
+
+    @action(detail=False, methods=["get"])
+    def wip_summary(self, request):
+        """Stage counts for the production board's WIP-by-stage columns —
+        one aggregate query instead of the console fetching every line and
+        counting client-side. Honours the same hub/due filters as the list
+        so "today's overdue WIP" and "all WIP" use one consistent query
+        shape."""
+        counts = dict(
+            self.filter_queryset(self.get_queryset())
+            .values_list("stage")
+            .annotate(count=Count("id"))
+        )
+        return Response({stage: counts.get(stage, 0) for stage in GarmentStage.values})
 
     @action(detail=True, methods=["post"])
     def transition(self, request, pk=None):
