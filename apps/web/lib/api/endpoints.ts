@@ -1,10 +1,13 @@
 import { apiFetch, newIdempotencyKey } from "./client";
 import type {
   Apartment,
+  BagDetail,
   Cluster,
   CreateOrderInput,
   Customer,
   CustomerDetail,
+  GarmentLine,
+  GarmentStage,
   GarmentType,
   Hub,
   Me,
@@ -16,7 +19,9 @@ import type {
   Quote,
   ReQuote,
   RouteDayCapacity,
+  ScanResult,
   Service,
+  StageEvent,
 } from "./types";
 
 // ── Auth / identity ────────────────────────────────────────────────────
@@ -156,6 +161,34 @@ export const exceptionsApi = {
   }) => apiFetch<OrderException>("/order-exceptions/", { method: "POST", body: input }),
   update: (id: string, patch: Partial<OrderException>) =>
     apiFetch<OrderException>(`/order-exceptions/${id}/`, { method: "PATCH", body: patch }),
+};
+
+// ── Custody ────────────────────────────────────────────────────────────
+export const custodyApi = {
+  bagsForOrder: (orderId: string) =>
+    apiFetch<Paginated<BagDetail>>("/custody/bags/", { params: { order: orderId } }),
+  createBag: (orderId: string, orderLineIds?: string[]) =>
+    apiFetch<BagDetail>(`/orders/${orderId}/bags`, {
+      method: "POST",
+      body: orderLineIds ? { order_line_ids: orderLineIds } : {},
+      idempotencyKey: newIdempotencyKey(),
+    }),
+  printTag: (bagId: string) =>
+    apiFetch<BagDetail>(`/custody/bags/${bagId}/print_tag/`, { method: "POST" }),
+  stageEvents: (bagId: string) =>
+    apiFetch<StageEvent[]>(`/custody/bags/${bagId}/stage_events/`),
+  scan: (code: string, to_stage: GarmentStage) =>
+    apiFetch<ScanResult>("/custody/scan", { method: "POST", body: { code, to_stage } }),
+  transitionGarment: (garmentLineId: string, to_stage: GarmentStage) =>
+    apiFetch<GarmentLine>(`/custody/garment-lines/${garmentLineId}/transition/`, {
+      method: "POST",
+      body: { to_stage },
+    }),
+  recordQc: (garmentLineId: string, result: "PASS" | "FAIL", reason?: string) =>
+    apiFetch<GarmentLine>(`/custody/garment-lines/${garmentLineId}/qc/`, {
+      method: "POST",
+      body: { result, reason },
+    }),
 };
 
 // ── Platform ───────────────────────────────────────────────────────────

@@ -327,3 +327,48 @@ class Command(BaseCommand):
             order.payment_status = "PAID"
             order.save(update_fields=["payment_status"])
             transition(order, OrderStatus.CLOSED, actor=actor, event_type="seed.closed")
+
+        if OrderStatus.INTAKE_VERIFIED in path_by_target.get(target, []):
+            self._seed_bag(order, target, actor)
+
+    # docs/01 §5.3 — how far a bag's garments travel tracks how far the
+    # order itself got, so the production board and this order's own
+    # timeline tell the same story.
+    _BAG_PATH_BY_ORDER_TARGET = {
+        OrderStatus.IN_PRODUCTION: ["SORTED", "PRESSING"],
+        OrderStatus.READY: ["SORTED", "PRESSING", "PRESSED", "QC", "PACKED"],
+        OrderStatus.OUT_FOR_DELIVERY: [
+            "SORTED",
+            "PRESSING",
+            "PRESSED",
+            "QC",
+            "PACKED",
+            "DISPATCHED",
+        ],
+        OrderStatus.DELIVERED: [
+            "SORTED",
+            "PRESSING",
+            "PRESSED",
+            "QC",
+            "PACKED",
+            "DISPATCHED",
+            "DELIVERED",
+        ],
+        OrderStatus.CLOSED: [
+            "SORTED",
+            "PRESSING",
+            "PRESSED",
+            "QC",
+            "PACKED",
+            "DISPATCHED",
+            "DELIVERED",
+        ],
+    }
+
+    def _seed_bag(self, order, target, actor):
+        import custody.services as custody_services
+        from custody.state_machine import transition_bag
+
+        bag = custody_services.create_bag_for_order(order, actor=actor)
+        for stage in self._BAG_PATH_BY_ORDER_TARGET.get(target, []):
+            transition_bag(bag, stage, actor=actor, station="seed")
