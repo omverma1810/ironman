@@ -142,6 +142,12 @@ sensitive go in **Variables** instead, and stay readable in logs.
 | `GCP_ARTIFACT_REPO` | `ironman` |
 | `CLOUD_RUN_SERVICE` | `ironman-api` |
 
+**That's the whole Variables list — nothing else goes there.** In
+particular, `GCP_SA_KEY_B64` (the service account key) always stays a
+Secret, never a Variable: Variables are plaintext-readable by anyone with
+access to repo settings, which is fine for a project ID but not for a
+credential.
+
 **Secrets tab → New repository secret:**
 
 | Secret | Value |
