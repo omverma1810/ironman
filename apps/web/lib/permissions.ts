@@ -34,6 +34,13 @@ export function canManageStaff(roles: Role[] | undefined): boolean {
   return hasRole(roles, "ADMIN", "FOUNDER");
 }
 
+// docs/06 §3.1 "[A]" tag on route-day planning — Operator is not in this
+// row, unlike most ops-console screens (deliberately narrower than
+// canManageOrders).
+export function canPlanRouteDays(roles: Role[] | undefined): boolean {
+  return hasRole(roles, "ADMIN", "FOUNDER");
+}
+
 export function isViewer(roles: Role[] | undefined): boolean {
   return hasRole(roles, "VIEWER") && !hasRole(roles, ...OPS_ROLES);
 }

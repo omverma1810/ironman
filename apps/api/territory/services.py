@@ -8,7 +8,7 @@ from __future__ import annotations
 from django.db import transaction
 
 from common.errors import SlotUnavailable
-from territory.models import Apartment, Hub, RouteDayCapacity
+from territory.models import Apartment, Cluster, Hub, RouteDayCapacity
 
 
 @transaction.atomic
@@ -61,3 +61,7 @@ def get_apartment(apartment_id):
 
 def get_capacity(capacity_id):
     return RouteDayCapacity.objects.get(pk=capacity_id) if capacity_id else None
+
+
+def get_cluster(cluster_id):
+    return Cluster.objects.get(pk=cluster_id)

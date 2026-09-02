@@ -50,6 +50,7 @@ LOCAL_APPS = [
     "customers",
     "ordering",
     "custody",
+    "fulfilment",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -123,6 +124,28 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# Private object storage for proof-of-delivery photos (fulfilment.Proof —
+# docs/06 §3: "stored private, served via short-lived signed URLs", never
+# a public URL — these are pictures of people's front doors). S3-compatible
+# so the same code path works against MinIO locally (docker-compose) and a
+# real bucket in prod. `STORAGES["default"]` always exists; environments
+# (prod.py) override `STORAGES["staticfiles"]` on top without touching this.
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+}
+AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME", default="")
+if AWS_STORAGE_BUCKET_NAME:
+    AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID", default="")
+    AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY", default="")
+    AWS_S3_ENDPOINT_URL = env("AWS_S3_ENDPOINT_URL", default="")  # MinIO locally; unset for AWS S3
+    AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME", default="ap-south-1")
+    AWS_DEFAULT_ACL = None
+    AWS_QUERYSTRING_AUTH = True  # signed URLs, never a public object URL
+    AWS_QUERYSTRING_EXPIRE = 300  # 5 min — "short-lived" per docs/06 §3
+    AWS_S3_FILE_OVERWRITE = False
+    STORAGES["default"] = {"BACKEND": "storages.backends.s3boto3.S3Boto3Storage"}
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # ── DRF ──────────────────────────────────────────────────────────────────
@@ -173,6 +196,11 @@ SPECTACULAR_SETTINGS = {
         "OrderStatusEnum": "ordering.models.OrderStatus",
         "CustomerStatusEnum": "customers.models.Customer.Status",
         "GarmentStageEnum": "custody.models.GarmentStage",
+        "JobKindEnum": "fulfilment.models.JobKind",
+        "ProofKindEnum": "fulfilment.models.ProofKind",
+        "JobStatusEnum": "fulfilment.models.JobStatus",
+        "RouteDayStatusEnum": "fulfilment.models.RouteDayStatus",
+        "OfflineOpStatusEnum": "fulfilment.models.OfflineOpStatus",
     },
 }
 

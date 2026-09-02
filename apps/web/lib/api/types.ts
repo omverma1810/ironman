@@ -19,6 +19,14 @@ export type Me = {
   requires_mfa: boolean;
 };
 
+export type Staff = {
+  id: string;
+  full_name: string;
+  email: string | null;
+  phone: string | null;
+  roles: Role[];
+};
+
 export type Paginated<T> = {
   next: string | null;
   previous: string | null;
@@ -342,6 +350,52 @@ export type ScanResult = {
   moved_count: number;
   skipped_count: number;
   skipped: GarmentLine[];
+};
+
+// ── Fulfilment (docs/02 §3.7) ───────────────────────────────────────────
+export type JobKind = "PICKUP" | "DELIVERY";
+export type JobStatus = "PENDING" | "EN_ROUTE" | "ARRIVED" | "DONE" | "FAILED";
+export type RouteDayStatus = "PLANNED" | "ACTIVE" | "CLOSED";
+
+export type Job = {
+  id: string;
+  route_day: string;
+  order: string;
+  order_ref: string;
+  kind: JobKind;
+  sequence: number;
+  assigned_to: string | null;
+  assigned_to_name: string;
+  status: JobStatus;
+  slot_start: string | null;
+  slot_end: string | null;
+  started_at: string | null;
+  arrived_at: string | null;
+  completed_at: string | null;
+  attempt_no: number;
+};
+
+export type RouteDay = {
+  id: string;
+  hub: string;
+  cluster: string;
+  cluster_name: string;
+  date: string;
+  status: RouteDayStatus;
+  job_count: number;
+  created_at: string;
+};
+
+export type RouteDayDetail = RouteDay & { jobs: Job[]; staff: string[] };
+
+export type JobAttempt = {
+  id: string;
+  job: string;
+  attempt_no: number;
+  outcome: "DONE" | "FAILED";
+  failure_reason: string;
+  notes: string;
+  at: string;
 };
 
 export type OrderLineInput = { garment_type: string; qty: number };

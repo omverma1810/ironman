@@ -2572,6 +2572,495 @@ paths:
               schema:
                 $ref: '#/components/schemas/CustomerList'
           description: ''
+  /api/v1/fulfilment/jobs/:
+    get:
+      operationId: fulfilment_jobs_list
+      parameters:
+      - in: query
+        name: assigned_to
+        schema:
+          type: string
+          format: uuid
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: hub
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: kind
+        schema:
+          type: string
+          enum:
+          - DELIVERY
+          - PICKUP
+        description: |-
+          * `PICKUP` - Pickup
+          * `DELIVERY` - Delivery
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: route_day
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - ARRIVED
+          - DONE
+          - EN_ROUTE
+          - FAILED
+          - PENDING
+        description: |-
+          * `PENDING` - Pending
+          * `EN_ROUTE` - En route
+          * `ARRIVED` - Arrived
+          * `DONE` - Done
+          * `FAILED` - Failed
+      tags:
+      - fulfilment
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedJobList'
+          description: ''
+  /api/v1/fulfilment/jobs/{id}/:
+    get:
+      operationId: fulfilment_jobs_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this job.
+        required: true
+      tags:
+      - fulfilment
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+          description: ''
+  /api/v1/fulfilment/jobs/{id}/arrive/:
+    post:
+      operationId: fulfilment_jobs_arrive_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this job.
+        required: true
+      tags:
+      - fulfilment
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/JobRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/JobRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+          description: ''
+  /api/v1/fulfilment/jobs/{id}/attempts/:
+    get:
+      operationId: fulfilment_jobs_attempts_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this job.
+        required: true
+      tags:
+      - fulfilment
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+          description: ''
+  /api/v1/fulfilment/jobs/{id}/complete/:
+    post:
+      operationId: fulfilment_jobs_complete_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this job.
+        required: true
+      tags:
+      - fulfilment
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobCompleteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/JobCompleteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/JobCompleteRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+          description: ''
+  /api/v1/fulfilment/jobs/{id}/fail/:
+    post:
+      operationId: fulfilment_jobs_fail_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this job.
+        required: true
+      tags:
+      - fulfilment
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobFailRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/JobFailRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/JobFailRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+          description: ''
+  /api/v1/fulfilment/jobs/{id}/proofs/:
+    get:
+      operationId: fulfilment_jobs_proofs_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this job.
+        required: true
+      tags:
+      - fulfilment
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+          description: ''
+  /api/v1/fulfilment/jobs/{id}/start/:
+    post:
+      operationId: fulfilment_jobs_start_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this job.
+        required: true
+      tags:
+      - fulfilment
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/JobRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/JobRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+          description: ''
+  /api/v1/fulfilment/jobs/mine/:
+    get:
+      operationId: fulfilment_jobs_mine_retrieve
+      tags:
+      - fulfilment
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+          description: ''
+  /api/v1/fulfilment/proofs:
+    post:
+      operationId: fulfilment_proofs_create
+      description: |-
+        POST /fulfilment/proofs — multipart (docs/04 §3.6). The only
+        fulfilment endpoint that carries file bytes; job completion itself
+        stays a plain JSON POST (see `JobCompleteSerializer`'s docstring).
+      tags:
+      - fulfilment
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProofCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProofCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProofCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Proof'
+          description: ''
+  /api/v1/fulfilment/route-days/:
+    get:
+      operationId: fulfilment_route_days_list
+      parameters:
+      - in: query
+        name: cluster
+        schema:
+          type: string
+          format: uuid
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: date
+        schema:
+          type: string
+          format: date
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - ACTIVE
+          - CLOSED
+          - PLANNED
+        description: |-
+          * `PLANNED` - Planned
+          * `ACTIVE` - Active
+          * `CLOSED` - Closed
+      tags:
+      - fulfilment
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedRouteDayListList'
+          description: ''
+    post:
+      operationId: fulfilment_route_days_create
+      tags:
+      - fulfilment
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RouteDayCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RouteDayCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RouteDayCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RouteDayDetail'
+          description: ''
+  /api/v1/fulfilment/route-days/{id}/:
+    get:
+      operationId: fulfilment_route_days_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this route day.
+        required: true
+      tags:
+      - fulfilment
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RouteDayDetail'
+          description: ''
+  /api/v1/fulfilment/route-days/{id}/assign/:
+    post:
+      operationId: fulfilment_route_days_assign_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this route day.
+        required: true
+      tags:
+      - fulfilment
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RouteDayAssignRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RouteDayAssignRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RouteDayAssignRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RouteDayDetail'
+          description: ''
+  /api/v1/fulfilment/sync:
+    post:
+      operationId: fulfilment_sync_create
+      description: |-
+        POST /fulfilment/sync — batch offline queue replay (docs/04 §3.6,
+        R-304). Each op gets its own applied/conflict/rejected result; one bad
+        op in the batch never fails the rest (`fulfilment.services`'s
+        per-operation try/except).
+      tags:
+      - fulfilment
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OfflineSyncRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OfflineSyncRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OfflineSyncRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OfflineOpResult'
+          description: ''
   /api/v1/healthz:
     get:
       operationId: healthz_retrieve
@@ -2584,6 +3073,28 @@ paths:
       responses:
         '200':
           description: OK
+  /api/v1/identity/staff:
+    get:
+      operationId: identity_staff_list
+      description: |-
+        GET /identity/staff?role= — a minimal staff picker (e.g. assigning
+        a route-day job to a rider), hub-scoped like everything else
+        (docs/06 §3.2). Not the full staff-management screen (Phase 2+); see
+        docs/06 §3.1 "Manage users & roles" — Admin/Founder only.
+      tags:
+      - identity
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Staff'
+          description: ''
   /api/v1/me:
     get:
       operationId: me_retrieve
@@ -5269,6 +5780,18 @@ components:
         * `PENDING` - Pending
         * `APPROVED` - Approved
         * `REJECTED` - Rejected
+    DeclaredLineRequest:
+      type: object
+      properties:
+        garment_type:
+          type: string
+          format: uuid
+        qty:
+          type: integer
+          minimum: 0
+      required:
+      - garment_type
+      - qty
     EmailVerifyConfirmRequest:
       type: object
       properties:
@@ -5483,6 +6006,173 @@ components:
       required:
       - code
       - name
+    Job:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        route_day:
+          type: string
+          format: uuid
+          readOnly: true
+        order:
+          type: string
+          format: uuid
+          readOnly: true
+        order_ref:
+          type: string
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/JobKindEnum'
+          readOnly: true
+        sequence:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        assigned_to:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        assigned_to_name:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/JobStatusEnum'
+          readOnly: true
+        slot_start:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        slot_end:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        started_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        arrived_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        attempt_no:
+          type: integer
+          readOnly: true
+      required:
+      - arrived_at
+      - assigned_to
+      - assigned_to_name
+      - attempt_no
+      - completed_at
+      - id
+      - kind
+      - order
+      - order_ref
+      - route_day
+      - slot_end
+      - slot_start
+      - started_at
+      - status
+    JobAssignEntryRequest:
+      type: object
+      properties:
+        order_id:
+          type: string
+          format: uuid
+        kind:
+          $ref: '#/components/schemas/JobKindEnum'
+        assigned_to:
+          type: string
+          format: uuid
+          nullable: true
+        sequence:
+          type: integer
+          default: 0
+        slot_start:
+          type: string
+          format: date-time
+          nullable: true
+        slot_end:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - kind
+      - order_id
+    JobCompleteRequest:
+      type: object
+      properties:
+        declared_lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeclaredLineRequest'
+        bag_codes:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        proof:
+          allOf:
+          - $ref: '#/components/schemas/ProofMetaRequest'
+          nullable: true
+    JobFailRequest:
+      type: object
+      properties:
+        reason_code:
+          type: string
+          minLength: 1
+          maxLength: 64
+        note:
+          type: string
+          default: ''
+        reschedule:
+          type: boolean
+          default: false
+      required:
+      - reason_code
+    JobKindEnum:
+      enum:
+      - PICKUP
+      - DELIVERY
+      type: string
+      description: |-
+        * `PICKUP` - Pickup
+        * `DELIVERY` - Delivery
+    JobRequest:
+      type: object
+      properties:
+        sequence:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+    JobStatusEnum:
+      enum:
+      - PENDING
+      - EN_ROUTE
+      - ARRIVED
+      - DONE
+      - FAILED
+      type: string
+      description: |-
+        * `PENDING` - Pending
+        * `EN_ROUTE` - En route
+        * `ARRIVED` - Arrived
+        * `DONE` - Done
+        * `FAILED` - Failed
     Me:
       type: object
       properties:
@@ -5663,6 +6353,68 @@ components:
       - code
       - effective_from
       - kind
+    OfflineOpItemRequest:
+      type: object
+      properties:
+        client_op_id:
+          type: string
+          minLength: 1
+          maxLength: 64
+        op_type:
+          type: string
+          minLength: 1
+          maxLength: 32
+        payload: {}
+        client_ts:
+          type: string
+          format: date-time
+      required:
+      - client_op_id
+      - client_ts
+      - op_type
+    OfflineOpResult:
+      type: object
+      properties:
+        client_op_id:
+          type: string
+          maxLength: 64
+        op_type:
+          type: string
+          maxLength: 32
+        status:
+          $ref: '#/components/schemas/OfflineOpStatusEnum'
+        result_detail:
+          type: string
+          maxLength: 255
+      required:
+      - client_op_id
+      - op_type
+    OfflineOpStatusEnum:
+      enum:
+      - PENDING
+      - APPLIED
+      - CONFLICT
+      - REJECTED
+      type: string
+      description: |-
+        * `PENDING` - Pending
+        * `APPLIED` - Applied
+        * `CONFLICT` - Conflict
+        * `REJECTED` - Rejected
+    OfflineSyncRequest:
+      type: object
+      properties:
+        device_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+        ops:
+          type: array
+          items:
+            $ref: '#/components/schemas/OfflineOpItemRequest'
+      required:
+      - device_id
+      - ops
     OrderCreateRequest:
       type: object
       properties:
@@ -6520,6 +7272,25 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Hub'
+    PaginatedJobList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Job'
     PaginatedOfferList:
       type: object
       required:
@@ -6672,6 +7443,25 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/RouteDayCapacity'
+    PaginatedRouteDayListList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/RouteDayList'
     PaginatedServiceList:
       type: object
       required:
@@ -7076,7 +7866,7 @@ components:
           type: string
           format: time
         kind:
-          $ref: '#/components/schemas/RouteDayCapacityKindEnum'
+          $ref: '#/components/schemas/JobKindEnum'
         capacity:
           type: integer
           maximum: 2147483647
@@ -7240,6 +8030,107 @@ components:
         * `DRAFT` - Draft
         * `ACTIVE` - Active
         * `SUPERSEDED` - Superseded
+    Proof:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        job:
+          type: string
+          format: uuid
+        kind:
+          $ref: '#/components/schemas/ProofKindEnum'
+        file_url:
+          type: string
+          nullable: true
+          readOnly: true
+        otp_verified:
+          type: boolean
+        geo_lat:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          nullable: true
+        geo_lng:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          nullable: true
+        at:
+          type: string
+          format: date-time
+      required:
+      - file_url
+      - id
+      - job
+      - kind
+    ProofCreateRequest:
+      type: object
+      description: |-
+        `POST /fulfilment/proofs` — multipart, the only fulfilment endpoint
+        that carries file bytes (docs/04 §3.6).
+      properties:
+        job:
+          type: string
+          format: uuid
+        kind:
+          $ref: '#/components/schemas/ProofKindEnum'
+        file:
+          type: string
+          format: binary
+          nullable: true
+        otp_verified:
+          type: boolean
+          default: false
+        geo_lat:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          nullable: true
+        geo_lng:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          nullable: true
+      required:
+      - job
+      - kind
+    ProofKindEnum:
+      enum:
+      - PHOTO
+      - OTP
+      - SIGNATURE
+      type: string
+      description: |-
+        * `PHOTO` - Photo
+        * `OTP` - OTP
+        * `SIGNATURE` - Signature
+    ProofMetaRequest:
+      type: object
+      description: |-
+        Proof metadata embedded in a job-completion call — no file. A photo
+        or signature image is uploaded separately via `POST /fulfilment/proofs`
+        (multipart) so the hot-path completion call stays a plain JSON POST.
+      properties:
+        kind:
+          $ref: '#/components/schemas/ProofKindEnum'
+        otp_verified:
+          type: boolean
+          default: false
+        geo_lat:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          nullable: true
+        geo_lng:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          nullable: true
+      required:
+      - kind
     QcCheck:
       type: object
       properties:
@@ -7384,6 +8275,20 @@ components:
       description: |-
         * `PASS` - Pass
         * `FAIL` - Fail
+    RouteDayAssignRequest:
+      type: object
+      properties:
+        staff:
+          type: array
+          items:
+            type: string
+            format: uuid
+        jobs:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobAssignEntryRequest'
+      required:
+      - jobs
     RouteDayCapacity:
       type: object
       properties:
@@ -7407,7 +8312,7 @@ components:
           type: string
           format: time
         kind:
-          $ref: '#/components/schemas/RouteDayCapacityKindEnum'
+          $ref: '#/components/schemas/JobKindEnum'
         capacity:
           type: integer
           maximum: 2147483647
@@ -7428,14 +8333,6 @@ components:
       - kind
       - window_end
       - window_start
-    RouteDayCapacityKindEnum:
-      enum:
-      - PICKUP
-      - DELIVERY
-      type: string
-      description: |-
-        * `PICKUP` - Pickup
-        * `DELIVERY` - Delivery
     RouteDayCapacityRequest:
       type: object
       properties:
@@ -7455,7 +8352,7 @@ components:
           type: string
           format: time
         kind:
-          $ref: '#/components/schemas/RouteDayCapacityKindEnum'
+          $ref: '#/components/schemas/JobKindEnum'
         capacity:
           type: integer
           maximum: 2147483647
@@ -7467,6 +8364,113 @@ components:
       - kind
       - window_end
       - window_start
+    RouteDayCreateRequest:
+      type: object
+      properties:
+        cluster:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+      required:
+      - cluster
+      - date
+    RouteDayDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        hub:
+          type: string
+          format: uuid
+        cluster:
+          type: string
+          format: uuid
+        cluster_name:
+          type: string
+          readOnly: true
+        date:
+          type: string
+          format: date
+        status:
+          $ref: '#/components/schemas/RouteDayStatusEnum'
+        job_count:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        jobs:
+          type: array
+          items:
+            $ref: '#/components/schemas/Job'
+          readOnly: true
+        staff:
+          type: array
+          items:
+            type: string
+            format: uuid
+          readOnly: true
+      required:
+      - cluster
+      - cluster_name
+      - created_at
+      - date
+      - hub
+      - id
+      - job_count
+      - jobs
+      - staff
+    RouteDayList:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        hub:
+          type: string
+          format: uuid
+        cluster:
+          type: string
+          format: uuid
+        cluster_name:
+          type: string
+          readOnly: true
+        date:
+          type: string
+          format: date
+        status:
+          $ref: '#/components/schemas/RouteDayStatusEnum'
+        job_count:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - cluster
+      - cluster_name
+      - created_at
+      - date
+      - hub
+      - id
+      - job_count
+    RouteDayStatusEnum:
+      enum:
+      - PLANNED
+      - ACTIVE
+      - CLOSED
+      type: string
+      description: |-
+        * `PLANNED` - Planned
+        * `ACTIVE` - Active
+        * `CLOSED` - Closed
     ScanResult:
       type: object
       properties:
@@ -7542,6 +8546,39 @@ components:
         * `LOW` - Low
         * `MEDIUM` - Medium
         * `HIGH` - High
+    Staff:
+      type: object
+      description: |-
+        A minimal staff-picker shape (docs/04) — for assigning a route-day
+        job to a rider, not the full staff-management screen (Phase 2+).
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        full_name:
+          type: string
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+          nullable: true
+        phone:
+          type: string
+          readOnly: true
+          nullable: true
+        roles:
+          type: array
+          items:
+            type: string
+          readOnly: true
+      required:
+      - email
+      - full_name
+      - id
+      - phone
+      - roles
     StaffInviteAcceptRequest:
       type: object
       properties:

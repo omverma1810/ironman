@@ -68,6 +68,22 @@ def create_bag_for_order(order, *, order_line_ids: list | None = None, actor=Non
     return bag
 
 
+def verify_bag_codes(order, codes: list[str]) -> list[Bag]:
+    """Resolves scanned bag codes against an order's own bags — the check
+    `fulfilment.services.complete_job` runs on a delivery so a rider can't
+    complete against the wrong customer's bags (docs/04 §3.6 `bag_codes[]`
+    on `POST /fulfilment/jobs/{id}/complete`)."""
+    bags = list(Bag.objects.filter(order=order, code__in=codes))
+    found_codes = {b.code for b in bags}
+    missing = set(codes) - found_codes
+    if missing:
+        raise ApiError(
+            f"{order.ref}: bag code(s) {', '.join(sorted(missing))} don't belong to this order.",
+            code="validation_error",
+        )
+    return bags
+
+
 def mark_printed(bag: Bag) -> Bag:
     bag.printed_at = timezone.now()
     bag.save(update_fields=["printed_at"])

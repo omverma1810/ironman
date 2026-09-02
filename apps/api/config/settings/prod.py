@@ -40,20 +40,20 @@ X_FRAME_OPTIONS = "DENY"
 ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=[".run.app"])  # noqa: F405
 
 # ── Static files ─────────────────────────────────────────────────────────
-# WhiteNoise, not S3/R2: nothing in the API yet accepts a file upload
-# (custody proof photos, invoice PDFs — all later phases per docs/08), so
-# object storage would be a dependency with nothing depending on it.
-# Django Admin's own static assets are the only static files that exist
-# today, and WhiteNoise serves those straight from the container with no
-# extra service to provision. Revisit when the first upload feature ships.
+# WhiteNoise for static assets regardless — Django Admin's own CSS/JS,
+# served straight from the container with no extra service to provision.
+# Media (`STORAGES["default"]`) is a different question: fulfilment.Proof
+# (proof-of-delivery photos) is the first real upload feature, and Cloud
+# Run's container disk is ephemeral — FileSystemStorage there silently
+# loses every photo on the next scale event. base.py already switches
+# `STORAGES["default"]` to S3-compatible storage when AWS_STORAGE_BUCKET_NAME
+# is set (see DEPLOYMENT.md); only override staticfiles here so that
+# decision isn't clobbered. Deploying without a bucket configured still
+# boots — proofs just won't survive a restart — for a demo where nobody's
+# provisioned one yet.
 MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")  # noqa: F405
-STORAGES = {
-    "default": {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
-    },
-    "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-    },
+STORAGES["staticfiles"] = {  # noqa: F405
+    "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
 }
 
 # ── Cache / throttling ──────────────────────────────────────────────────

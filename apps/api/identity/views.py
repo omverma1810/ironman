@@ -13,6 +13,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from common import audit
 from common.errors import ApiError
+from common.permissions import IsAdminOrFounder
 from common.throttles import ScopedRateThrottle
 from identity.models import (
     EmailVerificationToken,
@@ -35,6 +36,7 @@ from identity.serializers import (
     PasswordResetRequestSerializer,
     StaffInviteAcceptSerializer,
     StaffLoginSerializer,
+    StaffSerializer,
 )
 
 
@@ -209,6 +211,26 @@ class MeView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(MeSerializer(request.user).data)
+
+
+@extend_schema(responses={200: StaffSerializer(many=True)})
+class StaffListView(APIView):
+    """GET /identity/staff?role= — a minimal staff picker (e.g. assigning
+    a route-day job to a rider), hub-scoped like everything else
+    (docs/06 §3.2). Not the full staff-management screen (Phase 2+); see
+    docs/06 §3.1 "Manage users & roles" — Admin/Founder only."""
+
+    permission_classes = [IsAdminOrFounder]
+
+    def get(self, request):
+        user = request.user
+        qs = User.objects.filter(user_roles__hub__isnull=False).distinct()
+        if not user.is_unrestricted:
+            qs = qs.filter(user_roles__hub_id__in=user.hub_scope)
+        role = request.query_params.get("role")
+        if role:
+            qs = qs.filter(user_roles__role__code=role)
+        return Response(StaffSerializer(qs.order_by("full_name"), many=True).data)
 
 
 @extend_schema(

@@ -157,6 +157,21 @@ credential.
 | `DJANGO_SECRET_KEY` | a fresh random value — generate with `python -c "import secrets; print(secrets.token_urlsafe(50))"` and never reuse the dev one |
 | `DJANGO_ALLOWED_HOSTS` | `.run.app` for now (the leading dot matches any Cloud Run URL; switch to a real domain once you attach one) |
 | `CORS_ALLOWED_ORIGINS` | the Vercel URL your frontend will live at, e.g. `https://ironman-console.vercel.app` — decide the Vercel project name now (step 5) so you can fill this in before the frontend exists |
+| `AWS_STORAGE_BUCKET_NAME` | optional — see "Object storage" below. Leave unset and the API still boots fine; proof-of-delivery photos just won't survive a restart |
+| `AWS_ACCESS_KEY_ID` | optional, only if you set `AWS_STORAGE_BUCKET_NAME` |
+| `AWS_SECRET_ACCESS_KEY` | optional, only if you set `AWS_STORAGE_BUCKET_NAME` |
+| `AWS_S3_REGION_NAME` | optional, e.g. `ap-south-1` — only if you set `AWS_STORAGE_BUCKET_NAME` |
+
+**Object storage (for `fulfilment.Proof` — pickup/delivery photos):** the
+API code already speaks S3 (`django-storages`, same as the MinIO container
+in `docker-compose.yml` for local dev), it just needs real credentials in
+production. Cloud Run's own disk is wiped on every scale event, so without
+a bucket configured, proof photos taken by field staff are lost the moment
+the container restarts — fine for a demo, not fine once real riders are
+uploading real delivery proof. Any S3-compatible bucket works (a plain AWS
+S3 bucket is the least setup); create one, create an access key scoped to
+it, and put the four values above in as Secrets. No code change needed —
+`config/settings/base.py` picks it up automatically the next deploy.
 
 Also create a GitHub **environment** named `production` (Settings →
 Environments) — `deploy.yml` targets it by name; an empty environment with

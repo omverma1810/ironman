@@ -6,6 +6,7 @@ boundary rule)."""
 
 from __future__ import annotations
 
+from datetime import timedelta
 from decimal import Decimal
 
 from django.conf import settings
@@ -256,3 +257,97 @@ def resolve_requote(requote: ReQuote, *, approved: bool, actor=None) -> Order:
         event_type="order.requote_rejected",
         payload={"reason": "customer rejected re-quote"},
     )
+
+
+# ── Job-driven transitions (docs/02 §3.7) ──────────────────────────────────
+# `fulfilment` drives the pickup/delivery legs of the order state machine
+# through these — never `ordering.state_machine.transition` directly — the
+# same boundary custody keeps around `GarmentLine.stage` vs `Order.status`.
+
+
+@transaction.atomic
+def assign_pickup(order: Order, *, actor=None) -> Order:
+    return transition(
+        order, OrderStatus.PICKUP_ASSIGNED, actor=actor, event_type="order.pickup_assigned"
+    )
+
+
+@transaction.atomic
+def mark_pickup_en_route(order: Order, *, actor=None) -> Order:
+    return transition(
+        order, OrderStatus.PICKUP_EN_ROUTE, actor=actor, event_type="order.pickup_en_route"
+    )
+
+
+@transaction.atomic
+def mark_picked_up(order: Order, *, actor=None) -> Order:
+    """PICKED_UP then straight through to AT_HUB — this pilot's single-hub
+    topology means the ride back isn't a separately tracked state (docs/01
+    §5.1's PICKED_UP -> AT_HUB edge has no rider action of its own; a
+    later phase with multi-leg routes could split this). Also computes
+    `delivery_promised_at` from the service's `sla_hours` — the SLA counts
+    from the real pickup, not the booking-time estimate, so this is the
+    first point that timestamp is knowable."""
+    order = transition(order, OrderStatus.PICKED_UP, actor=actor, event_type="order.picked_up")
+    order = transition(order, OrderStatus.AT_HUB, actor=actor, event_type="order.arrived_at_hub")
+    if not order.delivery_promised_at:
+        order.delivery_promised_at = timezone.now() + timedelta(hours=order.service.sla_hours)
+        order.save(update_fields=["delivery_promised_at"])
+    return order
+
+
+@transaction.atomic
+def mark_pickup_failed(order: Order, *, actor=None, reason: str) -> Order:
+    return transition(
+        order,
+        OrderStatus.PICKUP_FAILED,
+        actor=actor,
+        event_type="order.pickup_failed",
+        payload={"reason": reason},
+    )
+
+
+@transaction.atomic
+def assign_delivery(order: Order, *, actor=None, slot_start=None, slot_end=None) -> Order:
+    """READY -> DELIVERY_ASSIGNED. Unlike pickup, there's no customer-chosen
+    delivery window from booking to carry forward — `Order.delivery_capacity`
+    has no equivalent of `pickup_capacity`'s booking-time slot lock (docs/02
+    §4) — ops sets the window operationally when planning the route day."""
+    if slot_start:
+        order.delivery_slot_start = slot_start
+        order.delivery_slot_end = slot_end
+        order.save(update_fields=["delivery_slot_start", "delivery_slot_end"])
+    return transition(
+        order, OrderStatus.DELIVERY_ASSIGNED, actor=actor, event_type="order.delivery_assigned"
+    )
+
+
+@transaction.atomic
+def mark_out_for_delivery(order: Order, *, actor=None) -> Order:
+    return transition(
+        order, OrderStatus.OUT_FOR_DELIVERY, actor=actor, event_type="order.out_for_delivery"
+    )
+
+
+@transaction.atomic
+def mark_delivered(order: Order, *, actor=None) -> Order:
+    return transition(order, OrderStatus.DELIVERED, actor=actor, event_type="order.delivered")
+
+
+@transaction.atomic
+def mark_delivery_failed(order: Order, *, actor=None, reason: str, attempt_no: int) -> Order:
+    """docs/01 §5.1: "Attempt 1 or 2 failed ... Retry, or RETURNED_TO_HUB."
+    The second failed attempt returns the order to the hub automatically —
+    a third rider dispatch needs an ops decision, not another Job."""
+    order = transition(
+        order,
+        OrderStatus.DELIVERY_FAILED,
+        actor=actor,
+        event_type="order.delivery_failed",
+        payload={"reason": reason, "attempt_no": attempt_no},
+    )
+    if attempt_no >= 2:
+        order = transition(
+            order, OrderStatus.RETURNED_TO_HUB, actor=actor, event_type="order.returned_to_hub"
+        )
+    return order

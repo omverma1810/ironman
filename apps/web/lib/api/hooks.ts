@@ -8,9 +8,12 @@ import {
   custodyApi,
   customersApi,
   exceptionsApi,
+  fulfilmentApi,
+  identityApi,
   ordersApi,
   requotesApi,
   territoryApi,
+  type JobAssignEntry,
   type OrderListParams,
 } from "./endpoints";
 import { ApiError } from "./errors";
@@ -362,5 +365,92 @@ export function useUpdateException() {
       toast.success("Exception updated");
     },
     onError: (err) => errorToast(err, "Couldn't update the exception."),
+  });
+}
+
+// ── Staff (docs/06 §3.1 "Manage users & roles") ─────────────────────────
+export function useFieldStaff() {
+  return useQuery({
+    queryKey: ["staff", "FIELD"],
+    queryFn: () => identityApi.staff("FIELD"),
+  });
+}
+
+// ── Fulfilment (docs/02 §3.7) ───────────────────────────────────────────
+export function useRouteDays(params?: { cluster?: string; date?: string }) {
+  return useQuery({
+    queryKey: ["route-days", params],
+    queryFn: () => fulfilmentApi.routeDays(params),
+    enabled: !!params?.cluster && !!params?.date,
+  });
+}
+
+export function useRouteDay(id: string | undefined) {
+  return useQuery({
+    queryKey: ["route-day", id],
+    queryFn: () => fulfilmentApi.routeDay(id as string),
+    enabled: !!id,
+  });
+}
+
+export function useCreateRouteDay() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ cluster, date }: { cluster: string; date: string }) =>
+      fulfilmentApi.createRouteDay(cluster, date),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["route-days"] });
+      toast.success("Route day created");
+    },
+    onError: (err) => errorToast(err, "Couldn't create the route day."),
+  });
+}
+
+export function useAssignRouteDay(routeDayId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ staff, jobs }: { staff: string[]; jobs: JobAssignEntry[] }) =>
+      fulfilmentApi.assignRouteDay(routeDayId, staff, jobs),
+    onSuccess: (routeDay) => {
+      queryClient.invalidateQueries({ queryKey: ["route-day", routeDayId] });
+      queryClient.invalidateQueries({ queryKey: ["route-days"] });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      toast.success(`${routeDay.jobs.length} job${routeDay.jobs.length === 1 ? "" : "s"} assigned`);
+    },
+    onError: (err) => errorToast(err, "Couldn't assign that job — check the order's status."),
+  });
+}
+
+export function useJobAttempts(jobId: string | undefined) {
+  return useQuery({
+    queryKey: ["job-attempts", jobId],
+    queryFn: () => fulfilmentApi.jobAttempts(jobId as string),
+    enabled: !!jobId,
+  });
+}
+
+export function useStartJob(routeDayId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (jobId: string) => fulfilmentApi.startJob(jobId),
+    onSuccess: (job) => {
+      queryClient.invalidateQueries({ queryKey: ["route-day", routeDayId] });
+      toast.success(`${job.order_ref} marked ${job.status.toLowerCase().replace("_", " ")}`);
+    },
+    onError: (err) => errorToast(err, "Couldn't start this job."),
+  });
+}
+
+export function useFailJob(routeDayId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ jobId, reason_code }: { jobId: string; reason_code: string }) =>
+      fulfilmentApi.failJob(jobId, reason_code),
+    onSuccess: (job) => {
+      queryClient.invalidateQueries({ queryKey: ["route-day", routeDayId] });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      toast.success(`${job.order_ref} marked failed`);
+    },
+    onError: (err) => errorToast(err, "Couldn't mark this job failed."),
   });
 }
