@@ -122,7 +122,7 @@ New repository secret**, one per row:
 | `GCP_REGION` | `asia-south1` |
 | `GCP_ARTIFACT_REPO` | `ironman` |
 | `CLOUD_RUN_SERVICE` | `ironman-api` |
-| `GCP_SA_KEY` | the full contents of `ironman-deployer-key.json` |
+| `GCP_SA_KEY_B64` | `base64 -w0 ironman-deployer-key.json` (Cloud Shell) — paste that one-line output, not the raw JSON. The JSON's `private_key` field is full of quotes and `\n` escapes that GitHub's secret textarea (and browsers generally) reliably mangle on paste; base64 has no characters that can get corrupted that way. |
 | `DATABASE_URL` | the Supabase pooled connection string from step 1 |
 | `DJANGO_SECRET_KEY` | a fresh random value — generate with `python -c "import secrets; print(secrets.token_urlsafe(50))"` and never reuse the dev one |
 | `DJANGO_ALLOWED_HOSTS` | `.run.app` for now (the leading dot matches any Cloud Run URL; switch to a real domain once you attach one) |
