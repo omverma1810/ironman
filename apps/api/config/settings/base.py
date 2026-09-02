@@ -7,6 +7,7 @@ from datetime import timedelta
 from pathlib import Path
 
 import environ
+from corsheaders.defaults import default_headers
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -175,6 +176,15 @@ SPECTACULAR_SETTINGS = {
 
 CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=["http://localhost:3000"])
 CORS_ALLOW_CREDENTIALS = True
+# django-cors-headers' own default allow-list doesn't know about our
+# custom headers — a preflight that rejects `Idempotency-Key` silently
+# blocks every order/payment creation from the browser with no server-side
+# log line at all (docs/04 §1, §3.4/§3.7 idempotent endpoints). Found via
+# the E2E "create a counter order" test, not a unit test.
+CORS_ALLOW_HEADERS = [
+    *default_headers,
+    "idempotency-key",
+]
 
 CSRF_TRUSTED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=["http://localhost:3000"])
 

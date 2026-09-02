@@ -81,9 +81,19 @@ class CapacityView(APIView):
 
 
 class HubViewSet(viewsets.ModelViewSet):
+    """Any ops staff may read the hub list — an operator building a
+    counter order needs to pick a hub (docs/06 §3.1 row "operational
+    analytics"/base data is IsOpsStaff-visible). Only founders create or
+    edit hubs — opening a new location is a business decision, not a
+    day-to-day op."""
+
     queryset = Hub.objects.filter(deleted_at__isnull=True)
     serializer_class = HubSerializer
-    permission_classes = [IsAdminOrFounder]
+
+    def get_permissions(self):
+        if self.action in ("list", "retrieve"):
+            return [IsOpsStaff()]
+        return [IsAdminOrFounder()]
 
 
 class ClusterViewSet(ScopedQuerysetMixin, viewsets.ModelViewSet):

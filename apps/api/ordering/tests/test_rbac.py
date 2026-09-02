@@ -228,3 +228,21 @@ def test_unverified_email_cannot_login(api_client, hub):
     resp = _login(api_client, user.email)
     assert resp.status_code == 403
     assert resp.data["error"]["code"] == "email_not_verified"
+
+
+def test_operator_can_list_hubs_for_order_creation(api_client, operator_user, hub):
+    """Regression: HubViewSet used to require ADMIN/FOUNDER even to list,
+    which meant an operator could never populate the hub dropdown on the
+    counter-order screen (found via the E2E suite, not a unit test)."""
+    api_client.force_authenticate(user=operator_user)
+    resp = api_client.get("/api/v1/territory/hubs/")
+    assert resp.status_code == 200
+    assert any(h["id"] == str(hub.id) for h in resp.data["results"])
+
+
+def test_operator_cannot_create_hub(api_client, operator_user):
+    api_client.force_authenticate(user=operator_user)
+    resp = api_client.post(
+        "/api/v1/territory/hubs/", {"code": "NEW-HUB", "name": "New Hub"}, format="json"
+    )
+    assert resp.status_code == 403

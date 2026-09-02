@@ -53,10 +53,48 @@ DJANGO_SETTINGS_MODULE=config.settings.test ./.venv/bin/python -m pytest
 ./.venv/bin/lint-imports         # bounded-context boundary contracts
 ```
 
-All of the above are green as of this commit. 38 tests cover the quote
+All of the above are green as of this commit. 40 tests cover the quote
 engine, the order state machine, capacity row-locking under concurrency,
 intake/re-quote variance handling, and the RBAC matrix as real API calls
 (not just as a document).
+
+## Running the E2E suite locally against a live server
+
+`apps/web/e2e/` (Playwright) drives this API and the Next.js app together
+as a real browser would. To run it:
+
+```bash
+DJANGO_SETTINGS_MODULE=config.settings.test ./.venv/bin/python manage.py runserver 0.0.0.0:8000
+# separately: npm run dev --workspace=apps/web
+```
+
+**Use `config.settings.test`, not `config.settings.dev`, for this.** It
+relaxes the rate limits (docs/06 §2.1/§4) that a real user would never hit
+but that a parallel Playwright run against a single dev server absolutely
+will — hitting them mid-suite produces login timeouts that look like app
+bugs and aren't. `config.settings.test` also switches to the MD5 password
+hasher for speed.
+
+**The hasher switch is a one-way trap if you reuse seeded data across
+settings modules.** `seed_demo`'s `get_or_create` only sets a password on
+first creation — it never rehashes an existing user. So if you seed under
+`dev` (Argon2) and then serve under `test` (MD5) against the *same*
+database, login fails for every seeded account, because their stored hash
+uses an algorithm `test.py`'s `PASSWORD_HASHERS` no longer lists (and vice
+versa switching back). Either reseed after switching settings modules, or
+rehash the seeded staff accounts directly:
+
+```python
+from identity.models import User
+for email in ["founder@ironman.test", "admin@ironman.test", "operator@ironman.test", "field@ironman.test"]:
+    u = User.objects.get(email=email)
+    u.set_password("IronMan@2026")
+    u.save(update_fields=["password"])
+```
+
+CI doesn't hit this — its E2E job seeds fresh under `config.settings.test`
+every run, so passwords are always hashed with whatever that settings
+module currently specifies.
 
 ## API schema
 
