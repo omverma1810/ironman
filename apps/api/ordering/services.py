@@ -20,6 +20,10 @@ from ordering.models import Order, OrderLine, OrderStatus, ReQuote
 from ordering.state_machine import transition
 
 
+def get_order(order_id):
+    return Order.objects.get(pk=order_id)
+
+
 @transaction.atomic
 def create_order(
     *,

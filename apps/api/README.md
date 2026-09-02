@@ -16,9 +16,10 @@ directly; they call that context's `services` module (enforced by
 | `catalog` | Services, garment types, effective-dated price lists, offers, packages, the quote engine |
 | `customers` | Customers, addresses, consent, notes, duplicate detection & merge |
 | `ordering` | Orders, order lines, the three-state-machine lifecycle, re-quotes, exceptions, counter intake |
+| `custody` | Bags, garment lines, the scan-driven stage state machine (`docs/01 §5.3`), QC pass/fail, append-only StageEvent history |
 
-`custody`, `fulfilment`, `billing` (beyond the tax-settings stub), `supplies`,
-`growth`, `analytics` and `notifications` are Phase 2+ per `docs/08-delivery-plan.md`
+`fulfilment`, `billing` (beyond the tax-settings stub), `supplies`, `growth`,
+`analytics` and `notifications` are Phase 2+ per `docs/08-delivery-plan.md`
 and are not yet built.
 
 ## Local setup

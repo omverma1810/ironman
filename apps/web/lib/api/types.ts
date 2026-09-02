@@ -276,6 +276,74 @@ export type OrderException = {
   created_at: string;
 };
 
+// ── Custody (docs/02 §3.6, docs/01 §5.3) ────────────────────────────────
+export type GarmentStage =
+  | "RECEIVED"
+  | "SORTED"
+  | "PRESSING"
+  | "PRESSED"
+  | "QC"
+  | "REWORK"
+  | "PACKED"
+  | "DISPATCHED"
+  | "DELIVERED"
+  | "DAMAGED"
+  | "LOST"
+  | "HELD"
+  | "RETURNED_UNPRESSED";
+
+export type GarmentLine = {
+  id: string;
+  order_line: string;
+  bag: string;
+  bag_code: string;
+  seq: number;
+  garment_type: string;
+  garment_type_name: string;
+  stage: GarmentStage;
+  condition_notes: string;
+  defect_flags: string[];
+  is_rework: boolean;
+  rework_count: number;
+  created_at: string;
+};
+
+export type Bag = {
+  id: string;
+  code: string;
+  order: string;
+  order_ref: string;
+  hub: string;
+  garment_count: number;
+  garment_line_count: number;
+  current_stage: GarmentStage;
+  printed_at: string | null;
+  created_at: string;
+};
+
+export type BagDetail = Bag & { garment_lines: GarmentLine[] };
+
+export type StageEvent = {
+  id: string;
+  bag: string | null;
+  garment_line: string | null;
+  from_stage: string;
+  to_stage: string;
+  actor: string | null;
+  actor_name: string;
+  station: string;
+  scanned: boolean;
+  occurred_at: string;
+  device_id: string;
+};
+
+export type ScanResult = {
+  bag: BagDetail;
+  moved_count: number;
+  skipped_count: number;
+  skipped: GarmentLine[];
+};
+
 export type OrderLineInput = { garment_type: string; qty: number };
 
 export type CreateOrderInput = {

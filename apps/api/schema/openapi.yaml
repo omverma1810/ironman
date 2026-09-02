@@ -1214,6 +1214,529 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/custody/bags/:
+    get:
+      operationId: custody_bags_list
+      description: |-
+        Bag lists are always narrow in practice — scoped to one order from
+        the console, or eventually to one hub's WIP on the production board —
+        never "every bag ever created". So list and retrieve both return the
+        full nested shape (garment lines included): the console needs it on
+        both, and there's no unscoped list heavy enough to make that costly.
+      parameters:
+      - in: query
+        name: code
+        schema:
+          type: string
+      - in: query
+        name: current_stage
+        schema:
+          type: string
+          enum:
+          - DAMAGED
+          - DELIVERED
+          - DISPATCHED
+          - HELD
+          - LOST
+          - PACKED
+          - PRESSED
+          - PRESSING
+          - QC
+          - RECEIVED
+          - RETURNED_UNPRESSED
+          - REWORK
+          - SORTED
+        description: |-
+          * `RECEIVED` - Received
+          * `SORTED` - Sorted
+          * `PRESSING` - Pressing
+          * `PRESSED` - Pressed
+          * `QC` - Quality check
+          * `REWORK` - Rework
+          * `PACKED` - Packed
+          * `DISPATCHED` - Dispatched
+          * `DELIVERED` - Delivered
+          * `DAMAGED` - Damaged
+          * `LOST` - Lost
+          * `HELD` - Held
+          * `RETURNED_UNPRESSED` - Returned unpressed
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: hub
+        schema:
+          type: string
+          format: uuid
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: order
+        schema:
+          type: string
+          format: uuid
+      tags:
+      - custody
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedBagDetailList'
+          description: ''
+  /api/v1/custody/bags/{id}/:
+    get:
+      operationId: custody_bags_retrieve
+      description: |-
+        Bag lists are always narrow in practice — scoped to one order from
+        the console, or eventually to one hub's WIP on the production board —
+        never "every bag ever created". So list and retrieve both return the
+        full nested shape (garment lines included): the console needs it on
+        both, and there's no unscoped list heavy enough to make that costly.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this bag.
+        required: true
+      tags:
+      - custody
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BagDetail'
+          description: ''
+  /api/v1/custody/bags/{id}/print_tag/:
+    post:
+      operationId: custody_bags_print_tag_create
+      description: |-
+        Bag lists are always narrow in practice — scoped to one order from
+        the console, or eventually to one hub's WIP on the production board —
+        never "every bag ever created". So list and retrieve both return the
+        full nested shape (garment lines included): the console needs it on
+        both, and there's no unscoped list heavy enough to make that costly.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this bag.
+        required: true
+      tags:
+      - custody
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BagDetailRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BagDetailRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BagDetailRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BagDetail'
+          description: ''
+  /api/v1/custody/bags/{id}/stage_events/:
+    get:
+      operationId: custody_bags_stage_events_retrieve
+      description: |-
+        Bag lists are always narrow in practice — scoped to one order from
+        the console, or eventually to one hub's WIP on the production board —
+        never "every bag ever created". So list and retrieve both return the
+        full nested shape (garment lines included): the console needs it on
+        both, and there's no unscoped list heavy enough to make that costly.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this bag.
+        required: true
+      tags:
+      - custody
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BagDetail'
+          description: ''
+  /api/v1/custody/garment-lines/:
+    get:
+      operationId: custody_garment_lines_list
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - in: query
+        name: bag
+        schema:
+          type: string
+          format: uuid
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: hub
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: is_rework
+        schema:
+          type: boolean
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: stage
+        schema:
+          type: string
+          enum:
+          - DAMAGED
+          - DELIVERED
+          - DISPATCHED
+          - HELD
+          - LOST
+          - PACKED
+          - PRESSED
+          - PRESSING
+          - QC
+          - RECEIVED
+          - RETURNED_UNPRESSED
+          - REWORK
+          - SORTED
+        description: |-
+          * `RECEIVED` - Received
+          * `SORTED` - Sorted
+          * `PRESSING` - Pressing
+          * `PRESSED` - Pressed
+          * `QC` - Quality check
+          * `REWORK` - Rework
+          * `PACKED` - Packed
+          * `DISPATCHED` - Dispatched
+          * `DELIVERED` - Delivered
+          * `DAMAGED` - Damaged
+          * `LOST` - Lost
+          * `HELD` - Held
+          * `RETURNED_UNPRESSED` - Returned unpressed
+      tags:
+      - custody
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedGarmentLineList'
+          description: ''
+  /api/v1/custody/garment-lines/{id}/:
+    get:
+      operationId: custody_garment_lines_retrieve
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this garment line.
+        required: true
+      tags:
+      - custody
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GarmentLine'
+          description: ''
+  /api/v1/custody/garment-lines/{id}/qc/:
+    post:
+      operationId: custody_garment_lines_qc_create
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this garment line.
+        required: true
+      tags:
+      - custody
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GarmentLineRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GarmentLineRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GarmentLineRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GarmentLine'
+          description: ''
+  /api/v1/custody/garment-lines/{id}/qc_checks/:
+    get:
+      operationId: custody_garment_lines_qc_checks_retrieve
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this garment line.
+        required: true
+      tags:
+      - custody
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GarmentLine'
+          description: ''
+  /api/v1/custody/garment-lines/{id}/transition/:
+    post:
+      operationId: custody_garment_lines_transition_create
+      description: |-
+        Single-garment moves — QC's REWORK branch and the exception
+        branches (DAMAGED/LOST/HELD/RETURNED_UNPRESSED) are per-item, not
+        per-bag, by nature (docs/01 §5.3).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this garment line.
+        required: true
+      tags:
+      - custody
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GarmentLineRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GarmentLineRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GarmentLineRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GarmentLine'
+          description: ''
+  /api/v1/custody/qc-checks/:
+    get:
+      operationId: custody_qc_checks_list
+      description: |-
+        Read-only cross-garment view — writes happen through
+        `GarmentLineViewSet.qc` so a check and its resulting stage move are
+        always recorded together (custody.services.record_qc).
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: garment_line
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: hub
+        schema:
+          type: string
+          format: uuid
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: result
+        schema:
+          type: string
+          enum:
+          - FAIL
+          - PASS
+        description: |-
+          * `PASS` - Pass
+          * `FAIL` - Fail
+      tags:
+      - custody
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedQcCheckList'
+          description: ''
+  /api/v1/custody/qc-checks/{id}/:
+    get:
+      operationId: custody_qc_checks_retrieve
+      description: |-
+        Read-only cross-garment view — writes happen through
+        `GarmentLineViewSet.qc` so a check and its resulting stage move are
+        always recorded together (custody.services.record_qc).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this qc check.
+        required: true
+      tags:
+      - custody
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QcCheck'
+          description: ''
+  /api/v1/custody/scan:
+    post:
+      operationId: custody_scan_create
+      description: |-
+        POST /custody/scan — the QR scan endpoint (docs/02 §3.6: "scanning
+        resolves it server-side", never a URL carrying customer data). Advances
+        every garment line in the bag that can legally reach `to_stage`;
+        reports back any that couldn't (already diverged, e.g. one item sent to
+        REWORK) so the console can surface it instead of silently dropping it.
+      tags:
+      - custody
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BagScanRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BagScanRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BagScanRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScanResult'
+          description: ''
   /api/v1/customer-addresses/:
     get:
       operationId: customer_addresses_list
@@ -2507,6 +3030,44 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OrderList'
+          description: ''
+  /api/v1/orders/{order_id}/bags:
+    post:
+      operationId: orders_bags_create
+      description: |-
+        POST /orders/{order_id}/bags — one bag from an order's verified
+        lines (docs/02 §3.5/§3.6). A separate call from `POST /orders/{ref}/
+        intake`: intake fixes quantities and pricing; bagging is a distinct
+        physical action ops does after, at their own pace.
+      parameters:
+      - in: path
+        name: order_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - orders
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BagCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BagCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BagCreateRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BagDetail'
           description: ''
   /api/v1/orders/{id}/:
     get:
@@ -4272,6 +4833,107 @@ components:
       required:
       - cluster
       - name
+    BagCreateRequest:
+      type: object
+      properties:
+        order_line_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+    BagDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        code:
+          type: string
+          readOnly: true
+        order:
+          type: string
+          format: uuid
+        order_ref:
+          type: string
+          readOnly: true
+        hub:
+          type: string
+          format: uuid
+        garment_count:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        garment_line_count:
+          type: integer
+          readOnly: true
+        current_stage:
+          $ref: '#/components/schemas/GarmentStageEnum'
+        printed_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        garment_lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/GarmentLine'
+          readOnly: true
+      required:
+      - code
+      - created_at
+      - garment_line_count
+      - garment_lines
+      - hub
+      - id
+      - order
+      - order_ref
+    BagDetailRequest:
+      type: object
+      properties:
+        order:
+          type: string
+          format: uuid
+        hub:
+          type: string
+          format: uuid
+        garment_count:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        current_stage:
+          $ref: '#/components/schemas/GarmentStageEnum'
+        printed_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - hub
+      - order
+    BagScanRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 32
+        to_stage:
+          $ref: '#/components/schemas/GarmentStageEnum'
+        station:
+          type: string
+          maxLength: 64
+        device_id:
+          type: string
+          maxLength: 128
+        scanned:
+          type: boolean
+          default: true
+      required:
+      - code
+      - to_stage
     ChannelEnum:
       enum:
       - WEB
@@ -4615,6 +5277,101 @@ components:
           minLength: 1
       required:
       - token
+    GarmentLine:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        order_line:
+          type: string
+          format: uuid
+          readOnly: true
+        bag:
+          type: string
+          format: uuid
+          readOnly: true
+        bag_code:
+          type: string
+          readOnly: true
+        seq:
+          type: integer
+          readOnly: true
+        garment_type:
+          type: string
+          format: uuid
+          readOnly: true
+        garment_type_name:
+          type: string
+          readOnly: true
+        stage:
+          allOf:
+          - $ref: '#/components/schemas/GarmentStageEnum'
+          readOnly: true
+        condition_notes:
+          type: string
+          maxLength: 255
+        defect_flags: {}
+        is_rework:
+          type: boolean
+          readOnly: true
+        rework_count:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - bag
+      - bag_code
+      - created_at
+      - garment_type
+      - garment_type_name
+      - id
+      - is_rework
+      - order_line
+      - rework_count
+      - seq
+      - stage
+    GarmentLineRequest:
+      type: object
+      properties:
+        condition_notes:
+          type: string
+          maxLength: 255
+        defect_flags: {}
+    GarmentStageEnum:
+      enum:
+      - RECEIVED
+      - SORTED
+      - PRESSING
+      - PRESSED
+      - QC
+      - REWORK
+      - PACKED
+      - DISPATCHED
+      - DELIVERED
+      - DAMAGED
+      - LOST
+      - HELD
+      - RETURNED_UNPRESSED
+      type: string
+      description: |-
+        * `RECEIVED` - Received
+        * `SORTED` - Sorted
+        * `PRESSING` - Pressing
+        * `PRESSED` - Pressed
+        * `QC` - Quality check
+        * `REWORK` - Rework
+        * `PACKED` - Packed
+        * `DISPATCHED` - Dispatched
+        * `DELIVERED` - Delivered
+        * `DAMAGED` - Damaged
+        * `LOST` - Lost
+        * `HELD` - Held
+        * `RETURNED_UNPRESSED` - Returned unpressed
     GarmentType:
       type: object
       properties:
@@ -5611,6 +6368,25 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Apartment'
+    PaginatedBagDetailList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/BagDetail'
     PaginatedClusterList:
       type: object
       required:
@@ -5687,6 +6463,25 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CustomerNote'
+    PaginatedGarmentLineList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/GarmentLine'
     PaginatedGarmentTypeList:
       type: object
       required:
@@ -5820,6 +6615,25 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PriceList'
+    PaginatedQcCheckList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/QcCheck'
     PaginatedReQuoteList:
       type: object
       required:
@@ -6426,6 +7240,36 @@ components:
         * `DRAFT` - Draft
         * `ACTIVE` - Active
         * `SUPERSEDED` - Superseded
+    QcCheck:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        garment_line:
+          type: string
+          format: uuid
+        result:
+          $ref: '#/components/schemas/ResultEnum'
+        reason:
+          type: string
+          maxLength: 255
+        checked_by:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - at
+      - checked_by
+      - garment_line
+      - id
+      - result
     QuoteRequestRequest:
       type: object
       properties:
@@ -6532,6 +7376,14 @@ components:
       - old_total_minor
       - order
       - reason
+    ResultEnum:
+      enum:
+      - PASS
+      - FAIL
+      type: string
+      description: |-
+        * `PASS` - Pass
+        * `FAIL` - Fail
     RouteDayCapacity:
       type: object
       properties:
@@ -6615,6 +7467,24 @@ components:
       - kind
       - window_end
       - window_start
+    ScanResult:
+      type: object
+      properties:
+        bag:
+          $ref: '#/components/schemas/BagDetail'
+        moved_count:
+          type: integer
+        skipped_count:
+          type: integer
+        skipped:
+          type: array
+          items:
+            $ref: '#/components/schemas/GarmentLine'
+      required:
+      - bag
+      - moved_count
+      - skipped
+      - skipped_count
     Service:
       type: object
       properties:

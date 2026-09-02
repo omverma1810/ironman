@@ -3,6 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { AsyncBoundary } from "@/components/patterns/async-boundary";
+import { CustodySection } from "@/components/custody/custody-section";
 import { PageHeader } from "@/components/patterns/page-header";
 import { StageBadge } from "@/components/patterns/stage-badge";
 import { MoneyText } from "@/components/patterns/money-text";
@@ -203,6 +204,12 @@ export default function OrderDetailPage() {
                       </div>
                     </CardContent>
                   </Card>
+
+                  <CustodySection
+                    orderId={order.id}
+                    orderStatus={order.status}
+                    canManage={!!canManage}
+                  />
 
                   <Card>
                     <CardHeader>

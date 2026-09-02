@@ -49,6 +49,7 @@ LOCAL_APPS = [
     "catalog",
     "customers",
     "ordering",
+    "custody",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -171,6 +172,7 @@ SPECTACULAR_SETTINGS = {
     "ENUM_NAME_OVERRIDES": {
         "OrderStatusEnum": "ordering.models.OrderStatus",
         "CustomerStatusEnum": "customers.models.Customer.Status",
+        "GarmentStageEnum": "custody.models.GarmentStage",
     },
 }
 

@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import {
   authApi,
   catalogApi,
+  custodyApi,
   customersApi,
   exceptionsApi,
   ordersApi,
@@ -13,7 +14,7 @@ import {
   type OrderListParams,
 } from "./endpoints";
 import { ApiError } from "./errors";
-import type { CreateOrderInput, OrderException } from "./types";
+import type { CreateOrderInput, GarmentStage, OrderException } from "./types";
 
 function errorToast(err: unknown, fallback = "Something went wrong.") {
   const message = ApiError.isApiError(err) ? err.message : fallback;
@@ -245,6 +246,88 @@ export function useRespondToRequote() {
       toast.success(order.status === "CANCELLED" ? "Re-quote rejected, order cancelled" : "Re-quote approved");
     },
     onError: (err) => errorToast(err, "Couldn't respond to the re-quote."),
+  });
+}
+
+// ── Custody ────────────────────────────────────────────────────────────
+export function useOrderBags(orderId: string | undefined) {
+  return useQuery({
+    queryKey: ["bags", orderId],
+    queryFn: () => custodyApi.bagsForOrder(orderId as string),
+    enabled: !!orderId,
+  });
+}
+
+function invalidateBags(queryClient: ReturnType<typeof useQueryClient>, orderId: string) {
+  queryClient.invalidateQueries({ queryKey: ["bags", orderId] });
+}
+
+export function useCreateBag(orderId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (orderLineIds?: string[]) => custodyApi.createBag(orderId, orderLineIds),
+    onSuccess: (bag) => {
+      invalidateBags(queryClient, orderId);
+      toast.success(`Bag ${bag.code} created — ${bag.garment_count} garments`);
+    },
+    onError: (err) => errorToast(err, "Couldn't create a bag for this order."),
+  });
+}
+
+export function usePrintBagTag(orderId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (bagId: string) => custodyApi.printTag(bagId),
+    onSuccess: (bag) => {
+      invalidateBags(queryClient, orderId);
+      toast.success(`Tag ready for ${bag.code}`);
+    },
+    onError: (err) => errorToast(err, "Couldn't print the bag tag."),
+  });
+}
+
+export function useScanBag(orderId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ code, to_stage }: { code: string; to_stage: GarmentStage }) =>
+      custodyApi.scan(code, to_stage),
+    onSuccess: (result) => {
+      invalidateBags(queryClient, orderId);
+      if (result.skipped_count > 0) {
+        toast.warning(
+          `${result.moved_count} garment${result.moved_count === 1 ? "" : "s"} moved, ` +
+            `${result.skipped_count} couldn't (already diverged — check them individually)`
+        );
+      } else {
+        toast.success(`${result.bag.code} moved to ${result.bag.current_stage.toLowerCase()}`);
+      }
+    },
+    onError: (err) => errorToast(err, "Couldn't scan this bag."),
+  });
+}
+
+export function useTransitionGarment(orderId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, to_stage }: { id: string; to_stage: GarmentStage }) =>
+      custodyApi.transitionGarment(id, to_stage),
+    onSuccess: () => invalidateBags(queryClient, orderId),
+    onError: (err) => errorToast(err, "Couldn't update this garment."),
+  });
+}
+
+export function useRecordQc(orderId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, result, reason }: { id: string; result: "PASS" | "FAIL"; reason?: string }) =>
+      custodyApi.recordQc(id, result, reason),
+    onSuccess: (line) => {
+      invalidateBags(queryClient, orderId);
+      toast.success(
+        line.stage === "PACKED" ? "Passed QC — packed" : "Failed QC — sent for rework"
+      );
+    },
+    onError: (err) => errorToast(err, "Couldn't record the QC result."),
   });
 }
 
