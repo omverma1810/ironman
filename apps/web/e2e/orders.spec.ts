@@ -86,4 +86,22 @@ test.describe("Orders", () => {
     await page.waitForURL(/\/console\/orders\/[0-9a-f-]+$/, { timeout: 10_000 });
     await expect(page.getByRole("heading", { name: /^ORD-/ })).toBeVisible();
   });
+
+  test("verifying intake on an at-hub order records the count and unlocks the next step", async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(isMobile, "desktop-only: clicks the <table> row directly");
+    await page.goto("/console/orders?status=AT_HUB");
+    await page.locator("table tbody tr").first().click();
+    await page.waitForURL(/\/console\/orders\/[0-9a-f-]+$/);
+
+    await page.getByRole("button", { name: /verify intake/i }).click();
+    await expect(page.getByRole("heading", { name: /verify intake/i })).toBeVisible();
+    await page.getByRole("button", { name: /confirm intake/i }).click();
+
+    await expect(page.getByText(/intake recorded/i)).toBeVisible();
+    await expect(page.getByText(/intake verified/i)).toBeVisible();
+    await expect(page.getByRole("button", { name: /verify intake/i })).toBeHidden();
+  });
 });
