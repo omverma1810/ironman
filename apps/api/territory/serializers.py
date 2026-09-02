@@ -29,7 +29,7 @@ class ClusterSerializer(serializers.ModelSerializer):
 class ApartmentContactSerializer(serializers.ModelSerializer):
     class Meta:
         model = ApartmentContact
-        fields = ["id", "kind", "name", "phone", "notes"]
+        fields = ["id", "apartment", "kind", "name", "phone", "notes"]
 
 
 class ApartmentSerializer(serializers.ModelSerializer):

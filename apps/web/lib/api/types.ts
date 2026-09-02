@@ -55,6 +55,7 @@ export type Cluster = {
 
 export type ApartmentContact = {
   id: string;
+  apartment: string;
   kind: "WATCHMAN" | "MANAGER" | "RWA";
   name: string;
   phone: string;

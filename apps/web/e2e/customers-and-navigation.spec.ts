@@ -35,26 +35,16 @@ test.describe("Navigation & error states", () => {
     await page.waitForURL("**/console");
   });
 
-  test("phase-2+ nav items render an honest coming-soon state, not a dead link", async ({
+  test("phase-3+ stub pages render an honest coming-soon state, not a dead link", async ({
     page,
-    isMobile,
   }) => {
     await loginAs(page, DEMO_USERS.operator);
-    // Below `lg`, the sidebar lives behind the hamburger drawer (docs/05
-    // §3). The desktop <aside> copy stays in the DOM (just hidden) even
-    // once the drawer opens, so scope the click to the dialog specifically
-    // on mobile rather than matching both copies of the link.
-    if (isMobile) {
-      await page.getByRole("button", { name: "Open navigation" }).click();
-      await page.getByRole("dialog").getByRole("link", { name: "Apartments" }).click();
-    } else {
-      await page.getByRole("link", { name: "Apartments" }).click();
-    }
-    await expect(page.getByText(/apartment management ui/i)).toBeVisible();
-    // The badge's "Phase 2 — Ops console" and the body copy's prose
-    // mention of "Phase 2" both match a bare /phase 2/i — anchor on the
-    // badge's distinctive em-dash phrasing to disambiguate.
-    await expect(page.getByText(/phase 2 —/i)).toBeVisible();
+    // Pricing's nav link is founder-only (lib/permissions.ts's
+    // canEditPricing), but the page itself carries no RBAC guard of its
+    // own — go straight there rather than via a link an operator can't see.
+    await page.goto("/console/pricing");
+    await expect(page.getByText(/price list management/i)).toBeVisible();
+    await expect(page.getByText(/phase 3 —/i)).toBeVisible();
   });
 
   test("the sidebar hides founder-only items from an operator", async ({ page }) => {

@@ -4021,6 +4021,16 @@ paths:
   /api/v1/territory/apartment-contacts/:
     get:
       operationId: territory_apartment_contacts_list
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
       parameters:
       - in: query
         name: apartment
@@ -4065,6 +4075,16 @@ paths:
           description: ''
     post:
       operationId: territory_apartment_contacts_create
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
       tags:
       - territory
       requestBody:
@@ -4092,6 +4112,16 @@ paths:
   /api/v1/territory/apartment-contacts/{id}/:
     get:
       operationId: territory_apartment_contacts_retrieve
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
       parameters:
       - in: path
         name: id
@@ -4114,6 +4144,16 @@ paths:
           description: ''
     put:
       operationId: territory_apartment_contacts_update
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
       parameters:
       - in: path
         name: id
@@ -4148,6 +4188,16 @@ paths:
           description: ''
     patch:
       operationId: territory_apartment_contacts_partial_update
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
       parameters:
       - in: path
         name: id
@@ -4181,6 +4231,16 @@ paths:
           description: ''
     delete:
       operationId: territory_apartment_contacts_destroy
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
       parameters:
       - in: path
         name: id
@@ -5291,6 +5351,9 @@ components:
           type: string
           format: uuid
           readOnly: true
+        apartment:
+          type: string
+          format: uuid
         kind:
           $ref: '#/components/schemas/ApartmentContactKindEnum'
         name:
@@ -5302,6 +5365,7 @@ components:
         notes:
           type: string
       required:
+      - apartment
       - id
       - kind
       - name
@@ -5318,6 +5382,9 @@ components:
     ApartmentContactRequest:
       type: object
       properties:
+        apartment:
+          type: string
+          format: uuid
         kind:
           $ref: '#/components/schemas/ApartmentContactKindEnum'
         name:
@@ -5330,6 +5397,7 @@ components:
         notes:
           type: string
       required:
+      - apartment
       - kind
       - name
     ApartmentPublic:
@@ -7597,6 +7665,9 @@ components:
     PatchedApartmentContactRequest:
       type: object
       properties:
+        apartment:
+          type: string
+          format: uuid
         kind:
           $ref: '#/components/schemas/ApartmentContactKindEnum'
         name:
