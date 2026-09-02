@@ -124,17 +124,28 @@ nothing appended. That's what goes into the `GCP_SA_KEY_B64` secret below.
 
 ---
 
-## 3. GitHub repository secrets
+## 3. GitHub repository secrets and variables
 
-**You do this** — repo → **Settings → Secrets and variables → Actions →
-New repository secret**, one per row:
+**You do this** — repo → **Settings → Secrets and variables → Actions**.
+Two separate tabs there, **Secrets** and **Variables** — this split matters:
+GitHub masks a Secret's value out of every log line that mentions it
+(including, awkwardly, the deployed URL this workflow prints — it contains
+the service name as a substring), so identifiers that aren't actually
+sensitive go in **Variables** instead, and stay readable in logs.
 
-| Secret | Value |
+**Variables tab → New repository variable:**
+
+| Variable | Value |
 |---|---|
 | `GCP_PROJECT_ID` | `ironman-prod` (or whatever you named it) |
 | `GCP_REGION` | `asia-south1` |
 | `GCP_ARTIFACT_REPO` | `ironman` |
 | `CLOUD_RUN_SERVICE` | `ironman-api` |
+
+**Secrets tab → New repository secret:**
+
+| Secret | Value |
+|---|---|
 | `GCP_SA_KEY_B64` | base64 of the key file — see the copy method below, not a plain terminal copy |
 | `DATABASE_URL` | the Supabase pooled connection string from step 1 |
 | `DJANGO_SECRET_KEY` | a fresh random value — generate with `python -c "import secrets; print(secrets.token_urlsafe(50))"` and never reuse the dev one |
