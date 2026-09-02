@@ -1,6 +1,7 @@
 import { apiFetch, newIdempotencyKey } from "./client";
 import type {
   Apartment,
+  ApartmentContact,
   BagDetail,
   Cluster,
   CreateOrderInput,
@@ -72,13 +73,48 @@ export const identityApi = {
 };
 
 // ── Territory ──────────────────────────────────────────────────────────
+export type ClusterInput = { hub: string; name: string; notes?: string; is_active?: boolean };
+export type ApartmentInput = {
+  cluster: string;
+  name: string;
+  address?: string;
+  pincode?: string;
+  gate_notes?: string;
+  is_active?: boolean;
+  launched_on?: string | null;
+};
+export type ApartmentContactInput = {
+  apartment: string;
+  kind: ApartmentContact["kind"];
+  name: string;
+  phone?: string;
+  notes?: string;
+};
+
 export const territoryApi = {
   hubs: () => apiFetch<Paginated<Hub>>("/territory/hubs/"),
   clusters: (hub?: string) =>
     apiFetch<Paginated<Cluster>>("/territory/clusters/", { params: { hub } }),
-  apartments: (params?: { cluster?: string; q?: string }) =>
+  createCluster: (input: ClusterInput) =>
+    apiFetch<Cluster>("/territory/clusters/", { method: "POST", body: input }),
+  updateCluster: (id: string, patch: Partial<ClusterInput>) =>
+    apiFetch<Cluster>(`/territory/clusters/${id}/`, { method: "PATCH", body: patch }),
+  apartments: (params?: { cluster?: string; is_active?: boolean }) =>
     apiFetch<Paginated<Apartment>>("/territory/apartments-admin/", { params }),
   apartment: (id: string) => apiFetch<Apartment>(`/territory/apartments-admin/${id}/`),
+  createApartment: (input: ApartmentInput) =>
+    apiFetch<Apartment>("/territory/apartments-admin/", { method: "POST", body: input }),
+  updateApartment: (id: string, patch: Partial<ApartmentInput>) =>
+    apiFetch<Apartment>(`/territory/apartments-admin/${id}/`, { method: "PATCH", body: patch }),
+  createApartmentContact: (input: ApartmentContactInput) =>
+    apiFetch<ApartmentContact>("/territory/apartment-contacts/", { method: "POST", body: input }),
+  updateApartmentContact: (id: string, patch: Partial<ApartmentContactInput>) =>
+    apiFetch<ApartmentContact>(`/territory/apartment-contacts/${id}/`, {
+      method: "PATCH",
+      body: patch,
+    }),
+  deleteApartmentContact: (id: string) =>
+    apiFetch<void>(`/territory/apartment-contacts/${id}/`, { method: "DELETE" }),
   capacity: (params: { cluster: string; kind: "PICKUP" | "DELIVERY"; from: string; to: string }) =>
     apiFetch<RouteDayCapacity[]>("/territory/capacity", { params }),
   serviceability: (pincode: string) =>

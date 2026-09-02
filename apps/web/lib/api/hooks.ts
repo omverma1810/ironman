@@ -13,6 +13,9 @@ import {
   ordersApi,
   requotesApi,
   territoryApi,
+  type ApartmentContactInput,
+  type ApartmentInput,
+  type ClusterInput,
   type ExceptionListParams,
   type GarmentLineListParams,
   type JobAssignEntry,
@@ -80,11 +83,115 @@ export function useClusters(hub?: string) {
   });
 }
 
-export function useApartments(params?: { cluster?: string; q?: string }) {
+export function useCreateCluster() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ClusterInput) => territoryApi.createCluster(input),
+    onSuccess: (cluster) => {
+      queryClient.invalidateQueries({ queryKey: ["clusters"] });
+      toast.success(`Cluster "${cluster.name}" created`);
+    },
+    onError: (err) => errorToast(err, "Couldn't create the cluster."),
+  });
+}
+
+export function useUpdateCluster() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: Partial<ClusterInput> }) =>
+      territoryApi.updateCluster(id, patch),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["clusters"] });
+      toast.success("Cluster updated");
+    },
+    onError: (err) => errorToast(err, "Couldn't update the cluster."),
+  });
+}
+
+export function useApartments(params?: { cluster?: string; is_active?: boolean }) {
   return useQuery({
     queryKey: ["apartments", params],
     queryFn: () => territoryApi.apartments(params),
     staleTime: 120_000,
+  });
+}
+
+export function useApartment(id: string | undefined) {
+  return useQuery({
+    queryKey: ["apartment", id],
+    queryFn: () => territoryApi.apartment(id as string),
+    enabled: !!id,
+  });
+}
+
+export function useCreateApartment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ApartmentInput) => territoryApi.createApartment(input),
+    onSuccess: (apartment) => {
+      queryClient.invalidateQueries({ queryKey: ["apartments"] });
+      toast.success(`${apartment.name} added`);
+    },
+    onError: (err) => errorToast(err, "Couldn't create the apartment."),
+  });
+}
+
+export function useUpdateApartment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: Partial<ApartmentInput> }) =>
+      territoryApi.updateApartment(id, patch),
+    onSuccess: (apartment) => {
+      queryClient.invalidateQueries({ queryKey: ["apartments"] });
+      queryClient.invalidateQueries({ queryKey: ["apartment", apartment.id] });
+      toast.success(`${apartment.name} updated`);
+    },
+    onError: (err) => errorToast(err, "Couldn't update the apartment."),
+  });
+}
+
+function invalidateApartmentContacts(
+  queryClient: ReturnType<typeof useQueryClient>,
+  apartmentId: string
+) {
+  queryClient.invalidateQueries({ queryKey: ["apartments"] });
+  queryClient.invalidateQueries({ queryKey: ["apartment", apartmentId] });
+}
+
+export function useCreateApartmentContact(apartmentId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ApartmentContactInput) => territoryApi.createApartmentContact(input),
+    onSuccess: () => {
+      invalidateApartmentContacts(queryClient, apartmentId);
+      toast.success("Contact added");
+    },
+    onError: (err) => errorToast(err, "Couldn't add the contact."),
+  });
+}
+
+export function useUpdateApartmentContact(apartmentId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: Partial<ApartmentContactInput> }) =>
+      territoryApi.updateApartmentContact(id, patch),
+    onSuccess: () => {
+      invalidateApartmentContacts(queryClient, apartmentId);
+      toast.success("Contact updated");
+    },
+    onError: (err) => errorToast(err, "Couldn't update the contact."),
+  });
+}
+
+export function useDeleteApartmentContact(apartmentId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => territoryApi.deleteApartmentContact(id),
+    onSuccess: () => {
+      invalidateApartmentContacts(queryClient, apartmentId);
+      toast.success("Contact removed");
+    },
+    onError: (err) => errorToast(err, "Couldn't remove the contact."),
   });
 }
 

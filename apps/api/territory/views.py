@@ -115,11 +115,14 @@ class ApartmentViewSet(ScopedQuerysetMixin, viewsets.ModelViewSet):
     hub_field = "cluster__hub"
 
 
-class ApartmentContactViewSet(viewsets.ModelViewSet):
-    queryset = ApartmentContact.objects.filter(deleted_at__isnull=True)
+class ApartmentContactViewSet(ScopedQuerysetMixin, viewsets.ModelViewSet):
+    queryset = ApartmentContact.objects.filter(deleted_at__isnull=True).select_related(
+        "apartment__cluster__hub"
+    )
     serializer_class = ApartmentContactSerializer
     permission_classes = [IsOpsStaff]
     filterset_fields = ["apartment", "kind"]
+    hub_field = "apartment__cluster__hub"
 
 
 class RouteDayCapacityViewSet(ScopedQuerysetMixin, viewsets.ModelViewSet):
