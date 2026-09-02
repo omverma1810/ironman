@@ -21,6 +21,15 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
+# The console (Vercel) and API (Cloud Run) live on different registrable
+# domains, so this is cross-site from the browser's point of view.
+# base.py's SameSite=Lax is right for same-site local dev, but a browser
+# withholds a Lax cookie on any cross-site fetch/XHR subrequest — only
+# login's own Set-Cookie response lands, every request after it goes out
+# with no cookie at all and 401s. None (paired with Secure, set above)
+# is required for a cross-site cookie to be sent at all.
+SESSION_COOKIE_SAMESITE = "None"
+CSRF_COOKIE_SAMESITE = "None"
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 X_FRAME_OPTIONS = "DENY"
