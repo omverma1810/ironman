@@ -13,6 +13,7 @@ import {
   ordersApi,
   requotesApi,
   territoryApi,
+  type ExceptionListParams,
   type GarmentLineListParams,
   type JobAssignEntry,
   type OrderListParams,
@@ -396,10 +397,12 @@ export function useBoardRecordQc() {
 }
 
 // ── Exceptions ─────────────────────────────────────────────────────────
-export function useExceptions(params?: { status?: string; kind?: string; order?: string }) {
+export function useExceptions(params?: ExceptionListParams) {
   return useQuery({
     queryKey: ["exceptions", params],
     queryFn: () => exceptionsApi.list(params),
+    placeholderData: keepPreviousData,
+    refetchInterval: 30_000,
   });
 }
 
@@ -434,6 +437,18 @@ export function useFieldStaff() {
   return useQuery({
     queryKey: ["staff", "FIELD"],
     queryFn: () => identityApi.staff("FIELD"),
+  });
+}
+
+// The unfiltered staff picker is Admin/Founder-only server-side
+// (identity.views.StaffListView) — enabled controls this at the call
+// site so an Operator's exceptions-queue assignee dropdown doesn't fire
+// a request it knows will 403.
+export function useOpsStaff(enabled: boolean) {
+  return useQuery({
+    queryKey: ["staff", "ops"],
+    queryFn: () => identityApi.staff(),
+    enabled,
   });
 }
 

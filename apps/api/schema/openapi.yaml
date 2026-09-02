@@ -3178,6 +3178,11 @@ paths:
         `self.scope_to_hub(qs)` before applying the narrower own-record filter,
         so both scopes always apply together.
       parameters:
+      - in: query
+        name: assigned_to
+        schema:
+          type: string
+          format: uuid
       - name: cursor
         required: false
         in: query
@@ -6681,10 +6686,18 @@ components:
           format: uuid
           readOnly: true
           nullable: true
+        raised_by_name:
+          type: string
+          readOnly: true
+          default: ''
         assigned_to:
           type: string
           format: uuid
           nullable: true
+        assigned_to_name:
+          type: string
+          readOnly: true
+          default: ''
         sla_due_at:
           type: string
           format: date-time
@@ -6707,6 +6720,7 @@ components:
           format: date-time
           readOnly: true
       required:
+      - assigned_to_name
       - created_at
       - description
       - id
@@ -6714,6 +6728,7 @@ components:
       - order
       - order_ref
       - raised_by
+      - raised_by_name
     OrderExceptionKindEnum:
       enum:
       - DAMAGED

@@ -162,14 +162,24 @@ export const requotesApi = {
     apiFetch<OrderDetail>(`/requotes/${id}/respond/`, { method: "POST", body: { approved } }),
 };
 
+export type ExceptionListParams = {
+  status?: string;
+  kind?: string;
+  severity?: string;
+  order?: string;
+  assigned_to?: string;
+  cursor?: string;
+};
+
 export const exceptionsApi = {
-  list: (params?: { status?: string; kind?: string; order?: string }) =>
+  list: (params?: ExceptionListParams) =>
     apiFetch<Paginated<OrderException>>("/order-exceptions/", { params }),
   create: (input: {
     order: string;
     kind: OrderException["kind"];
     severity: OrderException["severity"];
     description: string;
+    sla_due_at?: string;
   }) => apiFetch<OrderException>("/order-exceptions/", { method: "POST", body: input }),
   update: (id: string, patch: Partial<OrderException>) =>
     apiFetch<OrderException>(`/order-exceptions/${id}/`, { method: "PATCH", body: patch }),

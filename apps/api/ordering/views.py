@@ -185,10 +185,12 @@ class ReQuoteViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class OrderExceptionViewSet(ScopedQuerysetMixin, viewsets.ModelViewSet):
-    queryset = OrderException.objects.filter(deleted_at__isnull=True).select_related("order")
+    queryset = OrderException.objects.filter(deleted_at__isnull=True).select_related(
+        "order", "raised_by", "assigned_to"
+    )
     serializer_class = OrderExceptionSerializer
     permission_classes = [IsOpsStaff]
-    filterset_fields = ["status", "kind", "severity", "order"]
+    filterset_fields = ["status", "kind", "severity", "order", "assigned_to"]
 
     def perform_create(self, serializer):
         serializer.save(raised_by=self.request.user, hub=serializer.validated_data["order"].hub)

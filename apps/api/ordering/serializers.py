@@ -147,6 +147,10 @@ class ReQuoteDecisionSerializer(serializers.Serializer):
 
 class OrderExceptionSerializer(serializers.ModelSerializer):
     order_ref = serializers.CharField(source="order.ref", read_only=True)
+    raised_by_name = serializers.CharField(source="raised_by.full_name", read_only=True, default="")
+    assigned_to_name = serializers.CharField(
+        source="assigned_to.full_name", read_only=True, default=""
+    )
 
     class Meta:
         model = OrderException
@@ -158,7 +162,9 @@ class OrderExceptionSerializer(serializers.ModelSerializer):
             "severity",
             "description",
             "raised_by",
+            "raised_by_name",
             "assigned_to",
+            "assigned_to_name",
             "sla_due_at",
             "status",
             "resolution",
