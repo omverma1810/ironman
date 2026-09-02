@@ -275,7 +275,9 @@ export type OrderException = {
   severity: "LOW" | "MEDIUM" | "HIGH";
   description: string;
   raised_by: string | null;
+  raised_by_name: string;
   assigned_to: string | null;
+  assigned_to_name: string;
   sla_due_at: string | null;
   status: "OPEN" | "INVESTIGATING" | "RESOLVED" | "WRITTEN_OFF";
   resolution: string;

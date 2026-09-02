@@ -181,7 +181,7 @@ class Command(BaseCommand):
                 hub=hub,
                 phone=phone,
                 defaults=dict(
-                    name=f"{first_names[i % len(first_names)]} {['Sharma','Reddy','Nair','Gupta'][i % 4]}",
+                    name=f"{first_names[i % len(first_names)]} {['Sharma', 'Reddy', 'Nair', 'Gupta'][i % 4]}",
                     status=Customer.Status.LEAD,
                     acquisition_channel=random.choice(
                         ["WATCHMAN", "WALK_IN", "CUSTOMER_REFERRAL", "ORGANIC"]
@@ -192,7 +192,7 @@ class Command(BaseCommand):
             Address.objects.get_or_create(
                 customer=customer,
                 apartment=apt,
-                defaults=dict(flat_no=f"{i%9+1}0{i%4+1}", label="Home", is_default=True),
+                defaults=dict(flat_no=f"{i % 9 + 1}0{i % 4 + 1}", label="Home", is_default=True),
             )
             customers.append(customer)
 
@@ -235,13 +235,81 @@ class Command(BaseCommand):
                 self._fast_forward(order, target, founder, field_staff)
                 created_count += 1
 
+        self.stdout.write("Seeding exceptions...")
+        exception_count = self._seed_exceptions(hub, founder)
+
         self.stdout.write(
             self.style.SUCCESS(
                 f"Seed complete: 1 hub, 2 clusters, {len(apartments)} apartments, "
-                f"{len(customers)} customers, {created_count} orders, 4 staff accounts "
-                f"(password: IronMan@2026)."
+                f"{len(customers)} customers, {created_count} orders, "
+                f"{exception_count} exceptions, 4 staff accounts (password: IronMan@2026)."
             )
         )
+
+    def _seed_exceptions(self, hub, founder):
+        """A handful of exceptions across the triage queue's real states
+        (docs/08 batch 2.9) — an empty queue tells you nothing about
+        whether the SLA/assignment/resolution flow actually works."""
+        from ordering.models import Order, OrderException
+
+        orders = list(Order.objects.filter(hub=hub).order_by("?")[:4])
+        if len(orders) < 4:
+            return 0
+        admin = User.objects.get(email="admin@ironman.test")
+        operator = User.objects.get(email="operator@ironman.test")
+        now = timezone.now()
+
+        specs = [
+            dict(
+                order=orders[0],
+                kind="DAMAGED",
+                severity="HIGH",
+                status="OPEN",
+                description="Silk saree came back with a scorch mark near the pallu.",
+                raised_by=operator,
+                sla_due_at=now - timezone.timedelta(hours=6),  # overdue, on purpose
+            ),
+            dict(
+                order=orders[1],
+                kind="MISSING",
+                severity="MEDIUM",
+                status="INVESTIGATING",
+                description="Customer says one shirt short of the delivered count.",
+                raised_by=operator,
+                assigned_to=admin,
+                sla_due_at=now + timezone.timedelta(days=1),
+            ),
+            dict(
+                order=orders[2],
+                kind="WRONG_ITEM",
+                severity="LOW",
+                status="RESOLVED",
+                description="Delivered a trouser belonging to a different order in the same bag.",
+                raised_by=operator,
+                assigned_to=operator,
+                sla_due_at=now - timezone.timedelta(days=2),
+                resolution="Correct item picked up and swapped same day; customer confirmed.",
+                resolved_at=now - timezone.timedelta(days=1),
+            ),
+            dict(
+                order=orders[3],
+                kind="LOST",
+                severity="HIGH",
+                status="WRITTEN_OFF",
+                description="Garment never located after a hub relocation mix-up.",
+                raised_by=founder,
+                assigned_to=founder,
+                sla_due_at=now - timezone.timedelta(days=5),
+                resolution="Untraceable after 5 days; goodwill credit issued to customer.",
+                resolved_at=now - timezone.timedelta(days=3),
+                cost_minor=150000,
+            ),
+        ]
+        for spec in specs:
+            OrderException.objects.get_or_create(
+                hub=hub, order=spec["order"], kind=spec["kind"], defaults=spec
+            )
+        return len(specs)
 
     # Targets whose path reaches at least PICKUP_ASSIGNED / DELIVERY_ASSIGNED
     # — everything except the two ends of the lifecycle (still-just-booked,

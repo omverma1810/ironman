@@ -4,6 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { AsyncBoundary } from "@/components/patterns/async-boundary";
 import { CustodySection } from "@/components/custody/custody-section";
+import { ReportExceptionDialog } from "@/components/exceptions/report-exception-dialog";
 import { IntakeDialog } from "@/components/orders/intake-dialog";
 import { PageHeader } from "@/components/patterns/page-header";
 import { StageBadge } from "@/components/patterns/stage-badge";
@@ -61,6 +62,7 @@ export default function OrderDetailPage() {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [intakeOpen, setIntakeOpen] = useState(false);
+  const [reportExceptionOpen, setReportExceptionOpen] = useState(false);
 
   const canManage = me.data && canManageOrders(me.data.roles);
 
@@ -97,6 +99,15 @@ export default function OrderDetailPage() {
                 actions={
                   <div className="flex items-center gap-2">
                     <StageBadge status={order.status} className="text-sm" />
+                    {canManage && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setReportExceptionOpen(true)}
+                      >
+                        <Icon name="alert-triangle" /> Report an issue
+                      </Button>
+                    )}
                     {canManage && !isTerminal && (
                       <>
                         {order.status === "AT_HUB" && (
@@ -321,6 +332,11 @@ export default function OrderDetailPage() {
               </div>
 
               <IntakeDialog order={order} open={intakeOpen} onOpenChange={setIntakeOpen} />
+              <ReportExceptionDialog
+                orderId={order.id}
+                open={reportExceptionOpen}
+                onOpenChange={setReportExceptionOpen}
+              />
             </>
           );
         }}

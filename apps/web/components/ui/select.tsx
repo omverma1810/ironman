@@ -40,7 +40,9 @@ export function SelectContent({
       <SelectPrimitive.Content
         position={position}
         className={cn(
-          "z-30 max-h-72 min-w-32 overflow-hidden rounded-md border border-border-default bg-surface-raised shadow-md",
+          // Above z-40 (Dialog's overlay/content, ui/dialog.tsx) — a Select
+          // opened inside a Dialog must still render its options on top.
+          "z-50 max-h-72 min-w-32 overflow-hidden rounded-md border border-border-default bg-surface-raised shadow-md",
           position === "popper" && "translate-y-1",
           className
         )}
