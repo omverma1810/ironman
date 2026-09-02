@@ -1,3 +1,5 @@
+import datetime
+
 from rest_framework import serializers
 
 from custody.models import Bag, GarmentLine, GarmentStage, QcCheck, StageEvent
@@ -6,6 +8,20 @@ from custody.models import Bag, GarmentLine, GarmentStage, QcCheck, StageEvent
 class GarmentLineSerializer(serializers.ModelSerializer):
     garment_type_name = serializers.CharField(source="garment_type.name", read_only=True)
     bag_code = serializers.CharField(source="bag.code", read_only=True)
+    order = serializers.UUIDField(source="bag.order_id", read_only=True)
+    order_ref = serializers.CharField(source="bag.order.ref", read_only=True)
+    delivery_promised_at = serializers.DateTimeField(
+        source="bag.order.delivery_promised_at", read_only=True
+    )
+    # Only present when the queryset carries GarmentLineViewSet's
+    # `stage_entered_at` annotation (production board ageing, docs/08 batch
+    # 2.6) — falls back to `created_at` elsewhere (e.g. the scan/transition
+    # response, or nested under BagDetailSerializer) rather than erroring on
+    # a plain model instance with no such attribute.
+    stage_entered_at = serializers.SerializerMethodField()
+
+    def get_stage_entered_at(self, obj) -> datetime.datetime:
+        return getattr(obj, "stage_entered_at", None) or obj.created_at
 
     class Meta:
         model = GarmentLine
@@ -14,10 +30,15 @@ class GarmentLineSerializer(serializers.ModelSerializer):
             "order_line",
             "bag",
             "bag_code",
+            "order",
+            "order_ref",
+            "delivery_promised_at",
+            "hub",
             "seq",
             "garment_type",
             "garment_type_name",
             "stage",
+            "stage_entered_at",
             "condition_notes",
             "defect_flags",
             "is_rework",

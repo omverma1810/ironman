@@ -13,6 +13,7 @@ type NavItem = { href: string; label: string; icon: IconName; show?: (roles: Rol
 const NAV: NavItem[] = [
   { href: "/console", label: "Dashboard", icon: "dashboard" },
   { href: "/console/orders", label: "Orders", icon: "bag" },
+  { href: "/console/production", label: "Production", icon: "garment-bag" },
   { href: "/console/customers", label: "Customers", icon: "users" },
   { href: "/console/apartments", label: "Apartments", icon: "apartment" },
   { href: "/console/exceptions", label: "Exceptions", icon: "alert-triangle" },

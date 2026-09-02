@@ -305,16 +305,25 @@ export type GarmentLine = {
   order_line: string;
   bag: string;
   bag_code: string;
+  order: string;
+  order_ref: string;
+  delivery_promised_at: string | null;
+  hub: string;
   seq: number;
   garment_type: string;
   garment_type_name: string;
   stage: GarmentStage;
+  // The timestamp this garment entered `stage` — from the append-only
+  // scan trail, falling back to `created_at` if never scanned.
+  stage_entered_at: string;
   condition_notes: string;
   defect_flags: string[];
   is_rework: boolean;
   rework_count: number;
   created_at: string;
 };
+
+export type WipSummary = Record<GarmentStage, number>;
 
 export type Bag = {
   id: string;

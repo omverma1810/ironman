@@ -1419,6 +1419,14 @@ paths:
         schema:
           type: string
       - in: query
+        name: due
+        schema:
+          type: string
+      - in: query
+        name: exclude_terminal
+        schema:
+          type: boolean
+      - in: query
         name: hub
         schema:
           type: string
@@ -1615,6 +1623,27 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/GarmentLineRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GarmentLine'
+          description: ''
+  /api/v1/custody/garment-lines/wip_summary/:
+    get:
+      operationId: custody_garment_lines_wip_summary_retrieve
+      description: |-
+        Stage counts for the production board's WIP-by-stage columns —
+        one aggregate query instead of the console fetching every line and
+        counting client-side. Honours the same hub/due filters as the list
+        so "today's overdue WIP" and "all WIP" use one consistent query
+        shape.
+      tags:
+      - custody
       security:
       - jwtAuth: []
       - cookieAuth: []
@@ -5818,6 +5847,21 @@ components:
         bag_code:
           type: string
           readOnly: true
+        order:
+          type: string
+          format: uuid
+          readOnly: true
+        order_ref:
+          type: string
+          readOnly: true
+        delivery_promised_at:
+          type: string
+          format: date-time
+          readOnly: true
+        hub:
+          type: string
+          format: uuid
+          readOnly: true
         seq:
           type: integer
           readOnly: true
@@ -5831,6 +5875,10 @@ components:
         stage:
           allOf:
           - $ref: '#/components/schemas/GarmentStageEnum'
+          readOnly: true
+        stage_entered_at:
+          type: string
+          format: date-time
           readOnly: true
         condition_notes:
           type: string
@@ -5850,14 +5898,19 @@ components:
       - bag
       - bag_code
       - created_at
+      - delivery_promised_at
       - garment_type
       - garment_type_name
+      - hub
       - id
       - is_rework
+      - order
       - order_line
+      - order_ref
       - rework_count
       - seq
       - stage
+      - stage_entered_at
     GarmentLineRequest:
       type: object
       properties:

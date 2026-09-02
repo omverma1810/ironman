@@ -13,6 +13,7 @@ import {
   ordersApi,
   requotesApi,
   territoryApi,
+  type GarmentLineListParams,
   type JobAssignEntry,
   type OrderListParams,
 } from "./endpoints";
@@ -329,6 +330,66 @@ export function useRecordQc(orderId: string) {
       toast.success(
         line.stage === "PACKED" ? "Passed QC — packed" : "Failed QC — sent for rework"
       );
+    },
+    onError: (err) => errorToast(err, "Couldn't record the QC result."),
+  });
+}
+
+// ── Production board (docs/08 batch 2.6) ────────────────────────────────
+// Hub-wide, not order-scoped — separate query keys and invalidation from
+// the order-detail Custody section's hooks above.
+export function useGarmentLines(params?: GarmentLineListParams) {
+  return useQuery({
+    queryKey: ["garment-lines", params],
+    queryFn: () => custodyApi.garmentLines(params),
+    placeholderData: keepPreviousData,
+    refetchInterval: 30_000,
+  });
+}
+
+export function useWipSummary(
+  params?: Pick<GarmentLineListParams, "hub" | "due" | "exclude_terminal">
+) {
+  return useQuery({
+    queryKey: ["wip-summary", params],
+    queryFn: () => custodyApi.wipSummary(params),
+    refetchInterval: 30_000,
+  });
+}
+
+function invalidateBoard(queryClient: ReturnType<typeof useQueryClient>) {
+  queryClient.invalidateQueries({ queryKey: ["garment-lines"] });
+  queryClient.invalidateQueries({ queryKey: ["wip-summary"] });
+}
+
+export function useBoardScan() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ code, to_stage }: { code: string; to_stage: GarmentStage }) =>
+      custodyApi.scan(code, to_stage),
+    onSuccess: (result) => {
+      invalidateBoard(queryClient);
+      if (result.skipped_count > 0) {
+        toast.warning(
+          `${result.moved_count} garment${result.moved_count === 1 ? "" : "s"} moved, ` +
+            `${result.skipped_count} couldn't (already diverged — check them individually)`
+        );
+      } else {
+        toast.success(`${result.bag.code} moved to ${result.bag.current_stage.toLowerCase()}`);
+      }
+    },
+    onError: (err) => errorToast(err, "Couldn't scan this bag."),
+  });
+}
+
+export function useBoardRecordQc() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, result, reason }: { id: string; result: "PASS" | "FAIL"; reason?: string }) =>
+      custodyApi.recordQc(id, result, reason),
+    onSuccess: (line) => {
+      invalidateBoard(queryClient);
+      toast.success(line.stage === "PACKED" ? "Passed QC — packed" : "Failed QC — sent for rework");
     },
     onError: (err) => errorToast(err, "Couldn't record the QC result."),
   });
