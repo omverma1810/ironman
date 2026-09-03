@@ -8,7 +8,7 @@ nothing upstream has ever computed `Order.tax_minor`."""
 
 from __future__ import annotations
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from billing.models import CreditNote, Invoice, InvoiceStatus
@@ -42,12 +42,35 @@ def _build_snapshot(order) -> list[dict]:
     return lines
 
 
-@transaction.atomic
 def issue_invoice(order, *, apply_gst: bool | None = None, actor=None) -> Invoice:
     """`apply_gst=None` (the default) follows the hub's `TaxSettings`; ops
     can pass `True`/`False` to override that for this one invoice — the
     per-invoice override `territory.TaxSettings`'s own docstring already
-    calls out as a `billing`-phase feature."""
+    calls out as a `billing`-phase feature.
+
+    `_invoice_ref()` picks the next sequence number from a plain `count()`,
+    which two concurrent issuances can both read before either commits —
+    the second then loses on `Invoice.ref`'s unique constraint. Retrying
+    picks a fresh ref against whichever one just landed, same as the
+    collision is rare enough (in practice: two ops staff issuing at the
+    same instant) not to warrant a locked counter table.
+    """
+    for attempt in range(5):
+        try:
+            return _issue_invoice_once(order, apply_gst=apply_gst, actor=actor)
+        except IntegrityError:
+            if attempt == 4:
+                raise
+            # Constructing the failed `Invoice(order=order, ...)` above
+            # already set Django's reverse-cache for `order.invoice` on
+            # this Python object, even though nothing was persisted — the
+            # retry's own `hasattr(order, "invoice")` guard would
+            # otherwise see that stale cache and wrongly refuse to issue.
+            order.refresh_from_db()
+
+
+@transaction.atomic
+def _issue_invoice_once(order, *, apply_gst: bool | None, actor) -> Invoice:
     if hasattr(order, "invoice"):
         raise ApiError(f"{order.ref} already has an invoice.", code="validation_error")
     if order.status == OrderStatus.CANCELLED:

@@ -66,6 +66,53 @@ def test_cannot_invoice_without_verified_quantities(hub, customer, service):
         issue_invoice(order)
 
 
+def test_issue_invoice_retries_past_a_ref_collision(
+    monkeypatch, verified_order, hub, customer, service
+):
+    """`_invoice_ref()` picks the next sequence number from a plain
+    `count()` — two concurrent issuances can both compute the same ref
+    before either commits, and the loser hits `Invoice.ref`'s unique
+    constraint. Caught this for real in CI when the `chromium` and
+    `mobile` E2E projects both issued an invoice at once against the same
+    seeded backend."""
+    from ordering.models import Order, OrderStatus
+
+    first = issue_invoice(verified_order)
+
+    second_order = Order.objects.create(
+        hub=hub,
+        customer=customer,
+        service=service,
+        channel="COUNTER",
+        status=OrderStatus.INTAKE_VERIFIED,
+        declared_total_qty=1,
+        verified_total_qty=1,
+        subtotal_minor=1000,
+        total_minor=1000,
+        price_list_version=1,
+    )
+
+    from billing.models import Invoice, _invoice_ref
+
+    ref_field = Invoice._meta.get_field("ref")
+    calls = {"n": 0}
+
+    def colliding_once():
+        calls["n"] += 1
+        return first.ref if calls["n"] == 1 else _invoice_ref()
+
+    # `Field.get_default()` is a `cached_property` (`_get_default`) already
+    # memoized from the first `Invoice()` construction above — patching
+    # `.default` alone is too late, since Django won't re-read it. Overwrite
+    # the memoized slot directly instead.
+    monkeypatch.setattr(ref_field, "_get_default", colliding_once)
+
+    second = issue_invoice(second_order)
+    assert calls["n"] == 2
+    assert second.ref != first.ref
+    assert second.order_id == second_order.id
+
+
 def test_cannot_invoice_a_cancelled_order(verified_order):
     verified_order.status = "CANCELLED"
     verified_order.save(update_fields=["status"])
