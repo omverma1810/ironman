@@ -55,3 +55,22 @@ def gst_hub(hub):
         defaults={"gst_enabled": True, "gstin": "29AAAAA0000A1Z5", "default_rate_bps": 1800},
     )
     return hub
+
+
+@pytest.fixture
+def field_job(hub, cluster, field_user, verified_order):
+    """A delivery job assigning `field_user` to `verified_order` — just
+    enough of `fulfilment`'s shape for `InvoiceViewSet`'s Field-scoping
+    (`order__jobs__assigned_to`) to have something real to filter on."""
+    from django.utils import timezone
+
+    from fulfilment.models import Job, JobKind, RouteDay
+
+    route_day = RouteDay.objects.create(hub=hub, cluster=cluster, date=timezone.localdate())
+    return Job.objects.create(
+        hub=hub,
+        route_day=route_day,
+        order=verified_order,
+        kind=JobKind.DELIVERY,
+        assigned_to=field_user,
+    )

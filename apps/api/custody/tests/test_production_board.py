@@ -129,7 +129,13 @@ def test_due_filter_today(api_client, operator_user, hub, customer, service, gar
     from custody.services import create_bag_for_order
     from ordering.models import Order, OrderLine, OrderStatus
 
-    today_5pm = timezone.now().replace(hour=17, minute=0, second=0, microsecond=0)
+    # `timezone.localtime()`, not `timezone.now()` — the filter under test
+    # (GarmentLineFilterSet.filter_due, custody/views.py) windows "today" on
+    # IST (this project's TIME_ZONE), and `.replace(hour=...)` on a bare
+    # `now()` pins the UTC calendar day instead. The two disagree for ~5.5h
+    # daily (UTC 18:30-24:00, when IST has already rolled to tomorrow) —
+    # this test flaked in CI in exactly that window (PR #18).
+    today_5pm = timezone.localtime().replace(hour=17, minute=0, second=0, microsecond=0)
     order = Order.objects.create(
         hub=hub,
         customer=customer,

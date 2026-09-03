@@ -3,6 +3,7 @@ import { test as base, expect } from "@playwright/test";
 /** Shared demo credentials, seeded by `manage.py seed_demo` (docs/api README). */
 export const DEMO_USERS = {
   operator: { email: "operator@ironman.test", password: "IronMan@2026" },
+  admin: { email: "admin@ironman.test", password: "IronMan@2026" },
   founder: { email: "founder@ironman.test", password: "IronMan@2026" },
   field: { email: "field@ironman.test", password: "IronMan@2026" },
 } as const;

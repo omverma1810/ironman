@@ -28,10 +28,12 @@ import type {
   OrderException,
   OrderListItem,
   Paginated,
+  Payment,
   Proof,
   ProofKind,
   ProofMeta,
   Quote,
+  RecordPaymentInput,
   ReQuote,
   Role,
   RouteDay,
@@ -372,7 +374,7 @@ export const suppliesApi = {
     }),
 };
 
-// ── Billing (docs/08 batch 3.1) ──────────────────────────────────────────
+// ── Billing (docs/08 batches 3.1-3.2) ────────────────────────────────────
 export const billingApi = {
   invoices: (params?: { status?: string; order?: string }) =>
     apiFetch<Paginated<Invoice>>("/billing/invoices/", { params }),
@@ -386,6 +388,11 @@ export const billingApi = {
     }),
   issueCreditNote: (ref: string, input: CreditNoteInput) =>
     apiFetch<CreditNote>(`/billing/invoices/${ref}/credit-note/`, {
+      method: "POST",
+      body: input,
+    }),
+  recordPayment: (ref: string, input: RecordPaymentInput) =>
+    apiFetch<Payment>(`/billing/invoices/${ref}/payments/`, {
       method: "POST",
       body: input,
     }),

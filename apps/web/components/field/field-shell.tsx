@@ -46,6 +46,15 @@ export function FieldShell({ children }: { children: React.ReactNode }) {
     }
   }, [me.isError, me.error, router]);
 
+  function handleLogout() {
+    // Not just logout.mutate() — useLogout()'s onSuccess sets `me`'s
+    // cached data to `null` (not an error), so the redirect effect above
+    // never fires on it: the page fell to `return null` below and just
+    // sat blank forever. Navigate explicitly instead, same as the
+    // console topbar's own logout already does.
+    logout.mutate(undefined, { onSuccess: () => router.replace("/field/login") });
+  }
+
   if (me.isPending) {
     return (
       <div className="flex min-h-dvh flex-col gap-3 p-4">
@@ -76,7 +85,7 @@ export function FieldShell({ children }: { children: React.ReactNode }) {
           <Button asChild variant="secondary" size="lg">
             <a href="/console">Go to console</a>
           </Button>
-          <Button variant="outline" size="lg" onClick={() => logout.mutate()}>
+          <Button variant="outline" size="lg" onClick={handleLogout}>
             Log out
           </Button>
         </div>
@@ -115,7 +124,7 @@ export function FieldShell({ children }: { children: React.ReactNode }) {
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-text-muted">{me.data.full_name}</span>
-          <Button variant="ghost" size="icon" onClick={() => logout.mutate()}>
+          <Button variant="ghost" size="icon" onClick={handleLogout}>
             <Icon name="logout" label="Log out" />
           </Button>
         </div>

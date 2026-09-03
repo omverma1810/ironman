@@ -17,12 +17,12 @@ test.describe("Authentication", () => {
     await expect(page.getByText(/incorrect/i)).toBeVisible();
   });
 
-  test("admin login without MFA setup is refused with a clear message", async ({ page }) => {
-    await page.goto("/console/login");
-    await page.getByLabel("Email", { exact: true }).fill(DEMO_USERS.founder.email);
-    await page.getByLabel("Password", { exact: true }).fill(DEMO_USERS.founder.password);
-    await page.getByRole("button", { name: "Log in" }).click();
-    await expect(page.getByText(/two-factor authentication is required/i)).toBeVisible();
+  test("a founder logs in without TOTP (opt-in for the pilot) and reaches the dashboard", async ({
+    page,
+  }) => {
+    await loginAs(page, DEMO_USERS.founder);
+    await expect(page).toHaveURL(/\/console$/);
+    await expect(page.getByRole("heading", { name: /welcome back/i })).toBeVisible();
   });
 
   test("a valid operator login reaches the dashboard", async ({ page }) => {
