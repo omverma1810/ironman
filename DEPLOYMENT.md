@@ -225,6 +225,15 @@ If the Vercel URL Vercel actually assigns differs from the
 `CORS_ALLOWED_ORIGINS`, update that GitHub secret to match and re-run the
 deploy workflow.
 
+**Why the browser never talks to Cloud Run directly:** console and API sit
+on different registrable domains, so a direct browser fetch is cross-site
+— the session/CSRF cookie needs `SameSite=None`, which mobile Safari (and
+increasingly other browsers) can drop unreliably right after it's set.
+`next.config.ts`'s `rewrites()` proxies `/api/v1/*` to
+`NEXT_PUBLIC_API_BASE_URL` server-side instead, so the browser only ever
+sees its own origin and the cookie stays an ordinary same-site one. This
+reuses the one env var above — nothing else to configure.
+
 ---
 
 ## 6. What's already live without any of the above
