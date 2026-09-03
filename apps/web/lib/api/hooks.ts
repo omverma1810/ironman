@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient, keepPreviousData } from "@tansta
 import { toast } from "sonner";
 import {
   authApi,
+  billingApi,
   catalogApi,
   custodyApi,
   customersApi,
@@ -26,6 +27,7 @@ import { ApiError } from "./errors";
 import type {
   ConsumptionRuleInput,
   CreateOrderInput,
+  CreditNoteInput,
   DeclaredLine,
   GarmentStage,
   Job,
@@ -1004,5 +1006,50 @@ export function useReplaceConsumptionRules() {
       toast.success("Consumption rules saved");
     },
     onError: (err) => errorToast(err, "Couldn't save the consumption rules."),
+  });
+}
+
+// ── Billing (docs/08 batch 3.1) ──────────────────────────────────────────
+export function useInvoices(params?: { status?: string; order?: string }) {
+  return useQuery({
+    queryKey: ["invoices", params],
+    queryFn: () => billingApi.invoices(params),
+    staleTime: 30_000,
+  });
+}
+
+export function useInvoice(ref: string | undefined) {
+  return useQuery({
+    queryKey: ["invoice", ref],
+    queryFn: () => billingApi.invoice(ref as string),
+    enabled: !!ref,
+  });
+}
+
+export function useIssueInvoice() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orderId, applyGst }: { orderId: string; applyGst?: boolean | null }) =>
+      billingApi.issueInvoice(orderId, applyGst),
+    onSuccess: (invoice) => {
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["order", invoice.order] });
+      toast.success(`${invoice.ref} issued`);
+    },
+    onError: (err) => errorToast(err, "Couldn't issue the invoice."),
+  });
+}
+
+export function useIssueCreditNote() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ref, input }: { ref: string; input: CreditNoteInput }) =>
+      billingApi.issueCreditNote(ref, input),
+    onSuccess: (_creditNote, { ref }) => {
+      queryClient.invalidateQueries({ queryKey: ["invoice", ref] });
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      toast.success("Credit note issued");
+    },
+    onError: (err) => errorToast(err, "Couldn't issue the credit note."),
   });
 }

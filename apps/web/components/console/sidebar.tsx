@@ -36,6 +36,12 @@ const NAV: NavItem[] = [
     show: (roles) => canManageSupplies(roles),
   },
   {
+    href: "/console/invoices",
+    label: "Invoices",
+    icon: "file-text",
+    show: (roles) => canSeeMoney(roles),
+  },
+  {
     href: "/console/pricing",
     label: "Pricing",
     icon: "percent",

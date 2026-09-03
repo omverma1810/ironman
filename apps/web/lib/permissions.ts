@@ -38,6 +38,14 @@ export function canSeeMoney(roles: Role[] | undefined): boolean {
   return hasRole(roles, ...MONEY_ROLES);
 }
 
+// docs/04 §3.7 "[O][A]" on issuing an invoice — day-to-day order handling,
+// same mapping as `canManageOrders`. Reading it back is `canSeeMoney`
+// instead (`[C own][A][B]`, Operator excluded — docs/06 §3.1: the store
+// operator "must not see what the business charges").
+export function canIssueInvoices(roles: Role[] | undefined): boolean {
+  return hasRole(roles, ...OPS_ROLES);
+}
+
 export function canEditPricing(roles: Role[] | undefined): boolean {
   return hasRole(roles, "FOUNDER");
 }

@@ -7,6 +7,8 @@ import type {
   ConsumptionRule,
   ConsumptionRuleInput,
   CreateOrderInput,
+  CreditNote,
+  CreditNoteInput,
   Customer,
   CustomerDetail,
   GarmentLine,
@@ -14,6 +16,8 @@ import type {
   GarmentType,
   Hub,
   DeclaredLine,
+  Invoice,
+  InvoiceDetail,
   Job,
   JobAttempt,
   JobKind,
@@ -365,6 +369,25 @@ export const suppliesApi = {
     apiFetch<ConsumptionRule[]>("/supplies/consumption-rules", {
       method: "PUT",
       body: { rules },
+    }),
+};
+
+// ── Billing (docs/08 batch 3.1) ──────────────────────────────────────────
+export const billingApi = {
+  invoices: (params?: { status?: string; order?: string }) =>
+    apiFetch<Paginated<Invoice>>("/billing/invoices/", { params }),
+  invoice: (ref: string) => apiFetch<InvoiceDetail>(`/billing/invoices/${ref}/`),
+  invoicePdfUrl: (ref: string) =>
+    apiFetch<{ url: string | null }>(`/billing/invoices/${ref}/pdf/`),
+  issueInvoice: (orderId: string, apply_gst?: boolean | null) =>
+    apiFetch<InvoiceDetail>(`/billing/invoices/${orderId}/issue`, {
+      method: "POST",
+      body: { apply_gst: apply_gst ?? null },
+    }),
+  issueCreditNote: (ref: string, input: CreditNoteInput) =>
+    apiFetch<CreditNote>(`/billing/invoices/${ref}/credit-note/`, {
+      method: "POST",
+      body: input,
     }),
 };
 

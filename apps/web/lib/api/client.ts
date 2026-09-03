@@ -21,6 +21,19 @@ function isFormData(body: unknown): body is FormData {
   return typeof FormData !== "undefined" && body instanceof FormData;
 }
 
+/**
+ * A file URL a serializer returns via Django's `FileField.url` (invoice/
+ * credit-note PDFs, docs/08 batch 3.1) is host-relative (`/media/...`) —
+ * it only resolves correctly when the page and the API share an origin.
+ * Console and API are separate deployments, so it needs the API's own
+ * origin prefixed before it's used as a link or download target.
+ */
+export function resolveMediaUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (/^https?:\/\//i.test(url)) return url;
+  return `${new URL(API_BASE_URL).origin}${url}`;
+}
+
 function buildUrl(path: string, params?: RequestOptions["params"]): string {
   const url = new URL(
     path.startsWith("http") ? path : `${API_BASE_URL}${path}`

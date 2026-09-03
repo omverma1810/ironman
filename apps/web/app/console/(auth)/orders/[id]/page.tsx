@@ -3,6 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { AsyncBoundary } from "@/components/patterns/async-boundary";
+import { InvoiceSection } from "@/components/billing/invoice-section";
 import { CustodySection } from "@/components/custody/custody-section";
 import { ReportExceptionDialog } from "@/components/exceptions/report-exception-dialog";
 import { IntakeDialog } from "@/components/orders/intake-dialog";
@@ -227,6 +228,12 @@ export default function OrderDetailPage() {
                     orderId={order.id}
                     orderStatus={order.status}
                     canManage={!!canManage}
+                  />
+
+                  <InvoiceSection
+                    orderId={order.id}
+                    orderStatus={order.status}
+                    roles={me.data?.roles}
                   />
 
                   <Card>

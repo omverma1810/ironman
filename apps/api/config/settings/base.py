@@ -52,6 +52,7 @@ LOCAL_APPS = [
     "custody",
     "fulfilment",
     "supplies",
+    "billing",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -202,6 +203,7 @@ SPECTACULAR_SETTINGS = {
         "JobStatusEnum": "fulfilment.models.JobStatus",
         "RouteDayStatusEnum": "fulfilment.models.RouteDayStatus",
         "OfflineOpStatusEnum": "fulfilment.models.OfflineOpStatus",
+        "InvoiceStatusEnum": "billing.models.InvoiceStatus",
     },
 }
 

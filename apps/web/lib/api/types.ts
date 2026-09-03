@@ -549,3 +549,55 @@ export type ConsumptionRuleInput = {
   stock_item: string;
   qty_per_unit: string;
 };
+
+export type InvoiceStatus = "DRAFT" | "ISSUED" | "PAID" | "CANCELLED";
+
+export type Invoice = {
+  id: string;
+  ref: string;
+  hub: string;
+  order: string;
+  order_ref: string;
+  customer_name: string;
+  status: InvoiceStatus;
+  issued_at: string | null;
+  total_minor: number;
+  gst_applied: boolean;
+};
+
+export type InvoiceSnapshotLine = {
+  garment_type_name: string;
+  qty: number;
+  unit_price_minor: number;
+  line_total_minor: number;
+};
+
+export type CreditNote = {
+  id: string;
+  invoice: string;
+  reason: string;
+  amount_minor: number;
+  issued_by_name: string;
+  at: string;
+  pdf_url: string | null;
+};
+
+export type InvoiceDetail = Invoice & {
+  hub_name: string;
+  customer: string;
+  customer_phone: string;
+  subtotal_minor: number;
+  discount_minor: number;
+  tax_minor: number;
+  gstin_snapshot: string;
+  price_list_version: number | null;
+  snapshot: InvoiceSnapshotLine[];
+  pdf_url: string | null;
+  credit_notes: CreditNote[];
+  credited_minor: number;
+};
+
+export type CreditNoteInput = {
+  reason: string;
+  amount: number;
+};
