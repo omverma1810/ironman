@@ -248,13 +248,35 @@ class Command(BaseCommand):
         self.stdout.write("Seeding supplies...")
         self._seed_supplies(hub, service, garment_types)
 
+        self.stdout.write("Seeding invoices...")
+        invoice_count = self._seed_invoices(founder)
+
         self.stdout.write(
             self.style.SUCCESS(
                 f"Seed complete: 1 hub, 2 clusters, {len(apartments)} apartments, "
                 f"{len(customers)} customers, {created_count} orders, "
-                f"{exception_count} exceptions, 4 staff accounts (password: IronMan@2026)."
+                f"{exception_count} exceptions, {invoice_count} invoices, "
+                "4 staff accounts (password: IronMan@2026)."
             )
         )
+
+    def _seed_invoices(self, actor) -> int:
+        """docs/08 Phase 3 exit criterion: "every delivered order has an
+        invoice" — so every DELIVERED/CLOSED order in `demo_states` above
+        gets one, not just a sample, and the console's Invoices screen
+        (Admin/Founder) has real rows on first load."""
+        import billing.services as billing_services
+
+        count = 0
+        orders = Order.objects.filter(
+            status__in=[OrderStatus.DELIVERED, OrderStatus.CLOSED], verified_total_qty__isnull=False
+        )
+        for order in orders:
+            if hasattr(order, "invoice"):
+                continue
+            billing_services.issue_invoice(order, actor=actor)
+            count += 1
+        return count
 
     def _seed_supplies(self, hub, service, garment_types):
         """docs/08 batch 2.13: enough stock rows that the console screen has
@@ -451,16 +473,25 @@ class Command(BaseCommand):
             order = self._seed_pickup_job(order, target, actor, field_staff)
 
         production_path = {
-            OrderStatus.IN_PRODUCTION: [OrderStatus.INTAKE_VERIFIED, OrderStatus.IN_PRODUCTION],
-            OrderStatus.READY: [
-                OrderStatus.INTAKE_VERIFIED,
-                OrderStatus.IN_PRODUCTION,
-                OrderStatus.READY,
-            ],
+            OrderStatus.IN_PRODUCTION: [OrderStatus.IN_PRODUCTION],
+            OrderStatus.READY: [OrderStatus.IN_PRODUCTION, OrderStatus.READY],
         }
         # OUT_FOR_DELIVERY/DELIVERED/CLOSED all pass through READY first.
         steps = production_path.get(target, production_path[OrderStatus.READY])
         if target in self._NEEDS_PRODUCTION:
+            # Real `record_intake`, not an injected `transition()` — this
+            # is also what sets `verified_total_qty`/`subtotal_minor`/
+            # `total_minor` from verified quantities (docs/02 §3.5), which
+            # `billing.services.issue_invoice` requires before an order can
+            # be invoiced. No variance seeded: every declared line verifies
+            # as declared.
+            verified_lines = [
+                {"garment_type": line.garment_type_id, "qty": line.declared_qty}
+                for line in order.lines.all()
+            ]
+            order = ordering_services.record_intake(
+                order, verified_lines=verified_lines, actor=actor
+            )
             for step in steps:
                 order = transition(order, step, actor=actor, event_type=f"seed.{step.lower()}")
             self._seed_bag(order, target, actor)

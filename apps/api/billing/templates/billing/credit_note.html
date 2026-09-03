@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page { size: A4; margin: 20mm 18mm; }
+  body { font-family: "DejaVu Sans", "Helvetica Neue", Arial, sans-serif; color: #17171b; font-size: 10.5pt; }
+  .header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    border-bottom: 3px solid #F5C518; padding-bottom: 12pt; margin-bottom: 16pt;
+  }
+  .brand { display: flex; align-items: center; gap: 8pt; }
+  .brand-mark {
+    width: 28pt; height: 28pt; border-radius: 6pt; background: #F5C518; color: #0b0b0c;
+    display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14pt;
+  }
+  .brand-name { font-size: 15pt; font-weight: 700; color: #0b0b0c; }
+  .doc-title { text-align: right; }
+  .doc-title h1 { margin: 0; font-size: 18pt; color: #0b0b0c; }
+  .doc-title .ref { color: #55555f; font-size: 10pt; margin-top: 2pt; }
+  .meta p { margin: 0 0 4pt; line-height: 1.5; }
+  .amount {
+    margin-top: 20pt; padding: 14pt; background: #f4f3ee; border-radius: 6pt;
+    font-size: 16pt; font-weight: 700;
+  }
+  .reason { margin-top: 14pt; color: #55555f; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="brand">
+      <div class="brand-mark">I</div>
+      <div class="brand-name">IronMan</div>
+    </div>
+    <div class="doc-title">
+      <h1>Credit note</h1>
+      <div class="ref">Against {{ credit_note.invoice.ref }}</div>
+    </div>
+  </div>
+
+  <div class="meta">
+    <p>{{ credit_note.invoice.customer.name }}</p>
+    <p>Order {{ credit_note.invoice.order.ref }}</p>
+    <p>Issued {{ issued_date }}</p>
+  </div>
+
+  <div class="amount">Credit amount: {{ amount_display }}</div>
+  <p class="reason"><strong>Reason:</strong> {{ credit_note.reason }}</p>
+</body>
+</html>

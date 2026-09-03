@@ -262,6 +262,204 @@ paths:
               schema:
                 $ref: '#/components/schemas/TokenRefresh'
           description: ''
+  /api/v1/billing/invoices/:
+    get:
+      operationId: billing_invoices_list
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: order
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - CANCELLED
+          - DRAFT
+          - ISSUED
+          - PAID
+        description: |-
+          * `DRAFT` - Draft
+          * `ISSUED` - Issued
+          * `PAID` - Paid
+          * `CANCELLED` - Cancelled
+      tags:
+      - billing
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedInvoiceListList'
+          description: ''
+  /api/v1/billing/invoices/{order_id}/issue:
+    post:
+      operationId: billing_invoices_issue_create
+      description: |-
+        POST /billing/invoices/{order_id}/issue — same "action nested under
+        a different app's resource id" shape as `custody.CreateBagForOrderView`.
+      parameters:
+      - in: path
+        name: order_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - billing
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IssueInvoiceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/IssueInvoiceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/IssueInvoiceRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceDetail'
+          description: ''
+  /api/v1/billing/invoices/{ref}/:
+    get:
+      operationId: billing_invoices_retrieve
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - in: path
+        name: ref
+        schema:
+          type: string
+        required: true
+      tags:
+      - billing
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceDetail'
+          description: ''
+  /api/v1/billing/invoices/{ref}/credit-note/:
+    post:
+      operationId: billing_invoices_credit_note_create
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - in: path
+        name: ref
+        schema:
+          type: string
+        required: true
+      tags:
+      - billing
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreditNoteCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreditNoteCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreditNoteCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreditNote'
+          description: ''
+  /api/v1/billing/invoices/{ref}/pdf/:
+    get:
+      operationId: billing_invoices_pdf_retrieve
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - in: path
+        name: ref
+        schema:
+          type: string
+        required: true
+      tags:
+      - billing
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceList'
+          description: ''
   /api/v1/catalog/garment-types/:
     get:
       operationId: catalog_garment_types_list
@@ -6148,6 +6346,56 @@ components:
       required:
       - service
       - stock_item
+    CreditNote:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        invoice:
+          type: string
+          format: uuid
+          readOnly: true
+        reason:
+          type: string
+          readOnly: true
+        amount_minor:
+          type: integer
+          readOnly: true
+        issued_by_name:
+          type: string
+          readOnly: true
+          default: ''
+        at:
+          type: string
+          format: date-time
+          readOnly: true
+        pdf_url:
+          type: string
+          nullable: true
+          readOnly: true
+      required:
+      - amount_minor
+      - at
+      - id
+      - invoice
+      - issued_by_name
+      - pdf_url
+      - reason
+    CreditNoteCreateRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 255
+        amount:
+          type: integer
+          minimum: 1
+      required:
+      - amount
+      - reason
     CustomerDetail:
       type: object
       properties:
@@ -6633,6 +6881,176 @@ components:
       required:
       - code
       - name
+    InvoiceDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        ref:
+          type: string
+          readOnly: true
+        hub:
+          type: string
+          format: uuid
+          readOnly: true
+        hub_name:
+          type: string
+          readOnly: true
+        order:
+          type: string
+          format: uuid
+          readOnly: true
+        order_ref:
+          type: string
+          readOnly: true
+        customer:
+          type: string
+          format: uuid
+          readOnly: true
+        customer_name:
+          type: string
+          readOnly: true
+        customer_phone:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/InvoiceStatusEnum'
+          readOnly: true
+        issued_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        subtotal_minor:
+          type: integer
+          readOnly: true
+        discount_minor:
+          type: integer
+          readOnly: true
+        tax_minor:
+          type: integer
+          readOnly: true
+        total_minor:
+          type: integer
+          readOnly: true
+        gst_applied:
+          type: boolean
+          readOnly: true
+        gstin_snapshot:
+          type: string
+          readOnly: true
+        price_list_version:
+          type: integer
+          readOnly: true
+          nullable: true
+        snapshot:
+          readOnly: true
+        pdf_url:
+          type: string
+          nullable: true
+          readOnly: true
+        credit_notes:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreditNote'
+          readOnly: true
+        credited_minor:
+          type: integer
+          readOnly: true
+      required:
+      - credit_notes
+      - credited_minor
+      - customer
+      - customer_name
+      - customer_phone
+      - discount_minor
+      - gst_applied
+      - gstin_snapshot
+      - hub
+      - hub_name
+      - id
+      - issued_at
+      - order
+      - order_ref
+      - pdf_url
+      - price_list_version
+      - ref
+      - snapshot
+      - status
+      - subtotal_minor
+      - tax_minor
+      - total_minor
+    InvoiceList:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        ref:
+          type: string
+          readOnly: true
+        hub:
+          type: string
+          format: uuid
+          readOnly: true
+        order:
+          type: string
+          format: uuid
+          readOnly: true
+        order_ref:
+          type: string
+          readOnly: true
+        customer_name:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/InvoiceStatusEnum'
+          readOnly: true
+        issued_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        total_minor:
+          type: integer
+          readOnly: true
+        gst_applied:
+          type: boolean
+          readOnly: true
+      required:
+      - customer_name
+      - gst_applied
+      - hub
+      - id
+      - issued_at
+      - order
+      - order_ref
+      - ref
+      - status
+      - total_minor
+    InvoiceStatusEnum:
+      enum:
+      - DRAFT
+      - ISSUED
+      - PAID
+      - CANCELLED
+      type: string
+      description: |-
+        * `DRAFT` - Draft
+        * `ISSUED` - Issued
+        * `PAID` - Paid
+        * `CANCELLED` - Cancelled
+    IssueInvoiceRequest:
+      type: object
+      properties:
+        apply_gst:
+          type: boolean
+          nullable: true
     Job:
       type: object
       properties:
@@ -7910,6 +8328,25 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Hub'
+    PaginatedInvoiceListList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/InvoiceList'
     PaginatedJobList:
       type: object
       required:

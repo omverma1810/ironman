@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page { size: A4; margin: 20mm 18mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "DejaVu Sans", "Helvetica Neue", Arial, sans-serif;
+    color: #17171b;
+    font-size: 10.5pt;
+    margin: 0;
+  }
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 3px solid #F5C518;
+    padding-bottom: 12pt;
+    margin-bottom: 16pt;
+  }
+  .brand { display: flex; align-items: center; gap: 8pt; }
+  .brand-mark {
+    width: 28pt; height: 28pt; border-radius: 6pt;
+    background: #F5C518; color: #0b0b0c;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 14pt;
+  }
+  .brand-name { font-size: 15pt; font-weight: 700; color: #0b0b0c; }
+  .doc-title { text-align: right; }
+  .doc-title h1 { margin: 0; font-size: 18pt; color: #0b0b0c; }
+  .doc-title .ref { color: #55555f; font-size: 10pt; margin-top: 2pt; }
+
+  .meta {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 18pt;
+  }
+  .meta .block { width: 47%; }
+  .meta h3 {
+    font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.06em;
+    color: #78787f; margin: 0 0 4pt;
+  }
+  .meta p { margin: 0 0 2pt; line-height: 1.4; }
+
+  table.lines { width: 100%; border-collapse: collapse; margin-bottom: 16pt; }
+  table.lines th {
+    text-align: left; font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.04em;
+    color: #78787f; border-bottom: 1.5pt solid #0b0b0c; padding: 6pt 4pt;
+  }
+  table.lines th.num, table.lines td.num { text-align: right; }
+  table.lines td { padding: 6pt 4pt; border-bottom: 0.75pt solid #e4e4e8; }
+
+  .totals { width: 55%; margin-left: 45%; }
+  .totals .row { display: flex; justify-content: space-between; padding: 3pt 4pt; }
+  .totals .row.total {
+    border-top: 1.5pt solid #0b0b0c; margin-top: 4pt; padding-top: 6pt;
+    font-weight: 700; font-size: 12pt;
+  }
+
+  .footer {
+    margin-top: 28pt; padding-top: 10pt; border-top: 0.75pt solid #e4e4e8;
+    color: #78787f; font-size: 8.5pt; line-height: 1.5;
+  }
+  .gstin { color: #55555f; font-size: 9pt; margin-top: 2pt; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="brand">
+      <div class="brand-mark">I</div>
+      <div class="brand-name">IronMan</div>
+    </div>
+    <div class="doc-title">
+      <h1>Invoice</h1>
+      <div class="ref">{{ invoice.ref }}</div>
+    </div>
+  </div>
+
+  <div class="meta">
+    <div class="block">
+      <h3>Billed to</h3>
+      <p>{{ invoice.customer.name }}</p>
+      <p>{{ invoice.customer.phone }}</p>
+    </div>
+    <div class="block">
+      <h3>Details</h3>
+      <p>Order {{ invoice.order.ref }}</p>
+      <p>Issued {{ issued_date }}</p>
+      <p>{{ invoice.hub.name }}</p>
+      {% if invoice.gst_applied and invoice.gstin_snapshot %}
+        <p class="gstin">GSTIN {{ invoice.gstin_snapshot }}</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <table class="lines">
+    <thead>
+      <tr>
+        <th>Item</th>
+        <th class="num">Qty</th>
+        <th class="num">Unit price</th>
+        <th class="num">Line total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for line in snapshot_display %}
+      <tr>
+        <td>{{ line.garment_type_name }}</td>
+        <td class="num">{{ line.qty }}</td>
+        <td class="num">{{ line.unit_price_display }}</td>
+        <td class="num">{{ line.line_total_display }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="totals">
+    <div class="row"><span>Subtotal</span><span>{{ subtotal_display }}</span></div>
+    {% if invoice.discount_minor %}
+    <div class="row"><span>Discount</span><span>&minus;{{ discount_display }}</span></div>
+    {% endif %}
+    {% if invoice.gst_applied %}
+    <div class="row"><span>GST</span><span>{{ tax_display }}</span></div>
+    {% endif %}
+    <div class="row total"><span>Total</span><span>{{ total_display }}</span></div>
+  </div>
+
+  <div class="footer">
+    <p>This is a system-generated invoice for laundry and garment care services rendered.</p>
+    <p>IronMan · {{ invoice.hub.address }}</p>
+  </div>
+</body>
+</html>

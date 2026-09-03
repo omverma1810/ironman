@@ -28,6 +28,10 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
           cache-dependency-path: apps/api/requirements/dev.txt
+      # `lint-imports` actually imports every module in scope (including
+      # `billing.pdf`, which imports WeasyPrint) to build the dependency
+      # graph — same system libraries as the `api-test`/`e2e` jobs.
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libcairo2 fonts-dejavu-core
       - run: pip install -r requirements/dev.txt
       - run: ruff check .
       - run: black --check .
@@ -76,6 +80,12 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
           cache-dependency-path: apps/api/requirements/dev.txt
+      # WeasyPrint (billing invoice/credit-note PDFs, docs/08 batch 3.1)
+      # links against Pango/Cairo at runtime — not on `ubuntu-latest` by
+      # default, so a plain `pip install` succeeds but the first render
+      # fails with an OSError. Same package set the invoice template's
+      # font stack expects (`fonts-dejavu-core`).
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libcairo2 fonts-dejavu-core
       - run: pip install -r requirements/dev.txt
       # A migration nobody generated is a schema drift nobody reviewed.
       - run: python manage.py makemigrations --check --dry-run
@@ -139,6 +149,9 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
+
+      - name: Install WeasyPrint system libraries
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libcairo2 fonts-dejavu-core
 
       - name: Install API deps and seed demo data
         working-directory: apps/api
