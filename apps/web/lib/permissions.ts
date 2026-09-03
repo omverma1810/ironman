@@ -22,6 +22,18 @@ export function canManageOrders(roles: Role[] | undefined): boolean {
   return hasRole(roles, ...OPS_ROLES);
 }
 
+export function canManageSupplies(roles: Role[] | undefined): boolean {
+  return hasRole(roles, ...OPS_ROLES);
+}
+
+// docs/04 §3.8 "[A][B]" tag on the movement ledger and consumption-rule
+// formulas — Operator handles day-to-day receipts/issues but doesn't see
+// the ledger or edit the rules, same narrowing `canPlanRouteDays` documents
+// for route-day planning.
+export function canSeeStockLedger(roles: Role[] | undefined): boolean {
+  return hasRole(roles, "ADMIN", "FOUNDER");
+}
+
 export function canSeeMoney(roles: Role[] | undefined): boolean {
   return hasRole(roles, ...MONEY_ROLES);
 }

@@ -12,6 +12,7 @@ import {
   identityApi,
   ordersApi,
   requotesApi,
+  suppliesApi,
   territoryApi,
   type ApartmentContactInput,
   type ApartmentInput,
@@ -23,12 +24,16 @@ import {
 } from "./endpoints";
 import { ApiError } from "./errors";
 import type {
+  ConsumptionRuleInput,
   CreateOrderInput,
   DeclaredLine,
   GarmentStage,
   Job,
   OrderException,
   ProofKind,
+  StockAdjustmentInput,
+  StockItemInput,
+  StockReceiptInput,
 } from "./types";
 import { newClientOpId, opsStore, proofsStore, type QueuedOpType } from "@/lib/offline/db";
 import { flushOfflineQueue, pendingCount } from "@/lib/offline/sync";
@@ -889,5 +894,115 @@ export function useSyncOfflineQueue() {
         toast.success(`Synced ${synced} queued action${synced === 1 ? "" : "s"}.`);
       }
     },
+  });
+}
+
+// ── Supplies (docs/08 batch 2.13) ────────────────────────────────────────
+export function useStockItems(params?: { hub?: string; is_active?: boolean }) {
+  return useQuery({
+    queryKey: ["stock-items", params],
+    queryFn: () => suppliesApi.items(params),
+    staleTime: 60_000,
+  });
+}
+
+export function useCreateStockItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: StockItemInput) => suppliesApi.createItem(input),
+    onSuccess: (item) => {
+      queryClient.invalidateQueries({ queryKey: ["stock-items"] });
+      queryClient.invalidateQueries({ queryKey: ["stock-levels"] });
+      toast.success(`${item.name} added`);
+    },
+    onError: (err) => errorToast(err, "Couldn't create the stock item."),
+  });
+}
+
+export function useUpdateStockItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: Partial<StockItemInput> }) =>
+      suppliesApi.updateItem(id, patch),
+    onSuccess: (item) => {
+      queryClient.invalidateQueries({ queryKey: ["stock-items"] });
+      queryClient.invalidateQueries({ queryKey: ["stock-levels"] });
+      toast.success(`${item.name} updated`);
+    },
+    onError: (err) => errorToast(err, "Couldn't update the stock item."),
+  });
+}
+
+export function useStockLevels(hub?: string) {
+  return useQuery({
+    queryKey: ["stock-levels", hub],
+    queryFn: () => suppliesApi.levels(hub),
+    staleTime: 30_000,
+  });
+}
+
+export function useReorderAlerts() {
+  return useQuery({
+    queryKey: ["reorder-alerts"],
+    queryFn: suppliesApi.reorderAlerts,
+    staleTime: 30_000,
+  });
+}
+
+export function useStockMovements(params?: { item?: string; from?: string; to?: string }) {
+  return useQuery({
+    queryKey: ["stock-movements", params],
+    queryFn: () => suppliesApi.movements(params),
+    enabled: !!params?.item,
+  });
+}
+
+function invalidateStock(queryClient: ReturnType<typeof useQueryClient>) {
+  queryClient.invalidateQueries({ queryKey: ["stock-levels"] });
+  queryClient.invalidateQueries({ queryKey: ["reorder-alerts"] });
+  queryClient.invalidateQueries({ queryKey: ["stock-movements"] });
+}
+
+export function useReceiveStock() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: StockReceiptInput) => suppliesApi.receiveStock(input),
+    onSuccess: (movement) => {
+      invalidateStock(queryClient);
+      toast.success(`Received ${movement.delta_qty} ${movement.sku}`);
+    },
+    onError: (err) => errorToast(err, "Couldn't record the receipt."),
+  });
+}
+
+export function useAdjustStock() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: StockAdjustmentInput) => suppliesApi.adjustStock(input),
+    onSuccess: (movement) => {
+      invalidateStock(queryClient);
+      toast.success(`${movement.sku} adjusted by ${movement.delta_qty}`);
+    },
+    onError: (err) => errorToast(err, "Couldn't record the adjustment."),
+  });
+}
+
+export function useConsumptionRules() {
+  return useQuery({
+    queryKey: ["consumption-rules"],
+    queryFn: suppliesApi.consumptionRules,
+    staleTime: 60_000,
+  });
+}
+
+export function useReplaceConsumptionRules() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (rules: ConsumptionRuleInput[]) => suppliesApi.replaceConsumptionRules(rules),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["consumption-rules"] });
+      toast.success("Consumption rules saved");
+    },
+    onError: (err) => errorToast(err, "Couldn't save the consumption rules."),
   });
 }

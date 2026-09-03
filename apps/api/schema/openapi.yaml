@@ -4018,6 +4018,424 @@ paths:
               schema:
                 $ref: '#/components/schemas/ReQuote'
           description: ''
+  /api/v1/supplies/adjustments:
+    post:
+      operationId: supplies_adjustments_create
+      tags:
+      - supplies
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockAdjustmentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StockAdjustmentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StockAdjustmentRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockMovement'
+          description: ''
+  /api/v1/supplies/consumption-rules:
+    get:
+      operationId: supplies_consumption_rules_list
+      tags:
+      - supplies
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ConsumptionRule'
+          description: ''
+    put:
+      operationId: supplies_consumption_rules_update
+      tags:
+      - supplies
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConsumptionRuleReplaceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ConsumptionRuleReplaceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ConsumptionRuleReplaceRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ConsumptionRule'
+          description: ''
+  /api/v1/supplies/items/:
+    get:
+      operationId: supplies_items_list
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - supplies
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedStockItemList'
+          description: ''
+    post:
+      operationId: supplies_items_create
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      tags:
+      - supplies
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockItemRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StockItemRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StockItemRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockItem'
+          description: ''
+  /api/v1/supplies/items/{id}/:
+    get:
+      operationId: supplies_items_retrieve
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this stock item.
+        required: true
+      tags:
+      - supplies
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockItem'
+          description: ''
+    patch:
+      operationId: supplies_items_partial_update
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this stock item.
+        required: true
+      tags:
+      - supplies
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedStockItemRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedStockItemRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedStockItemRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockItem'
+          description: ''
+  /api/v1/supplies/levels/:
+    get:
+      operationId: supplies_levels_list
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - supplies
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedStockLevelList'
+          description: ''
+  /api/v1/supplies/levels/{id}/:
+    get:
+      operationId: supplies_levels_retrieve
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this stock level.
+        required: true
+      tags:
+      - supplies
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockLevel'
+          description: ''
+  /api/v1/supplies/movements/:
+    get:
+      operationId: supplies_movements_list
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - supplies
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedStockMovementList'
+          description: ''
+  /api/v1/supplies/movements/{id}/:
+    get:
+      operationId: supplies_movements_retrieve
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this stock movement.
+        required: true
+      tags:
+      - supplies
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockMovement'
+          description: ''
+  /api/v1/supplies/receipts:
+    post:
+      operationId: supplies_receipts_create
+      tags:
+      - supplies
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockReceiptRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StockReceiptRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StockReceiptRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockMovement'
+          description: ''
+  /api/v1/supplies/reorder-alerts:
+    get:
+      operationId: supplies_reorder_alerts_list
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      tags:
+      - supplies
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StockLevel'
+          description: ''
   /api/v1/territory/apartment-contacts/:
     get:
       operationId: territory_apartment_contacts_list
@@ -5547,6 +5965,22 @@ components:
       required:
       - code
       - to_stage
+    CategoryEnum:
+      enum:
+      - HANGER
+      - COVER
+      - BAG
+      - CHEMICAL
+      - SPARE
+      - OTHER
+      type: string
+      description: |-
+        * `HANGER` - Hanger
+        * `COVER` - Poly cover
+        * `BAG` - Bag
+        * `CHEMICAL` - Chemical
+        * `SPARE` - Spare part
+        * `OTHER` - Other
     ChannelEnum:
       enum:
       - WEB
@@ -5647,6 +6081,73 @@ components:
           maxLength: 64
       required:
       - purpose
+    ConsumptionRule:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        service:
+          type: string
+          format: uuid
+        service_name:
+          type: string
+          readOnly: true
+        garment_type:
+          type: string
+          format: uuid
+          nullable: true
+        garment_type_name:
+          type: string
+          readOnly: true
+          default: ''
+        stock_item:
+          type: string
+          format: uuid
+        stock_item_sku:
+          type: string
+          readOnly: true
+        qty_per_unit:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
+      required:
+      - garment_type_name
+      - id
+      - service
+      - service_name
+      - stock_item
+      - stock_item_sku
+    ConsumptionRuleReplaceRequest:
+      type: object
+      properties:
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConsumptionRuleRequest'
+      required:
+      - rules
+    ConsumptionRuleRequest:
+      type: object
+      properties:
+        service:
+          type: string
+          format: uuid
+        garment_type:
+          type: string
+          format: uuid
+          nullable: true
+        stock_item:
+          type: string
+          format: uuid
+        qty_per_unit:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
+      required:
+      - service
+      - stock_item
     CustomerDetail:
       type: object
       properties:
@@ -7618,6 +8119,63 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Service'
+    PaginatedStockItemList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/StockItem'
+    PaginatedStockLevelList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/StockLevel'
+    PaginatedStockMovementList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/StockMovement'
     PasswordResetConfirmRequest:
       type: object
       properties:
@@ -8023,8 +8581,32 @@ components:
           minLength: 1
           maxLength: 120
         unit:
-          $ref: '#/components/schemas/UnitEnum'
+          $ref: '#/components/schemas/ServiceUnitEnum'
         sla_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        is_active:
+          type: boolean
+    PatchedStockItemRequest:
+      type: object
+      properties:
+        hub:
+          type: string
+          format: uuid
+        sku:
+          type: string
+          minLength: 1
+          maxLength: 32
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        unit:
+          $ref: '#/components/schemas/StockItemUnitEnum'
+        category:
+          $ref: '#/components/schemas/CategoryEnum'
+        reorder_level:
           type: integer
           maximum: 2147483647
           minimum: 0
@@ -8643,7 +9225,7 @@ components:
           type: string
           maxLength: 120
         unit:
-          $ref: '#/components/schemas/UnitEnum'
+          $ref: '#/components/schemas/ServiceUnitEnum'
         sla_hours:
           type: integer
           maximum: 2147483647
@@ -8666,7 +9248,7 @@ components:
           minLength: 1
           maxLength: 120
         unit:
-          $ref: '#/components/schemas/UnitEnum'
+          $ref: '#/components/schemas/ServiceUnitEnum'
         sla_hours:
           type: integer
           maximum: 2147483647
@@ -8676,6 +9258,16 @@ components:
       required:
       - code
       - name
+    ServiceUnitEnum:
+      enum:
+      - PER_ITEM
+      - PER_KG
+      - PER_PAIR
+      type: string
+      description: |-
+        * `PER_ITEM` - Per item
+        * `PER_KG` - Per kilogram
+        * `PER_PAIR` - Per pair
     SeverityEnum:
       enum:
       - LOW
@@ -8751,6 +9343,270 @@ components:
       required:
       - email
       - password
+    StockAdjustmentKindEnum:
+      enum:
+      - ISSUE
+      - ADJUSTMENT
+      - WASTAGE
+      - RETURN
+      type: string
+      description: |-
+        * `ISSUE` - ISSUE
+        * `ADJUSTMENT` - ADJUSTMENT
+        * `WASTAGE` - WASTAGE
+        * `RETURN` - RETURN
+    StockAdjustmentRequest:
+      type: object
+      properties:
+        item:
+          type: string
+          format: uuid
+        delta:
+          type: integer
+        kind:
+          $ref: '#/components/schemas/StockAdjustmentKindEnum'
+        note:
+          type: string
+          default: ''
+          maxLength: 255
+      required:
+      - delta
+      - item
+      - kind
+    StockItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        hub:
+          type: string
+          format: uuid
+        sku:
+          type: string
+          maxLength: 32
+        name:
+          type: string
+          maxLength: 120
+        unit:
+          $ref: '#/components/schemas/StockItemUnitEnum'
+        category:
+          $ref: '#/components/schemas/CategoryEnum'
+        reorder_level:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - category
+      - created_at
+      - hub
+      - id
+      - name
+      - sku
+    StockItemRequest:
+      type: object
+      properties:
+        hub:
+          type: string
+          format: uuid
+        sku:
+          type: string
+          minLength: 1
+          maxLength: 32
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        unit:
+          $ref: '#/components/schemas/StockItemUnitEnum'
+        category:
+          $ref: '#/components/schemas/CategoryEnum'
+        reorder_level:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        is_active:
+          type: boolean
+      required:
+      - category
+      - hub
+      - name
+      - sku
+    StockItemUnitEnum:
+      enum:
+      - PIECE
+      - LITRE
+      - KG
+      - ROLL
+      type: string
+      description: |-
+        * `PIECE` - Piece
+        * `LITRE` - Litre
+        * `KG` - Kilogram
+        * `ROLL` - Roll
+    StockLevel:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        hub:
+          type: string
+          format: uuid
+          readOnly: true
+        stock_item:
+          type: string
+          format: uuid
+          readOnly: true
+        sku:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        unit:
+          type: string
+          readOnly: true
+        reorder_level:
+          type: integer
+          readOnly: true
+        qty_on_hand:
+          type: integer
+          readOnly: true
+        avg_unit_cost_minor:
+          type: integer
+          readOnly: true
+      required:
+      - avg_unit_cost_minor
+      - hub
+      - id
+      - name
+      - qty_on_hand
+      - reorder_level
+      - sku
+      - stock_item
+      - unit
+    StockMovement:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        hub:
+          type: string
+          format: uuid
+          readOnly: true
+        stock_item:
+          type: string
+          format: uuid
+          readOnly: true
+        sku:
+          type: string
+          readOnly: true
+        delta_qty:
+          type: integer
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/StockMovementKindEnum'
+          readOnly: true
+        order:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        unit_cost_minor:
+          type: integer
+          readOnly: true
+          nullable: true
+        supplier:
+          type: string
+          readOnly: true
+        invoice_ref:
+          type: string
+          readOnly: true
+        actor:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        actor_name:
+          type: string
+          readOnly: true
+          default: ''
+        note:
+          type: string
+          readOnly: true
+        at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - actor
+      - actor_name
+      - at
+      - delta_qty
+      - hub
+      - id
+      - invoice_ref
+      - kind
+      - note
+      - order
+      - sku
+      - stock_item
+      - supplier
+      - unit_cost_minor
+    StockMovementKindEnum:
+      enum:
+      - RECEIPT
+      - ISSUE
+      - ADJUSTMENT
+      - WASTAGE
+      - RETURN
+      type: string
+      description: |-
+        * `RECEIPT` - Receipt
+        * `ISSUE` - Issue
+        * `ADJUSTMENT` - Adjustment
+        * `WASTAGE` - Wastage
+        * `RETURN` - Return
+    StockReceiptRequest:
+      type: object
+      properties:
+        item:
+          type: string
+          format: uuid
+        qty:
+          type: integer
+          minimum: 1
+        unit_cost:
+          type: integer
+          minimum: 0
+        supplier:
+          type: string
+          default: ''
+          maxLength: 120
+        invoice_ref:
+          type: string
+          default: ''
+          maxLength: 64
+        note:
+          type: string
+          default: ''
+          maxLength: 255
+      required:
+      - item
+      - qty
+      - unit_cost
     TokenRefresh:
       type: object
       properties:
@@ -8770,16 +9626,6 @@ components:
           minLength: 1
       required:
       - refresh
-    UnitEnum:
-      enum:
-      - PER_ITEM
-      - PER_KG
-      - PER_PAIR
-      type: string
-      description: |-
-        * `PER_ITEM` - Per item
-        * `PER_KG` - Per kilogram
-        * `PER_PAIR` - Per pair
   securitySchemes:
     cookieAuth:
       type: apiKey

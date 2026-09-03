@@ -4,6 +4,8 @@ import type {
   ApartmentContact,
   BagDetail,
   Cluster,
+  ConsumptionRule,
+  ConsumptionRuleInput,
   CreateOrderInput,
   Customer,
   CustomerDetail,
@@ -35,6 +37,12 @@ import type {
   Service,
   Staff,
   StageEvent,
+  StockAdjustmentInput,
+  StockItem,
+  StockItemInput,
+  StockLevel,
+  StockMovement,
+  StockReceiptInput,
   WipSummary,
 } from "./types";
 
@@ -332,6 +340,31 @@ export const fulfilmentApi = {
     apiFetch<OfflineOpResult[]>("/fulfilment/sync", {
       method: "POST",
       body: { device_id, ops },
+    }),
+};
+
+// ── Supplies (docs/08 batch 2.13) ────────────────────────────────────────
+export const suppliesApi = {
+  items: (params?: { hub?: string; is_active?: boolean }) =>
+    apiFetch<Paginated<StockItem>>("/supplies/items/", { params }),
+  createItem: (input: StockItemInput) =>
+    apiFetch<StockItem>("/supplies/items/", { method: "POST", body: input }),
+  updateItem: (id: string, patch: Partial<StockItemInput>) =>
+    apiFetch<StockItem>(`/supplies/items/${id}/`, { method: "PATCH", body: patch }),
+  levels: (hub?: string) =>
+    apiFetch<Paginated<StockLevel>>("/supplies/levels/", { params: { hub } }),
+  movements: (params?: { item?: string; from?: string; to?: string }) =>
+    apiFetch<Paginated<StockMovement>>("/supplies/movements/", { params }),
+  reorderAlerts: () => apiFetch<StockLevel[]>("/supplies/reorder-alerts"),
+  receiveStock: (input: StockReceiptInput) =>
+    apiFetch<StockMovement>("/supplies/receipts", { method: "POST", body: input }),
+  adjustStock: (input: StockAdjustmentInput) =>
+    apiFetch<StockMovement>("/supplies/adjustments", { method: "POST", body: input }),
+  consumptionRules: () => apiFetch<ConsumptionRule[]>("/supplies/consumption-rules"),
+  replaceConsumptionRules: (rules: ConsumptionRuleInput[]) =>
+    apiFetch<ConsumptionRule[]>("/supplies/consumption-rules", {
+      method: "PUT",
+      body: { rules },
     }),
 };
 
