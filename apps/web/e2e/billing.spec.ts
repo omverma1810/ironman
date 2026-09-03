@@ -62,7 +62,11 @@ test.describe("Billing", () => {
     await expect(page.getByRole("heading", { name: "Invoice" })).toBeVisible();
 
     await page.getByRole("button", { name: "Issue invoice" }).click();
-    await expect(page.getByText(/INV-\d{4}-\d{4} issued/i)).toBeVisible();
+    // Unlike every other mutation in this suite, issuing renders a PDF
+    // server-side (WeasyPrint) inside the same request — genuinely slower
+    // than Playwright's default 5s assertion window under CI's real
+    // concurrent load, not a sign anything is stuck.
+    await expect(page.getByText(/INV-\d{4}-\d{4} issued/i)).toBeVisible({ timeout: 15000 });
   });
 
   test("issuing an invoice twice for the same order is rejected", async ({ page }) => {
@@ -70,7 +74,7 @@ test.describe("Billing", () => {
 
     await page.goto(`/console/orders/${orderIds[1]}`);
     await page.getByRole("button", { name: "Issue invoice" }).click();
-    await expect(page.getByText(/INV-\d{4}-\d{4} issued/i)).toBeVisible();
+    await expect(page.getByText(/INV-\d{4}-\d{4} issued/i)).toBeVisible({ timeout: 15000 });
 
     // An operator can't read invoices back (docs/06 §3.1: "must not see
     // what the business charges"), so the Issue invoice button stays
