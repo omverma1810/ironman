@@ -7,59 +7,68 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8
 // guaranteed invoice-free — no need to check for an existing one first.
 const INVOICEABLE_STATUSES = ["IN_PRODUCTION", "READY", "OUT_FOR_DELIVERY"];
 
-test.describe("Billing", () => {
-  test("an operator can issue an invoice from the order detail page", async ({
-    page,
-    request,
-  }) => {
-    await loginAs(page, DEMO_USERS.operator);
+// playwright.config.ts runs exactly two projects (chromium, mobile) against
+// this one seeded backend — keep in sync if that ever changes.
+const PROJECT_NAMES = ["chromium", "mobile"];
 
+/** This project's slice of invoiceable orders, fixed once per project run
+ * (`beforeAll`, not re-fetched per test): both tests in this file need one
+ * order each, and — since `chromium` and `mobile` are separate Playwright
+ * projects running this same file against the same seeded backend — a
+ * plain "first"/"last" split (as within one project) still lets one
+ * project's tests race the other's for the identical order, which one
+ * side then finds already invoiced. Split by `sortedIndex %
+ * PROJECT_NAMES.length`, same pattern as `field.spec.ts`. */
+let orderIds: string[] = [];
+
+test.describe("Billing", () => {
+  // Keeps this file's own 2 tests from racing each other within one
+  // project, on top of the cross-project split above.
+  test.describe.configure({ mode: "serial" });
+
+  test.beforeAll(async ({ request }, testInfo) => {
     const login = await request.post(`${API_BASE_URL}/auth/login`, {
       data: { email: DEMO_USERS.operator.email, password: DEMO_USERS.operator.password },
     });
     expect(login.ok()).toBeTruthy();
 
-    let orderId: string | undefined;
+    const projectIndex = PROJECT_NAMES.indexOf(testInfo.project.name);
+    if (projectIndex === -1) {
+      throw new Error(
+        `Unknown Playwright project "${testInfo.project.name}" — add it to PROJECT_NAMES in billing.spec.ts`
+      );
+    }
+
+    const eligible: string[] = [];
     for (const status of INVOICEABLE_STATUSES) {
       const res = await request.get(`${API_BASE_URL}/orders/`, { params: { status } });
       const results = (await res.json()).results as { id: string }[];
-      if (results.length > 0) {
-        orderId = results[0].id;
-        break;
-      }
+      eligible.push(...results.map((o) => o.id));
     }
-    if (!orderId) throw new Error("No seeded order in an invoiceable, not-yet-invoiced state");
+    eligible.sort();
+    orderIds = eligible.filter((_, i) => i % PROJECT_NAMES.length === projectIndex);
 
-    await page.goto(`/console/orders/${orderId}`);
+    if (orderIds.length < 2) {
+      throw new Error(
+        `Need 2 invoiceable orders for project "${testInfo.project.name}", found ${orderIds.length}`
+      );
+    }
+  });
+
+  test("an operator can issue an invoice from the order detail page", async ({ page }) => {
+    await loginAs(page, DEMO_USERS.operator);
+
+    await page.goto(`/console/orders/${orderIds[0]}`);
     await expect(page.getByRole("heading", { name: "Invoice" })).toBeVisible();
 
     await page.getByRole("button", { name: "Issue invoice" }).click();
     await expect(page.getByText(/INV-\d{4}-\d{4} issued/i)).toBeVisible();
   });
 
-  test("issuing an invoice twice for the same order is rejected", async ({ page, request }) => {
+  test("issuing an invoice twice for the same order is rejected", async ({ page }) => {
     await loginAs(page, DEMO_USERS.operator);
 
-    const login = await request.post(`${API_BASE_URL}/auth/login`, {
-      data: { email: DEMO_USERS.operator.email, password: DEMO_USERS.operator.password },
-    });
-    expect(login.ok()).toBeTruthy();
-
-    // Pick from the back of each status's result page — the first test
-    // picks from the front — so the two tests, which run concurrently,
-    // don't race for the same order.
-    let orderId: string | undefined;
-    for (const status of INVOICEABLE_STATUSES) {
-      const res = await request.get(`${API_BASE_URL}/orders/`, { params: { status } });
-      const results = (await res.json()).results as { id: string }[];
-      if (results.length > 0) {
-        orderId = results[results.length - 1].id;
-        break;
-      }
-    }
-    if (!orderId) throw new Error("No seeded order in an invoiceable, not-yet-invoiced state");
-
-    await page.goto(`/console/orders/${orderId}`);
+    await page.goto(`/console/orders/${orderIds[1]}`);
     await page.getByRole("button", { name: "Issue invoice" }).click();
     await expect(page.getByText(/INV-\d{4}-\d{4} issued/i)).toBeVisible();
 
