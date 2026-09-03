@@ -6,7 +6,13 @@ import type { IconName } from "@/components/icons/icon";
 import { Icon } from "@/components/icons/icon";
 import { cn } from "@/lib/utils";
 import type { Role } from "@/lib/api/types";
-import { canEditPricing, canManageStaff, canPlanRouteDays, canSeeMoney } from "@/lib/permissions";
+import {
+  canEditPricing,
+  canManageStaff,
+  canManageSupplies,
+  canPlanRouteDays,
+  canSeeMoney,
+} from "@/lib/permissions";
 
 type NavItem = { href: string; label: string; icon: IconName; show?: (roles: Role[]) => boolean };
 
@@ -22,6 +28,12 @@ const NAV: NavItem[] = [
     label: "Route Days",
     icon: "truck",
     show: (roles) => canPlanRouteDays(roles),
+  },
+  {
+    href: "/console/supplies",
+    label: "Supplies",
+    icon: "package-open",
+    show: (roles) => canManageSupplies(roles),
   },
   {
     href: "/console/pricing",

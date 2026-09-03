@@ -456,3 +456,96 @@ export type CreateOrderInput = {
   special_instructions?: string;
   referral_code?: string;
 };
+
+export type StockUnit = "PIECE" | "LITRE" | "KG" | "ROLL";
+
+export type StockCategory = "HANGER" | "COVER" | "BAG" | "CHEMICAL" | "SPARE" | "OTHER";
+
+export type StockItem = {
+  id: string;
+  hub: string;
+  sku: string;
+  name: string;
+  unit: StockUnit;
+  category: StockCategory;
+  reorder_level: number;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type StockItemInput = {
+  hub: string;
+  sku: string;
+  name: string;
+  unit: StockUnit;
+  category: StockCategory;
+  reorder_level?: number;
+  is_active?: boolean;
+};
+
+export type StockLevel = {
+  id: string;
+  hub: string;
+  stock_item: string;
+  sku: string;
+  name: string;
+  unit: StockUnit;
+  reorder_level: number;
+  qty_on_hand: number;
+  avg_unit_cost_minor: number;
+};
+
+export type MovementKind = "RECEIPT" | "ISSUE" | "ADJUSTMENT" | "WASTAGE" | "RETURN";
+
+export type AdjustmentKind = Exclude<MovementKind, "RECEIPT">;
+
+export type StockMovement = {
+  id: string;
+  hub: string;
+  stock_item: string;
+  sku: string;
+  delta_qty: number;
+  kind: MovementKind;
+  order: string | null;
+  unit_cost_minor: number | null;
+  supplier: string;
+  invoice_ref: string;
+  actor: string | null;
+  actor_name: string;
+  note: string;
+  at: string;
+};
+
+export type StockReceiptInput = {
+  item: string;
+  qty: number;
+  unit_cost: number;
+  supplier?: string;
+  invoice_ref?: string;
+  note?: string;
+};
+
+export type StockAdjustmentInput = {
+  item: string;
+  delta: number;
+  kind: AdjustmentKind;
+  note?: string;
+};
+
+export type ConsumptionRule = {
+  id: string;
+  service: string;
+  service_name: string;
+  garment_type: string | null;
+  garment_type_name: string;
+  stock_item: string;
+  stock_item_sku: string;
+  qty_per_unit: string;
+};
+
+export type ConsumptionRuleInput = {
+  service: string;
+  garment_type?: string | null;
+  stock_item: string;
+  qty_per_unit: string;
+};

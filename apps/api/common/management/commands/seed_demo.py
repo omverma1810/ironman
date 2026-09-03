@@ -245,6 +245,9 @@ class Command(BaseCommand):
         self.stdout.write("Seeding exceptions...")
         exception_count = self._seed_exceptions(hub, founder)
 
+        self.stdout.write("Seeding supplies...")
+        self._seed_supplies(hub, service, garment_types)
+
         self.stdout.write(
             self.style.SUCCESS(
                 f"Seed complete: 1 hub, 2 clusters, {len(apartments)} apartments, "
@@ -252,6 +255,96 @@ class Command(BaseCommand):
                 f"{exception_count} exceptions, 4 staff accounts (password: IronMan@2026)."
             )
         )
+
+    def _seed_supplies(self, hub, service, garment_types):
+        """docs/08 batch 2.13: enough stock rows that the console screen has
+        both a healthy item and one already at/under its reorder line
+        (`HANGER-001`, deliberately received below its own reorder_level) —
+        an all-green board doesn't exercise the reorder-alerts view at
+        all. Consumption rules mirror docs/02 §3.9's own example: a hanger
+        and a poly cover per shirt or trouser."""
+        import supplies.services as supplies_services
+        from supplies.models import ConsumptionRule, StockCategory, StockItem, StockUnit
+
+        operator = User.objects.get(email="operator@ironman.test")
+
+        item_specs = [
+            ("HANGER-001", "Wire hanger", StockCategory.HANGER, StockUnit.PIECE, 200, 40, 300),
+            ("COVER-001", "Poly garment cover", StockCategory.COVER, StockUnit.PIECE, 300, 25, 800),
+            ("BAG-001", "Delivery bag", StockCategory.BAG, StockUnit.PIECE, 50, 15, 120),
+            (
+                "SPOT-001",
+                "Spot-cleaning solvent",
+                StockCategory.CHEMICAL,
+                StockUnit.LITRE,
+                5,
+                220,
+                10,
+            ),
+        ]
+        stock_items = {}
+        already_seeded = []
+        for sku, name, category, unit, reorder_level, unit_cost, receive_qty in item_specs:
+            item, _ = StockItem.objects.update_or_create(
+                hub=hub,
+                sku=sku,
+                defaults=dict(name=name, category=category, unit=unit, reorder_level=reorder_level),
+            )
+            stock_items[sku] = item
+            already_seeded.append(hasattr(item, "level"))
+
+        # The receipt + issue/wastage movements below are a single batch,
+        # seeded together the first time this command runs against a hub —
+        # `receive_stock`/`adjust_stock` write append-only ledger rows, so
+        # re-running the batch on a re-seed would double the balance (or,
+        # for the issues, eventually try to remove more than is on hand).
+        # `StockItem` rows themselves stay `update_or_create`-idempotent
+        # above regardless.
+        if not all(already_seeded):
+            for sku, _name, _category, _unit, _reorder_level, unit_cost, receive_qty in item_specs:
+                supplies_services.receive_stock(
+                    stock_items[sku],
+                    qty=receive_qty,
+                    unit_cost_minor=unit_cost,
+                    supplier="Bangalore Packaging Co.",
+                    invoice_ref="INV-2026-0142",
+                    actor=operator,
+                )
+            # A little wear on the healthy items, and enough issued against
+            # the hanger stock to leave it sitting at/under its own reorder
+            # line (see the docstring above).
+            supplies_services.adjust_stock(
+                stock_items["HANGER-001"],
+                delta=-270,
+                kind="ISSUE",
+                note="packed shirts",
+                actor=operator,
+            )
+            supplies_services.adjust_stock(
+                stock_items["COVER-001"],
+                delta=-40,
+                kind="ISSUE",
+                note="packed shirts",
+                actor=operator,
+            )
+            supplies_services.adjust_stock(
+                stock_items["SPOT-001"], delta=-1, kind="WASTAGE", note="spill", actor=operator
+            )
+
+        for code in ("SHIRT", "TROUSER"):
+            gt, _price = garment_types[code]
+            ConsumptionRule.objects.update_or_create(
+                service=service,
+                garment_type=gt,
+                stock_item=stock_items["HANGER-001"],
+                defaults={"qty_per_unit": 1},
+            )
+            ConsumptionRule.objects.update_or_create(
+                service=service,
+                garment_type=gt,
+                stock_item=stock_items["COVER-001"],
+                defaults={"qty_per_unit": 1},
+            )
 
     def _seed_exceptions(self, hub, founder):
         """A handful of exceptions across the triage queue's real states
