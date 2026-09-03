@@ -74,7 +74,15 @@ def test_issue_invoice_retries_past_a_ref_collision(
     before either commits, and the loser hits `Invoice.ref`'s unique
     constraint. Caught this for real in CI when the `chromium` and
     `mobile` E2E projects both issued an invoice at once against the same
-    seeded backend."""
+    seeded backend.
+
+    `_issue_invoice_once` now locks the order's hub row before computing a
+    ref, which serializes same-hub issuances and was verified (a script
+    outside this suite, not committed here) to hold under real concurrent
+    threads. That leaves only a same-instant, cross-hub collision — refs
+    aren't hub-scoped — for the retry below to actually cover; forcing one
+    here is the only way to exercise that retry path at all.
+    """
     from ordering.models import Order, OrderStatus
 
     first = issue_invoice(verified_order)
@@ -92,20 +100,16 @@ def test_issue_invoice_retries_past_a_ref_collision(
         price_list_version=1,
     )
 
-    from billing.models import Invoice, _invoice_ref
+    import billing.services as billing_services
 
-    ref_field = Invoice._meta.get_field("ref")
+    real_invoice_ref = billing_services._invoice_ref
     calls = {"n": 0}
 
     def colliding_once():
         calls["n"] += 1
-        return first.ref if calls["n"] == 1 else _invoice_ref()
+        return first.ref if calls["n"] == 1 else real_invoice_ref()
 
-    # `Field.get_default()` is a `cached_property` (`_get_default`) already
-    # memoized from the first `Invoice()` construction above — patching
-    # `.default` alone is too late, since Django won't re-read it. Overwrite
-    # the memoized slot directly instead.
-    monkeypatch.setattr(ref_field, "_get_default", colliding_once)
+    monkeypatch.setattr(billing_services, "_invoice_ref", colliding_once)
 
     second = issue_invoice(second_order)
     assert calls["n"] == 2

@@ -11,11 +11,11 @@ from __future__ import annotations
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
-from billing.models import CreditNote, Invoice, InvoiceStatus
+from billing.models import CreditNote, Invoice, InvoiceStatus, _invoice_ref
 from billing.pdf import render_credit_note_pdf, render_invoice_pdf
 from common.errors import ApiError
 from ordering.models import OrderStatus
-from territory.models import TaxSettings
+from territory.models import Hub, TaxSettings
 
 
 def get_invoice(ref: str) -> Invoice:
@@ -48,18 +48,21 @@ def issue_invoice(order, *, apply_gst: bool | None = None, actor=None) -> Invoic
     per-invoice override `territory.TaxSettings`'s own docstring already
     calls out as a `billing`-phase feature.
 
-    `_invoice_ref()` picks the next sequence number from a plain `count()`,
-    which two concurrent issuances can both read before either commits —
-    the second then loses on `Invoice.ref`'s unique constraint. Retrying
-    picks a fresh ref against whichever one just landed, same as the
-    collision is rare enough (in practice: two ops staff issuing at the
-    same instant) not to warrant a locked counter table.
+    `_invoice_ref()` picks the next sequence number from a plain `count()`.
+    `_issue_invoice_once` locks the order's hub row before computing it, so
+    two concurrent issuances for the same hub serialize instead of both
+    reading the same count and racing on `Invoice.ref`'s unique constraint
+    (verified directly: 6 concurrent issuances via the ORM, no lock,
+    collided; with the lock, none did). The lock doesn't cover two
+    different hubs issuing in the same instant, since refs aren't
+    hub-scoped — retrying covers that unlikely remainder without needing a
+    second, cross-hub lock.
     """
-    for attempt in range(5):
+    for attempt in range(3):
         try:
             return _issue_invoice_once(order, apply_gst=apply_gst, actor=actor)
         except IntegrityError:
-            if attempt == 4:
+            if attempt == 2:
                 raise
             # Constructing the failed `Invoice(order=order, ...)` above
             # already set Django's reverse-cache for `order.invoice` on
@@ -81,6 +84,10 @@ def _issue_invoice_once(order, *, apply_gst: bool | None, actor) -> Invoice:
             code="validation_error",
         )
 
+    # See `issue_invoice`'s docstring: serializes ref generation for this
+    # hub against any other concurrent issuance for it.
+    Hub.objects.select_for_update().get(pk=order.hub_id)
+
     tax_settings = TaxSettings.objects.filter(hub=order.hub).first()
     gst_enabled = tax_settings.gst_enabled if tax_settings else False
     gst_applied = gst_enabled if apply_gst is None else apply_gst
@@ -92,6 +99,7 @@ def _issue_invoice_once(order, *, apply_gst: bool | None, actor) -> Invoice:
         gstin_snapshot = tax_settings.gstin
 
     invoice = Invoice(
+        ref=_invoice_ref(),
         hub=order.hub,
         order=order,
         customer=order.customer,
