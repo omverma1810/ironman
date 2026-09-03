@@ -48,7 +48,9 @@ class OrderViewSet(ScopedQuerysetMixin, viewsets.ModelViewSet):
         user = self.request.user
         qs = (
             Order.objects.filter(deleted_at__isnull=True)
-            .select_related("customer", "apartment", "service", "hub", "address", "address__apartment")
+            .select_related(
+                "customer", "apartment", "service", "hub", "address", "address__apartment"
+            )
             .prefetch_related("lines")
         )
         if "CUSTOMER" in user.role_codes and not (user.role_codes - {"CUSTOMER"}):

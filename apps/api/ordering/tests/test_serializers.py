@@ -11,7 +11,9 @@ from ordering.models import Order, OrderStatus
 pytestmark = pytest.mark.django_db
 
 
-def test_order_address_resolves_to_text_not_a_uuid(api_client, operator_user, hub, customer, service, apartment):
+def test_order_address_resolves_to_text_not_a_uuid(
+    api_client, operator_user, hub, customer, service, apartment
+):
     apartment.address = "12 MG Road"
     apartment.save(update_fields=["address"])
     address = Address.objects.create(
@@ -37,7 +39,9 @@ def test_order_address_resolves_to_text_not_a_uuid(api_client, operator_user, hu
     assert "Near the water tank" in resp.data["address"]
 
 
-def test_order_address_is_null_when_order_has_no_address(api_client, operator_user, hub, customer, service):
+def test_order_address_is_null_when_order_has_no_address(
+    api_client, operator_user, hub, customer, service
+):
     order = Order.objects.create(
         hub=hub, customer=customer, service=service, channel="COUNTER", status=OrderStatus.AT_HUB
     )
