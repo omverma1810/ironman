@@ -3,7 +3,11 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { AsyncBoundary } from "@/components/patterns/async-boundary";
-import { CreditNoteDialog } from "@/components/billing/invoice-section";
+import {
+  CreditNoteDialog,
+  PAYMENT_METHOD_LABEL,
+  RecordPaymentDialog,
+} from "@/components/billing/invoice-section";
 import { MoneyText } from "@/components/patterns/money-text";
 import { PageHeader } from "@/components/patterns/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -12,15 +16,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Icon } from "@/components/icons/icon";
-import { useInvoice } from "@/lib/api/hooks";
+import { useInvoice, useMe } from "@/lib/api/hooks";
 import { resolveMediaUrl } from "@/lib/api/client";
 import { formatDateTime } from "@/lib/format";
+import { canRecordAdjustment, canRecordPayment } from "@/lib/permissions";
 
 export default function InvoiceDetailPage() {
   const params = useParams<{ ref: string }>();
   const router = useRouter();
   const invoiceQuery = useInvoice(params.ref);
+  const me = useMe();
+  const roles = me.data?.roles;
   const [creditOpen, setCreditOpen] = useState(false);
+  const [paymentOpen, setPaymentOpen] = useState(false);
 
   return (
     <div className="flex flex-col gap-6">
@@ -29,7 +37,10 @@ export default function InvoiceDetailPage() {
       </Button>
 
       <AsyncBoundary query={invoiceQuery} loading={<Skeleton className="h-96" />}>
-        {(invoice) => (
+        {(invoice) => {
+          const remainingMinor = invoice.total_minor - invoice.paid_minor;
+          const canRecord = canRecordPayment(roles) && remainingMinor > 0;
+          return (
           <>
             <PageHeader
               title={invoice.ref}
@@ -46,9 +57,16 @@ export default function InvoiceDetailPage() {
                       </Button>
                     </a>
                   )}
-                  <Button size="sm" variant="outline" onClick={() => setCreditOpen(true)}>
-                    Issue credit note
-                  </Button>
+                  {canRecordAdjustment(roles) && (
+                    <Button size="sm" variant="outline" onClick={() => setCreditOpen(true)}>
+                      Issue credit note
+                    </Button>
+                  )}
+                  {canRecord && (
+                    <Button size="sm" onClick={() => setPaymentOpen(true)}>
+                      Record payment
+                    </Button>
+                  )}
                 </div>
               }
             />
@@ -125,6 +143,50 @@ export default function InvoiceDetailPage() {
                     )}
                   </CardContent>
                 </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Payments</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {invoice.payments.length === 0 ? (
+                      <p className="text-sm text-text-muted">No payments recorded yet.</p>
+                    ) : (
+                      <div className="flex flex-col gap-3">
+                        {invoice.payments.map((p) => (
+                          <div key={p.id} className="flex flex-col gap-1 text-sm">
+                            <div className="flex items-center justify-between">
+                              <span className="text-text-primary">
+                                {PAYMENT_METHOD_LABEL[p.method]}
+                                {p.status === "FAILED" && (
+                                  <Badge variant="danger" className="ml-2">
+                                    failed
+                                  </Badge>
+                                )}
+                              </span>
+                              <MoneyText minor={p.amount_minor} />
+                            </div>
+                            <span className="text-xs text-text-muted">
+                              {formatDateTime(p.at)}
+                              {p.collected_by_name && ` · ${p.collected_by_name}`}
+                            </span>
+                          </div>
+                        ))}
+                        <Separator />
+                        <div className="flex items-center justify-between text-sm font-medium text-text-primary">
+                          <span>Paid</span>
+                          <MoneyText minor={invoice.paid_minor} />
+                        </div>
+                        {remainingMinor > 0 && (
+                          <div className="flex items-center justify-between text-sm text-text-secondary">
+                            <span>Balance due</span>
+                            <MoneyText minor={remainingMinor} />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
 
               <div className="flex flex-col gap-4">
@@ -144,8 +206,18 @@ export default function InvoiceDetailPage() {
             </div>
 
             <CreditNoteDialog invoiceRef={invoice.ref} open={creditOpen} onOpenChange={setCreditOpen} />
+            {canRecord && (
+              <RecordPaymentDialog
+                invoiceRef={invoice.ref}
+                remainingMinor={remainingMinor}
+                roles={roles}
+                open={paymentOpen}
+                onOpenChange={setPaymentOpen}
+              />
+            )}
           </>
-        )}
+          );
+        }}
       </AsyncBoundary>
     </div>
   );

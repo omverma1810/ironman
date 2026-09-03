@@ -33,6 +33,7 @@ import type {
   Job,
   OrderException,
   ProofKind,
+  RecordPaymentInput,
   StockAdjustmentInput,
   StockItemInput,
   StockReceiptInput,
@@ -1051,5 +1052,20 @@ export function useIssueCreditNote() {
       toast.success("Credit note issued");
     },
     onError: (err) => errorToast(err, "Couldn't issue the credit note."),
+  });
+}
+
+export function useRecordPayment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ref, input }: { ref: string; input: RecordPaymentInput }) =>
+      billingApi.recordPayment(ref, input),
+    onSuccess: (payment, { ref }) => {
+      queryClient.invalidateQueries({ queryKey: ["invoice", ref] });
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["order"] });
+      toast.success(`Payment recorded — ₹${(payment.amount_minor / 100).toFixed(2)}`);
+    },
+    onError: (err) => errorToast(err, "Couldn't record the payment."),
   });
 }

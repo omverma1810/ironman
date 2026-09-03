@@ -2,7 +2,7 @@ import { test, expect, loginAs, DEMO_USERS } from "./fixtures";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
 
-/** Two orders this file owns outright, fixed once per project run
+/** Three orders this file owns outright, fixed once per project run
  * (`beforeAll`). Earlier versions picked orders out of the shared
  * IN_PRODUCTION/READY/OUT_FOR_DELIVERY pool — but that pool isn't stable
  * across a full CI run: `production`/`custody`/`fulfilment` specs move
@@ -19,8 +19,8 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8
 let orderIds: string[] = [];
 
 test.describe("Billing", () => {
-  // Keeps this file's own 2 tests from racing each other over their order
-  // pair within one project.
+  // Keeps this file's own 3 tests from racing each other over their order
+  // trio within one project.
   test.describe.configure({ mode: "serial" });
 
   test.beforeAll(async ({ request }) => {
@@ -30,6 +30,7 @@ test.describe("Billing", () => {
     expect(login.ok()).toBeTruthy();
 
     orderIds = [
+      await createInvoiceableOrder(request),
       await createInvoiceableOrder(request),
       await createInvoiceableOrder(request),
     ];
@@ -49,19 +50,96 @@ test.describe("Billing", () => {
     await expect(page.getByText(/INV-\d{4}-\d{4} issued/i)).toBeVisible({ timeout: 15000 });
   });
 
-  test("issuing an invoice twice for the same order is rejected", async ({ page }) => {
+  test("issuing an invoice twice for the same order is rejected", async ({ page, request }) => {
     await loginAs(page, DEMO_USERS.operator);
 
     await page.goto(`/console/orders/${orderIds[1]}`);
     await clickIssueInvoiceAndWaitForResponse(page);
-    await expect(page.getByText(/INV-\d{4}-\d{4} issued/i)).toBeVisible({ timeout: 15000 });
+    const toastText = await page.getByText(/INV-\d{4}-\d{4} issued/i).textContent({ timeout: 15000 });
 
-    // An operator can't read invoices back (docs/06 §3.1: "must not see
-    // what the business charges"), so the Issue invoice button stays
-    // visible even though the order now has one — issuing again must be
-    // rejected server-side, not silently hidden client-side.
-    await page.getByRole("button", { name: "Issue invoice" }).click();
-    await expect(page.getByText(/already has an invoice/i)).toBeVisible();
+    // docs/06 §3.1's "View invoice" row is `✓` for Operator — once issued,
+    // the "Issue invoice" button is replaced by the invoice summary
+    // (`InvoiceSection` only renders it while no invoice is known yet), so
+    // a second attempt is exercised directly against the API instead of a
+    // UI button that's no longer there.
+    await expect(page.getByRole("button", { name: "Issue invoice" })).toBeHidden();
+    const ref = toastText?.match(/INV-\d{4}-\d{4}/)?.[0];
+    // `exact: true` — the success toast (still visible) also contains the
+    // ref as a substring ("INV-... issued"), and a plain match would hit
+    // both it and the invoice summary's own ref span.
+    await expect(page.getByText(ref!, { exact: true })).toBeVisible();
+
+    // A fresh, separate `request` context — not the same cookie jar as
+    // `page` — so it authenticates for itself before calling the API
+    // directly, same as `createInvoiceableOrder`'s own login-then-act shape.
+    const login = await request.post(`${API_BASE_URL}/auth/login`, {
+      data: { email: DEMO_USERS.operator.email, password: DEMO_USERS.operator.password },
+    });
+    expect(login.ok()).toBeTruthy();
+    const headers = await csrfHeader(request);
+    const secondIssue = await request.post(`${API_BASE_URL}/billing/invoices/${orderIds[1]}/issue`, {
+      headers,
+    });
+    expect(secondIssue.ok()).toBeFalsy();
+    expect(await secondIssue.text()).toContain("already has an invoice");
+  });
+
+  test("an operator can record a partial then a closing payment, and the invoice reaches PAID", async ({
+    page,
+  }) => {
+    await loginAs(page, DEMO_USERS.operator);
+
+    await page.goto(`/console/orders/${orderIds[2]}`);
+    await clickIssueInvoiceAndWaitForResponse(page);
+    const toastText = await page.getByText(/INV-\d{4}-\d{4} issued/i).textContent({ timeout: 15000 });
+    const ref = toastText?.match(/INV-\d{4}-\d{4}/)?.[0];
+    if (!ref) throw new Error(`Couldn't parse an invoice ref out of "${toastText}"`);
+    // `exact: true` — the (still visible) success toast also contains this
+    // as a substring ("INV-... issued"), same as the previous test.
+    await expect(page.getByText(ref, { exact: true })).toBeVisible();
+
+    // `page.request` shares the page's own session cookies (and its CSRF
+    // cookie) — this is just the same GET `InvoiceSection` already made,
+    // read directly to know the real total rather than parsing formatted
+    // currency text back out of the DOM.
+    const totalMinor = ((await (await page.request.get(`${API_BASE_URL}/billing/invoices/${ref}/`)).json()) as {
+      total_minor: number;
+    }).total_minor;
+    const halfRupees = (Math.floor(totalMinor / 2) / 100).toFixed(2);
+
+    await page.getByRole("button", { name: "Record payment" }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.getByRole("heading", { name: "Record a payment" })).toBeVisible();
+    await dialog.getByLabel("Amount (₹)").fill(halfRupees);
+    await dialog.getByRole("button", { name: "Record payment" }).click();
+    await expect(page.getByText(/Payment recorded/i)).toBeVisible();
+
+    // Partial: the invoice itself stays ISSUED (only the order's aggregate
+    // `payment_status` becomes PARTIALLY_PAID — docs/01 §5.2), so "Record
+    // payment" stays available for the remainder. `exact: true` throughout
+    // this test: a plain substring match would also hit the nearby "Issued
+    // {date}" line, and (while the dialog's close animation is still
+    // running) the dialog's own "Balance due: ₹…" helper text.
+    await expect(page.getByText("issued", { exact: true })).toBeVisible();
+    await expect(page.getByText("Balance due", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Record payment" })).toBeVisible();
+
+    const remainingMinor = totalMinor - Math.round(Number(halfRupees) * 100);
+    const remainingRupees = (remainingMinor / 100).toFixed(2);
+
+    await page.getByRole("button", { name: "Record payment" }).click();
+    await expect(dialog.getByRole("heading", { name: "Record a payment" })).toBeVisible();
+    await dialog.getByLabel("Amount (₹)").fill(remainingRupees);
+    await dialog.getByRole("button", { name: "Record payment" }).click();
+    await expect(page.getByText(/Payment recorded/i)).toBeVisible();
+
+    // Both this invoice's own badge *and* the order's separate payment-status
+    // indicator read "paid" once fully settled — scoped to the row holding
+    // this invoice's ref to check the right one rather than either match.
+    const invoiceRow = page.locator("div", { has: page.getByText(ref, { exact: true }) }).last();
+    await expect(invoiceRow.getByText("paid", { exact: true })).toBeVisible();
+    await expect(page.getByText("Balance due", { exact: true })).toBeHidden();
+    await expect(page.getByRole("button", { name: "Record payment" })).toBeHidden();
   });
 });
 

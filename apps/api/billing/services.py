@@ -11,10 +11,11 @@ from __future__ import annotations
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
-from billing.models import CreditNote, Invoice, InvoiceStatus, _invoice_ref
+from billing.models import CreditNote, Invoice, InvoiceStatus, Payment, PaymentStatus, _invoice_ref
 from billing.pdf import render_credit_note_pdf, render_invoice_pdf
 from common.errors import ApiError
 from ordering.models import OrderStatus
+from ordering.models import PaymentStatus as OrderPaymentStatus
 from territory.models import Hub, TaxSettings
 
 
@@ -148,3 +149,88 @@ def issue_credit_note(
     credit_note.pdf_file = render_credit_note_pdf(credit_note)
     credit_note.save()
     return credit_note
+
+
+def paid_minor(invoice: Invoice) -> int:
+    return sum(
+        invoice.payments.filter(status=PaymentStatus.SUCCEEDED).values_list(
+            "amount_minor", flat=True
+        )
+    )
+
+
+@transaction.atomic
+def record_payment(
+    invoice: Invoice,
+    *,
+    method: str,
+    amount_minor: int,
+    idempotency_key: str,
+    gateway_ref: str = "",
+    actor=None,
+) -> Payment:
+    """COD / UPI-QR-at-door recording (docs/08 3.2) — every method this
+    batch supports is settled at the point of recording (see
+    `PaymentStatus`'s docstring), so there's no async confirmation step:
+    this either records the whole payment now or rejects it.
+
+    `idempotency_key` is checked *before* the row lock below: a genuine
+    replay of an already-applied submit (network retry after a dropped
+    response) must return the original payment unconditionally, even if
+    the invoice has since been fully paid by other means and a fresh
+    payment for the same amount would now be rejected as an overpay.
+    """
+    existing = Payment.objects.filter(idempotency_key=idempotency_key).first()
+    if existing:
+        return existing
+    if amount_minor <= 0:
+        raise ApiError("Payment amount must be positive.", code="validation_error")
+
+    # Locks the invoice row so two concurrent payments against it can't
+    # both read the same "remaining" balance and together overpay — same
+    # reasoning as `issue_invoice`'s hub lock, applied to the row that's
+    # actually contended here instead.
+    locked = Invoice.objects.select_for_update().get(pk=invoice.pk)
+
+    if locked.status not in (InvoiceStatus.ISSUED, InvoiceStatus.PAID):
+        raise ApiError(
+            f"{locked.ref} must be issued before a payment can be recorded.",
+            code="validation_error",
+        )
+    already_paid = paid_minor(locked)
+    already_credited = sum(locked.credit_notes.values_list("amount_minor", flat=True))
+    remaining = locked.total_minor - already_credited - already_paid
+    if amount_minor > remaining:
+        raise ApiError(
+            f"Only {remaining}p of {locked.ref} remains payable.", code="validation_error"
+        )
+
+    try:
+        # Nested atomic (a savepoint): a bare IntegrityError inside the
+        # outer block would leave the whole transaction — including the
+        # invoice lock above — unusable for the recovery query below.
+        with transaction.atomic():
+            payment = Payment.objects.create(
+                invoice=locked,
+                hub=locked.hub,
+                method=method,
+                amount_minor=amount_minor,
+                idempotency_key=idempotency_key,
+                gateway_ref=gateway_ref,
+                collected_by=actor,
+            )
+    except IntegrityError:
+        # Lost a race on the same idempotency_key to a request this one's
+        # own upfront check missed (submitted between that check and the
+        # lock above) — the winner's row is the answer either way.
+        return Payment.objects.get(idempotency_key=idempotency_key)
+
+    if amount_minor == remaining:
+        locked.status = InvoiceStatus.PAID
+        locked.save(update_fields=["status"])
+        locked.order.payment_status = OrderPaymentStatus.PAID
+    else:
+        locked.order.payment_status = OrderPaymentStatus.PARTIALLY_PAID
+    locked.order.save(update_fields=["payment_status"])
+
+    return payment

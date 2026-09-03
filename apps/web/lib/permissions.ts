@@ -39,11 +39,34 @@ export function canSeeMoney(roles: Role[] | undefined): boolean {
 }
 
 // docs/04 §3.7 "[O][A]" on issuing an invoice — day-to-day order handling,
-// same mapping as `canManageOrders`. Reading it back is `canSeeMoney`
-// instead (`[C own][A][B]`, Operator excluded — docs/06 §3.1: the store
-// operator "must not see what the business charges").
+// same mapping as `canManageOrders`.
 export function canIssueInvoices(roles: Role[] | undefined): boolean {
   return hasRole(roles, ...OPS_ROLES);
+}
+
+// docs/06 §3.1's "View invoice" matrix row is `✓` for Operator, `◐ (job)`
+// for Field — an operator has to know the amount to collect COD, and a
+// rider has to know it to collect at the door. Distinct from
+// `canSeeMoney` (Admin/Founder-only): that gates the matrix's *bold* rows
+// (price lists, commission rules, unit economics/margin) — "the store
+// operator must not see what the business charges" is about those, not
+// the invoice total a customer has to be told to pay.
+export function canViewInvoices(roles: Role[] | undefined): boolean {
+  return hasRole(roles, "FIELD", ...OPS_ROLES);
+}
+
+// docs/06 §3.1 "Record payment" row: `◐ (COD)` for Field, `✓` for
+// Operator/Admin/Founder. Field is further restricted server-side to
+// CASH/UPI_QR only (no ADJUSTMENT) — this only controls whether the
+// "Record payment" action renders at all.
+export function canRecordPayment(roles: Role[] | undefined): boolean {
+  return hasRole(roles, "FIELD", ...OPS_ROLES);
+}
+
+// ADJUSTMENT is a correction, same admin/founder territory as credit
+// notes — not offered to Operator or Field.
+export function canRecordAdjustment(roles: Role[] | undefined): boolean {
+  return hasRole(roles, ...MONEY_ROLES);
 }
 
 export function canEditPricing(roles: Role[] | undefined): boolean {

@@ -12,6 +12,7 @@ import {
   canManageSupplies,
   canPlanRouteDays,
   canSeeMoney,
+  canViewInvoices,
 } from "@/lib/permissions";
 
 type NavItem = { href: string; label: string; icon: IconName; show?: (roles: Role[]) => boolean };
@@ -39,7 +40,7 @@ const NAV: NavItem[] = [
     href: "/console/invoices",
     label: "Invoices",
     icon: "file-text",
-    show: (roles) => canSeeMoney(roles),
+    show: (roles) => canViewInvoices(roles),
   },
   {
     href: "/console/pricing",

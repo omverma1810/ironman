@@ -1,12 +1,17 @@
-"""docs/04 §3.7 (billing endpoints, batch 3.1). Issuing an invoice is
-day-to-day order handling — `IsOpsStaff` (Operator/Admin/Founder), same
-mapping used throughout for `[O][A]`-tagged rows. Reading the invoice
-record back is different: docs/06 §3.1 is explicit that the store
-operator "must not see what the business charges" — an invoice literally
-is that — so list/detail/pdf is `[C own][A][B]`, Operator excluded, a
-customer only ever seeing their own. Credit notes are `[A]` only, admin
-config/correction territory like `supplies.ConsumptionRuleView`, not an
-Operator action.
+"""docs/04 §3.7 (billing endpoints, batches 3.1-3.2). Issuing an invoice
+and recording a payment are both day-to-day order handling — `IsOpsStaff`
+(Operator/Admin/Founder) for issuing, `IsOpsStaff` **or** field staff
+(their own job's order, `CASH`/`UPI_QR` only — R-405 collecting COD at the
+door) for recording.
+
+Reading the invoice back is `[C own][Field job][O][A][B]`, matching docs/06
+§3.1's permission matrix ("View invoice" row) — an earlier reading of that
+section's prose ("the store operator must not see what the business
+charges") wrongly excluded Operator here; that sentence is about the
+*bold* rows in the matrix (price lists, commission rules, unit economics),
+not the invoice total an operator has to collect as COD. Credit notes stay
+`[A]` only, admin config/correction territory like
+`supplies.ConsumptionRuleView`, not an Operator or Field action.
 """
 
 from __future__ import annotations
@@ -27,14 +32,24 @@ from billing.serializers import (
     InvoiceDetailSerializer,
     InvoiceListSerializer,
     IssueInvoiceSerializer,
+    PaymentSerializer,
+    RecordPaymentSerializer,
 )
+from common.errors import ApiError
 from common.permissions import HasRole, IsAdminOrFounder, IsOpsStaff, ScopedQuerysetMixin
 
-_CAN_VIEW_INVOICES = HasRole.any("CUSTOMER", "ADMIN", "FOUNDER")
+_CAN_VIEW_INVOICES = HasRole.any("CUSTOMER", "FIELD", "OPERATOR", "ADMIN", "FOUNDER")
+_CAN_RECORD_PAYMENT = HasRole.any("FIELD", "OPERATOR", "ADMIN", "FOUNDER")
+
+# Field staff collect COD/UPI at the door — never an ADJUSTMENT (that's a
+# correction, admin/founder territory, same reasoning as credit notes).
+_FIELD_ALLOWED_METHODS = {"CASH", "UPI_QR"}
 
 
 class InvoiceViewSet(ScopedQuerysetMixin, viewsets.ReadOnlyModelViewSet):
-    queryset = Invoice.objects.select_related("order", "customer", "hub")
+    queryset = Invoice.objects.select_related("order", "customer", "hub").prefetch_related(
+        "payments"
+    )
     permission_classes = [_CAN_VIEW_INVOICES]
     filterset_fields = ["status", "order"]
     lookup_field = "ref"
@@ -46,13 +61,15 @@ class InvoiceViewSet(ScopedQuerysetMixin, viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         # Not `super().get_queryset()`: with `ScopedQuerysetMixin` first in
         # MRO that resolves to its own hub-scoped wrapper, which returns
-        # `.none()` for a customer (no `hub_scope`) before the filter
-        # below ever runs. Build the base queryset directly instead, same
-        # as `ordering.OrderViewSet.get_queryset`.
+        # `.none()` for a customer/field user (no `hub_scope`) before the
+        # filter below ever runs. Build the base queryset directly instead,
+        # same as `ordering.OrderViewSet.get_queryset`.
         user = self.request.user
-        qs = Invoice.objects.select_related("order", "customer", "hub")
+        qs = Invoice.objects.select_related("order", "customer", "hub").prefetch_related("payments")
         if "CUSTOMER" in user.role_codes and not (user.role_codes - {"CUSTOMER"}):
             return qs.filter(customer__user=user)
+        if "FIELD" in user.role_codes and not (user.role_codes - {"FIELD"}):
+            return qs.filter(order__jobs__assigned_to=user).distinct()
         return self.scope_to_hub(qs)
 
     @action(detail=True, methods=["get"])
@@ -75,6 +92,35 @@ class InvoiceViewSet(ScopedQuerysetMixin, viewsets.ReadOnlyModelViewSet):
             actor=request.user,
         )
         return Response(CreditNoteSerializer(credit_note).data, status=201)
+
+    @extend_schema(request=RecordPaymentSerializer, responses={201: PaymentSerializer})
+    @action(
+        detail=True, methods=["post"], url_path="payments", permission_classes=[_CAN_RECORD_PAYMENT]
+    )
+    def payments(self, request, ref=None):
+        invoice = self.get_object()
+        serializer = RecordPaymentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        user = request.user
+        if "FIELD" in user.role_codes and not (user.role_codes - {"FIELD"}):
+            if data["method"] not in _FIELD_ALLOWED_METHODS:
+                raise ApiError(
+                    "Field staff can only record CASH or UPI_QR payments.",
+                    code="permission_denied",
+                    status_code=403,
+                )
+
+        payment = services.record_payment(
+            invoice,
+            method=data["method"],
+            amount_minor=data["amount"],
+            idempotency_key=data["idempotency_key"],
+            gateway_ref=data.get("gateway_ref", ""),
+            actor=user,
+        )
+        return Response(PaymentSerializer(payment).data, status=201)
 
 
 @extend_schema(request=IssueInvoiceSerializer, responses={201: InvoiceDetailSerializer})

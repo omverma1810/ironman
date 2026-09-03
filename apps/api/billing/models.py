@@ -1,16 +1,18 @@
-"""Billing (docs/02 §3.8, batch 3.1). `Invoice` is created already `ISSUED`
-— there is no draft-editing workflow in this batch, `services.issue_invoice`
+"""Billing (docs/02 §3.8, batches 3.1-3.2). `Invoice` is created already
+`ISSUED` — there is no draft-editing workflow, `services.issue_invoice`
 snapshots the order's (verified-quantity-derived) totals plus tax computed
-at issue time and writes the row once. `DRAFT`/`PAID`/`CANCELLED` are kept
-in the status enum because the domain model (`docs/02 §3.8`) specifies them
-and a later batch (payments, `docs/08` 3.2) needs `PAID` to be reachable —
-neither is wired to an endpoint here.
+at issue time and writes the row once. `DRAFT`/`CANCELLED` stay in the
+status enum because the domain model (`docs/02 §3.8`) specifies them, but
+neither is wired to an endpoint yet; `PAID` is reachable as of 3.2, once
+`Payment` rows recorded against an invoice sum to its `total_minor`.
 
 `docs/02 §2` invariant: "`Invoice.status = ISSUED` ⟹ row immutable (trigger
 blocking `UPDATE` of money columns)." `Invoice.save()` enforces this at the
 application layer, mirroring `catalog.PriceLine`'s guard for `PriceList`.
 Corrections are `CreditNote` rows, never edits — append-only like
-`custody.StageEvent` / `supplies.StockMovement`.
+`custody.StageEvent` / `supplies.StockMovement`. `Payment` is append-only
+for the same reason: a bad entry gets reversed with an `ADJUSTMENT`, never
+edited or deleted.
 """
 
 from __future__ import annotations
@@ -26,6 +28,23 @@ class InvoiceStatus(models.TextChoices):
     ISSUED = "ISSUED", "Issued"
     PAID = "PAID", "Paid"
     CANCELLED = "CANCELLED", "Cancelled"
+
+
+class PaymentMethod(models.TextChoices):
+    CASH = "CASH", "Cash"
+    UPI_QR = "UPI_QR", "UPI (QR at door)"
+    GATEWAY = "GATEWAY", "Gateway"  # wired in a later batch (docs/08 3.5)
+    CREDIT = "CREDIT", "Customer credit"  # wired in a later batch (docs/08 3.6)
+    ADJUSTMENT = "ADJUSTMENT", "Adjustment"
+
+
+class PaymentStatus(models.TextChoices):
+    SUCCEEDED = "SUCCEEDED", "Succeeded"
+    FAILED = "FAILED", "Failed"
+    # No PENDING here: every method this batch actually records (CASH,
+    # UPI_QR, ADJUSTMENT) is settled at the point of recording — cash or a
+    # QR scan has already changed hands by the time staff enters it. An
+    # async PENDING state belongs to the gateway batch (3.5).
 
 
 def _invoice_ref() -> str:
@@ -130,3 +149,35 @@ class CreditNote(AppendOnlyModel):
 
     def __str__(self) -> str:
         return f"Credit note — {self.invoice.ref} ({self.amount_minor}p)"
+
+
+class Payment(AppendOnlyModel):
+    """docs/02 §3.8, batch 3.2. A record of money that has *already*
+    changed hands (cash counted, UPI QR scanned) — never an intent or an
+    authorization, so there is no state machine here, just an append-only
+    ledger `services.record_payment` sums against `Invoice.total_minor` to
+    derive `Order.payment_status`. `idempotency_key` is client-generated
+    (same convention as `Order`'s own `Idempotency-Key` header) so a
+    retried submit after a dropped response can't double-count a payment.
+    """
+
+    invoice = models.ForeignKey(Invoice, on_delete=models.PROTECT, related_name="payments")
+    hub = models.ForeignKey("territory.Hub", on_delete=models.PROTECT, related_name="+")
+    method = models.CharField(max_length=16, choices=PaymentMethod.choices)
+    amount_minor = models.PositiveIntegerField()
+    status = models.CharField(
+        max_length=16, choices=PaymentStatus.choices, default=PaymentStatus.SUCCEEDED
+    )
+    gateway_ref = models.CharField(max_length=64, blank=True)
+    idempotency_key = models.CharField(max_length=64, unique=True)
+    collected_by = models.ForeignKey(
+        "identity.User", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "billing_payment"
+        indexes = [models.Index(fields=["invoice", "-at"])]
+
+    def __str__(self) -> str:
+        return f"Payment — {self.invoice.ref} ({self.amount_minor}p {self.method})"

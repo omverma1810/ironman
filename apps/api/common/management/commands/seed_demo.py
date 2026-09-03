@@ -264,7 +264,16 @@ class Command(BaseCommand):
         """docs/08 Phase 3 exit criterion: "every delivered order has an
         invoice" — so every DELIVERED/CLOSED order in `demo_states` above
         gets one, not just a sample, and the console's Invoices screen
-        (Admin/Founder) has real rows on first load."""
+        (Admin/Founder) has real rows on first load.
+
+        Payments (batch 3.2) are seeded in the same pass so the screen
+        shows every real state, not just ISSUED: `CLOSED` requires
+        `payment_status = PAID` (`docs/02 §5` invariant #4), while
+        `DELIVERED` is routinely still `UNPAID` — "COD not yet handed over
+        by the rider" is normal, not a bug (`docs/01 §5.2`) — so only some
+        DELIVERED orders get a payment, and some of those only a partial
+        one.
+        """
         import billing.services as billing_services
 
         count = 0
@@ -274,8 +283,26 @@ class Command(BaseCommand):
         for order in orders:
             if hasattr(order, "invoice"):
                 continue
-            billing_services.issue_invoice(order, actor=actor)
+            invoice = billing_services.issue_invoice(order, actor=actor)
             count += 1
+
+            if order.status == OrderStatus.CLOSED:
+                billing_services.record_payment(
+                    invoice,
+                    method="CASH",
+                    amount_minor=invoice.total_minor,
+                    idempotency_key=f"seed-{invoice.ref}-full",
+                    actor=actor,
+                )
+            elif random.random() < 0.6:
+                partial = max(1, invoice.total_minor // 2)
+                billing_services.record_payment(
+                    invoice,
+                    method=random.choice(["CASH", "UPI_QR"]),
+                    amount_minor=partial,
+                    idempotency_key=f"seed-{invoice.ref}-partial",
+                    actor=actor,
+                )
         return count
 
     def _seed_supplies(self, hub, service, garment_types):

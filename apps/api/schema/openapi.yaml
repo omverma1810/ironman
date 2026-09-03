@@ -429,6 +429,49 @@ paths:
               schema:
                 $ref: '#/components/schemas/CreditNote'
           description: ''
+  /api/v1/billing/invoices/{ref}/payments/:
+    post:
+      operationId: billing_invoices_payments_create
+      description: |-
+        docs/06 §3.2 object scoping, applied uniformly rather than
+        per-viewset. A viewset sets `hub_field` (default "hub") to the
+        queryset's path to its Hub FK; founders and superusers see everything,
+        everyone else is filtered to their `user.hub_scope`.
+
+        A viewset that additionally needs "own records only" (customer, field
+        staff) should override `get_queryset()` and call
+        `self.scope_to_hub(qs)` before applying the narrower own-record filter,
+        so both scopes always apply together.
+      parameters:
+      - in: path
+        name: ref
+        schema:
+          type: string
+        required: true
+      tags:
+      - billing
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordPaymentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RecordPaymentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RecordPaymentRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+          description: ''
   /api/v1/billing/invoices/{ref}/pdf/:
     get:
       operationId: billing_invoices_pdf_retrieve
@@ -6960,6 +7003,14 @@ components:
         credited_minor:
           type: integer
           readOnly: true
+        payments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Payment'
+          readOnly: true
+        paid_minor:
+          type: integer
+          readOnly: true
       required:
       - credit_notes
       - credited_minor
@@ -6975,6 +7026,8 @@ components:
       - issued_at
       - order
       - order_ref
+      - paid_minor
+      - payments
       - pdf_url
       - price_list_version
       - ref
@@ -7022,6 +7075,9 @@ components:
         gst_applied:
           type: boolean
           readOnly: true
+        paid_minor:
+          type: integer
+          readOnly: true
       required:
       - customer_name
       - gst_applied
@@ -7030,6 +7086,7 @@ components:
       - issued_at
       - order
       - order_ref
+      - paid_minor
       - ref
       - status
       - total_minor
@@ -9049,6 +9106,62 @@ components:
           minimum: 0
         is_active:
           type: boolean
+    Payment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        invoice:
+          type: string
+          format: uuid
+          readOnly: true
+        method:
+          allOf:
+          - $ref: '#/components/schemas/PaymentMethodEnum'
+          readOnly: true
+        amount_minor:
+          type: integer
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/PaymentStatusEnum'
+          readOnly: true
+        gateway_ref:
+          type: string
+          readOnly: true
+        collected_by_name:
+          type: string
+          readOnly: true
+          default: ''
+        at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - amount_minor
+      - at
+      - collected_by_name
+      - gateway_ref
+      - id
+      - invoice
+      - method
+      - status
+    PaymentMethodEnum:
+      enum:
+      - CASH
+      - UPI_QR
+      - GATEWAY
+      - CREDIT
+      - ADJUSTMENT
+      type: string
+      description: |-
+        * `CASH` - Cash
+        * `UPI_QR` - UPI (QR at door)
+        * `GATEWAY` - Gateway
+        * `CREDIT` - Customer credit
+        * `ADJUSTMENT` - Adjustment
     PaymentStatusEnum:
       enum:
       - UNPAID
@@ -9426,6 +9539,35 @@ components:
       - old_total_minor
       - order
       - reason
+    RecordPaymentMethodEnum:
+      enum:
+      - CASH
+      - UPI_QR
+      - ADJUSTMENT
+      type: string
+      description: |-
+        * `CASH` - CASH
+        * `UPI_QR` - UPI_QR
+        * `ADJUSTMENT` - ADJUSTMENT
+    RecordPaymentRequest:
+      type: object
+      properties:
+        method:
+          $ref: '#/components/schemas/RecordPaymentMethodEnum'
+        amount:
+          type: integer
+          minimum: 1
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 64
+        gateway_ref:
+          type: string
+          maxLength: 64
+      required:
+      - amount
+      - idempotency_key
+      - method
     ResultEnum:
       enum:
       - PASS

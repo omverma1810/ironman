@@ -563,6 +563,9 @@ export type Invoice = {
   issued_at: string | null;
   total_minor: number;
   gst_applied: boolean;
+  // Sum of SUCCEEDED payments — on both the list and detail serializers
+  // since the order-detail page's Invoice card reads the list endpoint.
+  paid_minor: number;
 };
 
 export type InvoiceSnapshotLine = {
@@ -582,6 +585,35 @@ export type CreditNote = {
   pdf_url: string | null;
 };
 
+// COD / UPI-QR-at-door (docs/08 3.2) — GATEWAY and CREDIT exist in the
+// domain model but aren't recordable through this batch's UI (later
+// batches: 3.5 gateway, 3.6 credit ledger).
+export type PaymentMethod = "CASH" | "UPI_QR" | "GATEWAY" | "CREDIT" | "ADJUSTMENT";
+// Named distinctly from the order-level `PaymentStatus` above (billing's
+// per-payment SUCCEEDED/FAILED vs ordering's UNPAID/PARTIALLY_PAID/PAID/
+// WRITTEN_OFF aggregate) — same enum-name collision the backend resolves
+// via `billing.models.PaymentStatus` vs `ordering.models.PaymentStatus`.
+export type PaymentRecordStatus = "SUCCEEDED" | "FAILED";
+
+export type Payment = {
+  id: string;
+  invoice: string;
+  method: PaymentMethod;
+  amount_minor: number;
+  status: PaymentRecordStatus;
+  gateway_ref: string;
+  collected_by_name: string;
+  at: string;
+};
+
+export type RecordPaymentInput = {
+  method: "CASH" | "UPI_QR" | "ADJUSTMENT";
+  // Minor units (paise) on the wire, same convention as `CreditNoteInput`.
+  amount: number;
+  idempotency_key: string;
+  gateway_ref?: string;
+};
+
 export type InvoiceDetail = Invoice & {
   hub_name: string;
   customer: string;
@@ -595,6 +627,7 @@ export type InvoiceDetail = Invoice & {
   pdf_url: string | null;
   credit_notes: CreditNote[];
   credited_minor: number;
+  payments: Payment[];
 };
 
 export type CreditNoteInput = {

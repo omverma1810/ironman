@@ -1,11 +1,13 @@
 """docs/02 §3.8 batch 3.1: issuing snapshots the order's already-verified
 totals, computes tax fresh (nothing upstream ever sets `Order.tax_minor`),
-and the row becomes immutable once written."""
+and the row becomes immutable once written. Batch 3.2 adds `Payment`:
+idempotent recording, partial payments, and the invoice/order status
+transitions a full payment triggers."""
 
 import pytest
 
-from billing.models import CreditNote, Invoice
-from billing.services import issue_credit_note, issue_invoice
+from billing.models import CreditNote, Invoice, Payment
+from billing.services import issue_credit_note, issue_invoice, paid_minor, record_payment
 from common.errors import ApiError
 
 pytestmark = pytest.mark.django_db
@@ -166,3 +168,79 @@ def test_credit_note_is_append_only(verified_order):
     cn.amount_minor = 1
     with pytest.raises(RuntimeError):
         cn.save()
+
+
+# ── Payments (batch 3.2) ────────────────────────────────────────────────
+
+
+def test_record_payment_in_full_marks_invoice_and_order_paid(verified_order):
+    invoice = issue_invoice(verified_order)
+    payment = record_payment(invoice, method="CASH", amount_minor=4800, idempotency_key="k-full")
+    assert payment.amount_minor == 4800
+    assert payment.status == "SUCCEEDED"
+
+    invoice.refresh_from_db()
+    assert invoice.status == "PAID"
+    verified_order.refresh_from_db()
+    assert verified_order.payment_status == "PAID"
+    assert paid_minor(invoice) == 4800
+
+
+def test_record_partial_payment_marks_order_partially_paid(verified_order):
+    invoice = issue_invoice(verified_order)
+    record_payment(invoice, method="CASH", amount_minor=2000, idempotency_key="k-partial")
+
+    invoice.refresh_from_db()
+    assert invoice.status == "ISSUED"  # not fully paid yet
+    verified_order.refresh_from_db()
+    assert verified_order.payment_status == "PARTIALLY_PAID"
+
+
+def test_two_partial_payments_sum_to_paid(verified_order):
+    invoice = issue_invoice(verified_order)
+    record_payment(invoice, method="CASH", amount_minor=2000, idempotency_key="k-1")
+    record_payment(invoice, method="UPI_QR", amount_minor=2800, idempotency_key="k-2")
+
+    invoice.refresh_from_db()
+    assert invoice.status == "PAID"
+    assert Payment.objects.filter(invoice=invoice).count() == 2
+
+
+def test_record_payment_is_idempotent(verified_order):
+    invoice = issue_invoice(verified_order)
+    first = record_payment(invoice, method="CASH", amount_minor=2000, idempotency_key="k-replay")
+    replay = record_payment(invoice, method="CASH", amount_minor=2000, idempotency_key="k-replay")
+
+    assert first.id == replay.id
+    assert Payment.objects.filter(invoice=invoice).count() == 1
+    verified_order.refresh_from_db()
+    assert verified_order.payment_status == "PARTIALLY_PAID"  # only counted once
+
+
+def test_record_payment_rejects_overpay(verified_order):
+    invoice = issue_invoice(verified_order)
+    with pytest.raises(ApiError):
+        record_payment(invoice, method="CASH", amount_minor=5000, idempotency_key="k-over")
+
+
+def test_record_payment_requires_positive_amount(verified_order):
+    invoice = issue_invoice(verified_order)
+    with pytest.raises(ApiError):
+        record_payment(invoice, method="CASH", amount_minor=0, idempotency_key="k-zero")
+
+
+def test_record_payment_requires_an_issued_invoice(verified_order):
+    invoice = issue_invoice(verified_order)
+    invoice.status = "CANCELLED"
+    invoice.save(update_fields=["status"])  # status isn't frozen
+
+    with pytest.raises(ApiError):
+        record_payment(invoice, method="CASH", amount_minor=4800, idempotency_key="k-cancelled")
+
+
+def test_record_payment_is_append_only(verified_order):
+    invoice = issue_invoice(verified_order)
+    payment = record_payment(invoice, method="CASH", amount_minor=4800, idempotency_key="k-ao")
+    payment.amount_minor = 1
+    with pytest.raises(RuntimeError):
+        payment.save()
