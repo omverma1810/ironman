@@ -61,7 +61,7 @@ test.describe("Billing", () => {
     await page.goto(`/console/orders/${orderIds[0]}`);
     await expect(page.getByRole("heading", { name: "Invoice" })).toBeVisible();
 
-    await page.getByRole("button", { name: "Issue invoice" }).click();
+    await clickIssueInvoiceAndWaitForResponse(page);
     // Unlike every other mutation in this suite, issuing renders a PDF
     // server-side (WeasyPrint) inside the same request — genuinely slower
     // than Playwright's default 5s assertion window under CI's real
@@ -73,7 +73,7 @@ test.describe("Billing", () => {
     await loginAs(page, DEMO_USERS.operator);
 
     await page.goto(`/console/orders/${orderIds[1]}`);
-    await page.getByRole("button", { name: "Issue invoice" }).click();
+    await clickIssueInvoiceAndWaitForResponse(page);
     await expect(page.getByText(/INV-\d{4}-\d{4} issued/i)).toBeVisible({ timeout: 15000 });
 
     // An operator can't read invoices back (docs/06 §3.1: "must not see
@@ -84,3 +84,21 @@ test.describe("Billing", () => {
     await expect(page.getByText(/already has an invoice/i)).toBeVisible();
   });
 });
+
+/** Clicks "Issue invoice" and waits for its POST to resolve, failing loudly
+ * with the response body if the API itself rejected it — CI's default
+ * failure output is a UI-text timeout with no indication of what the
+ * backend actually said, which isn't enough to diagnose a real rejection
+ * vs. a slow-but-fine PDF render. */
+async function clickIssueInvoiceAndWaitForResponse(page: import("@playwright/test").Page) {
+  const [response] = await Promise.all([
+    page.waitForResponse(
+      (r) => /\/billing\/invoices\/[^/]+\/issue\/?$/.test(r.url()) && r.request().method() === "POST",
+      { timeout: 15000 }
+    ),
+    page.getByRole("button", { name: "Issue invoice" }).click(),
+  ]);
+  if (!response.ok()) {
+    throw new Error(`POST ${response.url()} -> ${response.status()}: ${await response.text()}`);
+  }
+}
