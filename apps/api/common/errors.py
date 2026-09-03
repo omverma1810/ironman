@@ -104,6 +104,26 @@ def exception_handler(exc, context):
     if isinstance(exc, DjangoPermissionDenied):
         exc = drf_exceptions.PermissionDenied()
 
+    # SessionAuthentication.enforce_csrf raises DRF's own PermissionDenied
+    # directly with Django's internal CSRF reason text as the message
+    # ("CSRF Failed: CSRF token missing.") — that's meant for a browser
+    # devtools console, not a toast; the generic-DRF-exception path below
+    # would otherwise forward it to the user verbatim.
+    if isinstance(exc, drf_exceptions.PermissionDenied) and str(exc.detail).startswith(
+        "CSRF Failed"
+    ):
+        body = {
+            "error": {
+                "code": "csrf_failed",
+                "message": "Your session changed — please refresh the page and try again.",
+                "detail": None,
+                "field_errors": {},
+                "request_id": request_id,
+                "retryable": True,
+            }
+        }
+        return Response(body, status=403)
+
     response = drf_exception_handler(exc, context)
     if response is None:
         logger.exception("Unhandled exception", extra={"request_id": request_id})

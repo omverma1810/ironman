@@ -32,9 +32,14 @@ class RoleCode(models.TextChoices):
     VIEWER = "VIEWER", "Viewer"
 
 
-# Roles that require mandatory TOTP 2FA (docs/06 §2.2) — they can change
-# prices and settle commissions payable to third parties.
-MFA_REQUIRED_ROLES = {RoleCode.ADMIN, RoleCode.FOUNDER}
+# Roles that require mandatory TOTP 2FA (docs/06 §2.2). Empty for the
+# pilot: the console never grew a totp_code input (there was no way to
+# actually complete a FOUNDER/ADMIN login), and requiring device-level
+# TOTP enrollment before a pilot demo account can even be looked at isn't
+# a tradeoff worth making yet. TOTP itself stays fully wired (opt-in via
+# StaffLoginView/requires_mfa()) — re-populate this set to bring back the
+# mandatory gate once there's a UI to set it up through.
+MFA_REQUIRED_ROLES: set[RoleCode] = set()
 
 STAFF_ROLES = {RoleCode.FIELD, RoleCode.OPERATOR, RoleCode.ADMIN, RoleCode.FOUNDER, RoleCode.VIEWER}
 

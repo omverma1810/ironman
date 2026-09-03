@@ -126,7 +126,9 @@ class OtpVerifyView(APIView):
 @extend_schema(request=StaffLoginSerializer, responses={200: MeSerializer})
 class StaffLoginView(APIView):
     """POST /auth/login — session-cookie auth for console users
-    (docs/06 §2.2). Mandatory TOTP for ADMIN/FOUNDER."""
+    (docs/06 §2.2). TOTP is opt-in for the pilot (`MFA_REQUIRED_ROLES` is
+    empty) — `requires_mfa()` still gates this per-user for anyone who has
+    turned it on via `MfaSetupView`/`MfaEnableView`."""
 
     permission_classes = [AllowAny]
     throttle_classes = [ScopedRateThrottle]

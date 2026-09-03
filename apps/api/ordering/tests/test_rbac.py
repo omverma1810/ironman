@@ -207,11 +207,12 @@ def test_only_founder_can_create_price_list(api_client, admin_user, founder_user
     assert resp.status_code == 201
 
 
-def test_admin_login_without_mfa_setup_is_blocked(api_client, admin_user):
-    """docs/06 §2.2: TOTP is mandatory for ADMIN/FOUNDER."""
+def test_admin_login_without_mfa_setup_succeeds(api_client, admin_user):
+    """docs/06 §2.2: TOTP is opt-in during the pilot (`MFA_REQUIRED_ROLES`
+    is empty) — an ADMIN with no TOTP enrolled still logs in with just a
+    password, same as any other role."""
     resp = _login(api_client, admin_user.email)
-    assert resp.status_code == 403
-    assert resp.data["error"]["code"] == "mfa_setup_required"
+    assert resp.status_code == 200
 
 
 def test_operator_login_without_mfa_succeeds(api_client, operator_user):

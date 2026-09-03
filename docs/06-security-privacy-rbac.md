@@ -44,8 +44,11 @@ Directly satisfies the brief's sign-up / verification / reset requirements:
 - **Password policy**: minimum 10 characters, checked against the Pwned Passwords k-anonymity
   API and a common-password list. No composition rules, no forced rotation (NIST 800-63B).
   Argon2id hashing.
-- **TOTP 2FA**: mandatory for `FOUNDER` and `ADMIN`, optional for others. These roles can change
-  prices and settle commissions.
+- **TOTP 2FA**: opt-in for everyone during the pilot (`MFA_REQUIRED_ROLES` is empty — the console
+  has no enrollment UI yet, so there's no way to complete a mandatory-TOTP login). The design intent
+  is mandatory for `FOUNDER` and `ADMIN` once a real setup flow ships, since those roles can change
+  prices and settle commissions; `requires_mfa()` and the enable/verify endpoints are already wired,
+  so turning it back on for those roles is a one-line change (repopulate `MFA_REQUIRED_ROLES`).
 - **Sessions**: httpOnly + Secure + `SameSite=Lax` cookies, 12-hour idle timeout, 7-day absolute,
   device list with remote revoke, and forced logout everywhere on password change.
 - Field staff log in with phone OTP *or* email+password — riders often have no work email.

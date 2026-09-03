@@ -104,6 +104,20 @@ test.describe("Field PWA", () => {
     await expect(page.locator("span", { hasText: "Done" })).toBeVisible();
   });
 
+  test("logging out returns to the field login page and re-guards /field", async ({ page }) => {
+    await page.goto("/field");
+    await page.getByRole("button", { name: "Log out" }).click();
+    await page.waitForURL("**/field/login");
+
+    // Regression check: FieldShell's own auth guard only redirected on a
+    // real 401/403 from /me, not on the deliberate `me: null` a logout
+    // leaves behind — so this used to land on a blank page instead.
+    await expect(page.getByRole("heading", { name: "IronMan Field" })).toBeVisible();
+
+    await page.goto("/field");
+    await page.waitForURL("**/field/login");
+  });
+
   test("reporting a problem marks the job failed", async ({ page }) => {
     await page.goto(`/field/jobs/${pendingPickupIds[1]}`);
 
