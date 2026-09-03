@@ -16,15 +16,11 @@ import { EmptyState } from "@/components/patterns/empty-state";
 import { PageHeader } from "@/components/patterns/page-header";
 import { RouteDayBoard } from "@/components/fulfilment/route-day-board";
 import { useClusters, useCreateRouteDay, useRouteDays } from "@/lib/api/hooks";
-import { formatDate } from "@/lib/format";
-
-function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
-}
+import { formatDate, todayIsoIST } from "@/lib/format";
 
 export default function RouteDaysPage() {
   const [clusterId, setClusterId] = useState("");
-  const [date, setDate] = useState(todayIso());
+  const [date, setDate] = useState(todayIsoIST);
 
   const clustersQuery = useClusters();
   const routeDaysQuery = useRouteDays({ cluster: clusterId, date });

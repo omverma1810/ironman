@@ -77,6 +77,29 @@ export function formatRelative(iso: string | null | undefined): string {
   return rtf.format(diffDay, "day");
 }
 
+const istDateFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Kolkata",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+/** "Today" as the hub's own calendar date (Asia/Kolkata), not the
+ * viewer's browser timezone — `new Date().toISOString()` reads as UTC and
+ * disagrees with the server for ~5.5 hours a day (IST is UTC+5:30), which
+ * silently shows the wrong day's jobs/route-day to anyone not in IST. */
+export function todayIsoIST(): string {
+  return istDateFormatter.format(new Date());
+}
+
+/** Pure date-string arithmetic — deliberately UTC-midnight internally so a
+ * day offset is never off-by-one from a viewer's local DST/timezone. */
+export function addDaysIso(iso: string, days: number): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 export function initials(name: string | null | undefined): string {
   if (!name) return "?";
   const parts = name.trim().split(/\s+/);
