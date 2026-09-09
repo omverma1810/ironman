@@ -31,7 +31,19 @@ jobs:
       # `lint-imports` actually imports every module in scope (including
       # `billing.pdf`, which imports WeasyPrint) to build the dependency
       # graph — same system libraries as the `api-test`/`e2e` jobs.
-      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libcairo2 fonts-dejavu-core
+      #
+      # GitHub's Ubuntu runner image preconfigures a google-chrome apt
+      # source none of these jobs use (e2e installs Chromium via
+      # Playwright, not apt). When Google's mirror serves an inconsistent
+      # Packages.gz/InRelease pair, `apt-get update` still successfully
+      # fetches every index this job actually needs (Ubuntu's own
+      # main/universe/security) before failing on that one unrelated
+      # source — but its non-zero exit code was killing the whole `&&`
+      # chain before `apt-get install` ever ran. `|| true` tolerates that
+      # known partial-index failure; a genuinely broken install still
+      # fails the step on its own exit code below.
+      - run: sudo apt-get update || true
+      - run: sudo apt-get install -y --no-install-recommends libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libcairo2 fonts-dejavu-core
       - run: pip install -r requirements/dev.txt
       - run: ruff check .
       - run: black --check .
@@ -85,7 +97,13 @@ jobs:
       # default, so a plain `pip install` succeeds but the first render
       # fails with an OSError. Same package set the invoice template's
       # font stack expects (`fonts-dejavu-core`).
-      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libcairo2 fonts-dejavu-core
+      #
+      # See api-quality's identical step for why `update` and `install`
+      # are split: a preconfigured google-chrome apt source neither job
+      # needs can fail `apt-get update`'s exit code alone while every
+      # index this job actually needs still downloaded fine.
+      - run: sudo apt-get update || true
+      - run: sudo apt-get install -y --no-install-recommends libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libcairo2 fonts-dejavu-core
       - run: pip install -r requirements/dev.txt
       # A migration nobody generated is a schema drift nobody reviewed.
       - run: python manage.py makemigrations --check --dry-run
@@ -150,8 +168,16 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
+      # This job installs its own Chromium below via Playwright, not apt.
+      # See api-quality's identical step: a preconfigured google-chrome
+      # apt source neither this job nor api-quality needs can fail
+      # `apt-get update`'s exit code alone while every index this job
+      # actually needs still downloads fine — split so that doesn't also
+      # block `apt-get install` below.
       - name: Install WeasyPrint system libraries
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libcairo2 fonts-dejavu-core
+        run: |
+          sudo apt-get update || true
+          sudo apt-get install -y --no-install-recommends libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libcairo2 fonts-dejavu-core
 
       - name: Install API deps and seed demo data
         working-directory: apps/api
@@ -168,6 +194,19 @@ jobs:
           npm run build --workspace=apps/web
           nohup npm run start --workspace=apps/web -- -p 3000 > /tmp/web.log 2>&1 &
           npx --yes wait-on http://localhost:3000 --timeout 30000
+
+      # `--with-deps` shells out to its own internal apt-get update/install
+      # for Chromium's OS libraries — unlike our own steps above, that
+      # internal call isn't ours to make tolerant of a partial-index
+      # failure, and it treats any non-zero apt exit as fatal. Removing
+      # the broken google-chrome source first avoids the failure outright
+      # rather than working around its exit code. Globbed because Ubuntu
+      # 24.04's preconfigured repos are inconsistently named between the
+      # legacy one-line `.list` format and the newer deb822 `.sources`
+      # format — confirmed by hand that an exact `google-chrome.list`
+      # guess silently no-ops here while the source keeps getting fetched.
+      - name: Remove unused google-chrome apt source
+        run: sudo rm -f /etc/apt/sources.list.d/google-chrome*
 
       - name: Install Playwright browsers
         working-directory: apps/web

@@ -543,7 +543,19 @@ class Command(BaseCommand):
         import fulfilment.services as fulfilment_services
 
         cluster = order.apartment.cluster
-        date = order.pickup_slot_start.date() if order.pickup_slot_start else timezone.localdate()
+        # `pickup_slot_start` round-trips through the DB and comes back
+        # UTC-represented (Django always returns DateTimeField values in
+        # UTC, regardless of TIME_ZONE) — plain `.date()` on it silently
+        # takes the UTC calendar date, while fulfilment's `jobs/mine/`
+        # (what field.spec.ts's "today's jobs" reads) filters on
+        # `timezone.localdate()` (IST). They disagree for ~5.5h daily
+        # (UTC 18:30-24:00, when IST has already rolled to tomorrow) —
+        # same class of bug as ordering/tests' test_due_filter_today fix.
+        date = (
+            timezone.localtime(order.pickup_slot_start).date()
+            if order.pickup_slot_start
+            else timezone.localdate()
+        )
         route_day = fulfilment_services.create_route_day(
             hub=order.hub, cluster=cluster, date=date, actor=actor
         )

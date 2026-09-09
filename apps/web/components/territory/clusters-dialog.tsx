@@ -125,9 +125,16 @@ function NewClusterForm({ defaultHub }: { defaultHub: string | undefined }) {
   const create = useCreateCluster();
 
   function handleCreate() {
-    if (!name.trim() || !hub) return;
+    // `hub` state seeds from `defaultHub` only on mount — if the hubs
+    // query was still loading right then (dialog opened before it
+    // resolved), `hub` is stuck at "" forever since a prop change after
+    // mount doesn't re-run useState's initializer, and this silently
+    // no-oped with no toast, no error, nothing. Falls back to the first
+    // hub the same way the <Select>'s own display value already does.
+    const effectiveHub = hub || hubs[0]?.id;
+    if (!name.trim() || !effectiveHub) return;
     create.mutate(
-      { hub, name: name.trim() },
+      { hub: effectiveHub, name: name.trim() },
       { onSuccess: () => setName("") }
     );
   }
