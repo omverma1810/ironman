@@ -34,12 +34,16 @@ jobs:
       #
       # GitHub's Ubuntu runner image preconfigures a google-chrome apt
       # source none of these jobs use (e2e installs Chromium via
-      # Playwright, not apt) — when Google's mirror serves an
-      # inconsistent Packages.gz/InRelease pair, `apt-get update` fails
-      # outright on that source alone and the whole `&&` chain never
-      # reaches the packages this job actually needs. Drop it first.
-      - run: sudo rm -f /etc/apt/sources.list.d/google-chrome.list
-      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libcairo2 fonts-dejavu-core
+      # Playwright, not apt). When Google's mirror serves an inconsistent
+      # Packages.gz/InRelease pair, `apt-get update` still successfully
+      # fetches every index this job actually needs (Ubuntu's own
+      # main/universe/security) before failing on that one unrelated
+      # source — but its non-zero exit code was killing the whole `&&`
+      # chain before `apt-get install` ever ran. `|| true` tolerates that
+      # known partial-index failure; a genuinely broken install still
+      # fails the step on its own exit code below.
+      - run: sudo apt-get update || true
+      - run: sudo apt-get install -y --no-install-recommends libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libcairo2 fonts-dejavu-core
       - run: pip install -r requirements/dev.txt
       - run: ruff check .
       - run: black --check .
@@ -94,11 +98,12 @@ jobs:
       # fails with an OSError. Same package set the invoice template's
       # font stack expects (`fonts-dejavu-core`).
       #
-      # See api-quality's identical step: this job doesn't touch Chrome
-      # either, so the preconfigured google-chrome apt source is just a
-      # single point of failure to drop before updating.
-      - run: sudo rm -f /etc/apt/sources.list.d/google-chrome.list
-      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libcairo2 fonts-dejavu-core
+      # See api-quality's identical step for why `update` and `install`
+      # are split: a preconfigured google-chrome apt source neither job
+      # needs can fail `apt-get update`'s exit code alone while every
+      # index this job actually needs still downloaded fine.
+      - run: sudo apt-get update || true
+      - run: sudo apt-get install -y --no-install-recommends libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libcairo2 fonts-dejavu-core
       - run: pip install -r requirements/dev.txt
       # A migration nobody generated is a schema drift nobody reviewed.
       - run: python manage.py makemigrations --check --dry-run
@@ -163,15 +168,16 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
-      # This job installs its own Chromium below via Playwright, not apt
-      # — the google-chrome source GitHub preconfigures on this image is
-      # dead weight that can take `apt-get update` down with it (see
-      # api-quality's identical step).
-      - name: Remove unused google-chrome apt source
-        run: sudo rm -f /etc/apt/sources.list.d/google-chrome.list
-
+      # This job installs its own Chromium below via Playwright, not apt.
+      # See api-quality's identical step: a preconfigured google-chrome
+      # apt source neither this job nor api-quality needs can fail
+      # `apt-get update`'s exit code alone while every index this job
+      # actually needs still downloads fine — split so that doesn't also
+      # block `apt-get install` below.
       - name: Install WeasyPrint system libraries
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libcairo2 fonts-dejavu-core
+        run: |
+          sudo apt-get update || true
+          sudo apt-get install -y --no-install-recommends libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libcairo2 fonts-dejavu-core
 
       - name: Install API deps and seed demo data
         working-directory: apps/api
