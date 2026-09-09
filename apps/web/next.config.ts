@@ -26,18 +26,31 @@ const nextConfig: NextConfig = {
   async rewrites() {
     const apiOrigin = process.env.NEXT_PUBLIC_API_BASE_URL;
     if (!apiOrigin) return [];
-    // Two rules, not one: a `:path*` catch-all's *captured value* never
-    // includes the request's own trailing slash, so a single
-    // `${apiOrigin}/:path*` destination silently drops it — confirmed by
-    // hand (GET /api/v1/orders/ reached Django as /api/v1/orders, which
+    // A `:path*` catch-all's *captured value* never includes the
+    // request's own trailing slash, so a plain `${apiOrigin}/:path*`
+    // destination silently drops it (confirmed by hand: GET
+    // /api/v1/orders/ reached Django as /api/v1/orders, which
     // 301-redirected back to the slash version, which hit this same
-    // rewrite again: an infinite loop). Matching the trailing slash
-    // *literally* in both source and destination, in its own rule, forces
-    // it through regardless of what :path* captured.
-    return [
-      { source: "/api/v1/:path*/", destination: `${apiOrigin}/:path*/` },
-      { source: "/api/v1/:path*", destination: `${apiOrigin}/:path*` },
-    ];
+    // rewrite again — an infinite loop).
+    //
+    // A prior version of this file tried to fix that with a *second*
+    // rule matching the trailing slash literally, checked first. That
+    // made it worse: Next's route matcher treats a trailing slash in a
+    // *pattern* as optional, not required, so that rule also matched
+    // requests with no trailing slash at all — forcing one onto the
+    // destination for every non-slash endpoint (healthz, me, every
+    // auth/* route) and 404ing them against Django, which never
+    // registered a slash-terminated version. Verified live: this class
+    // of endpoint 404'd through the proxy in production while the
+    // trailing-slash ones (docs/, schema/) worked, which is exactly
+    // backwards from "broken" reading as a clean failure.
+    //
+    // `:path(.*)` is a *named* param with an explicit custom regex
+    // instead of the repeating `:path*` segment matcher — `.*` matches
+    // the raw remaining string, slashes included, as one piece rather
+    // than splitting it into path segments and losing whether the last
+    // one had a trailing slash. One rule, no ambiguity to mismatch on.
+    return [{ source: "/api/v1/:path(.*)", destination: `${apiOrigin}/:path` }];
   },
 };
 
