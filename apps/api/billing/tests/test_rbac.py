@@ -273,3 +273,248 @@ def test_customer_cannot_record_payment(api_client, customer_user, verified_orde
         format="json",
     )
     assert resp.status_code == 403
+
+
+# ── Cash custody (batch 3.3) ────────────────────────────────────────────
+# docs/06 §3.1: "Own cash balance / handover" is Field(own)/Admin/Founder —
+# Operator has no access to *their own* balance/handover (they don't carry
+# COD cash), but does confirm *other* people's handovers day-to-day
+# (docs/04 `POST .../confirm` is `[A][O]`). Reconciliation (the cross-rider
+# variance report) stays Admin/Founder only — narrower than day-to-day
+# hub operations.
+
+
+def test_field_can_view_own_cash_balance(api_client, field_user):
+    api_client.force_authenticate(user=field_user)
+    resp = api_client.get("/api/v1/billing/cash/mine")
+    assert resp.status_code == 200, resp.data
+    assert resp.data["balance_minor"] == 0
+
+
+def test_operator_cannot_view_cash_mine(api_client, operator_user):
+    api_client.force_authenticate(user=operator_user)
+    resp = api_client.get("/api/v1/billing/cash/mine")
+    assert resp.status_code == 403
+
+
+def test_field_can_list_handover_recipients(api_client, field_user, operator_user, founder_user):
+    api_client.force_authenticate(user=field_user)
+    resp = api_client.get("/api/v1/billing/cash/handover-recipients")
+    assert resp.status_code == 200, resp.data
+    emails = {row["email"] for row in resp.data}
+    assert emails == {operator_user.email, founder_user.email}
+
+
+def test_operator_cannot_list_handover_recipients(api_client, operator_user):
+    api_client.force_authenticate(user=operator_user)
+    resp = api_client.get("/api/v1/billing/cash/handover-recipients")
+    assert resp.status_code == 403
+
+
+def test_field_can_initiate_handover(api_client, field_user, operator_user, verified_order):
+    from billing.services import issue_invoice, record_payment
+
+    invoice = issue_invoice(verified_order)
+    record_payment(
+        invoice, method="CASH", amount_minor=4800, idempotency_key="k-1", actor=field_user
+    )
+    api_client.force_authenticate(user=field_user)
+    resp = api_client.post(
+        "/api/v1/billing/cash/handovers/",
+        {"to_user": str(operator_user.id), "amount": 2000},
+        format="json",
+    )
+    assert resp.status_code == 201, resp.data
+    assert resp.data["status"] == "PENDING"
+    assert resp.data["declared_amount_minor"] == 2000
+
+
+def test_operator_cannot_initiate_handover(api_client, operator_user, admin_user):
+    api_client.force_authenticate(user=operator_user)
+    resp = api_client.post(
+        "/api/v1/billing/cash/handovers/",
+        {"to_user": str(admin_user.id), "amount": 100},
+        format="json",
+    )
+    assert resp.status_code == 403
+
+
+def test_customer_cannot_initiate_handover(api_client, customer_user, operator_user):
+    api_client.force_authenticate(user=customer_user)
+    resp = api_client.post(
+        "/api/v1/billing/cash/handovers/",
+        {"to_user": str(operator_user.id), "amount": 100},
+        format="json",
+    )
+    assert resp.status_code == 403
+
+
+def test_operator_can_confirm_handover(api_client, field_user, operator_user, verified_order):
+    from billing.services import initiate_handover, issue_invoice, record_payment
+
+    invoice = issue_invoice(verified_order)
+    record_payment(
+        invoice, method="CASH", amount_minor=4800, idempotency_key="k-1", actor=field_user
+    )
+    handover = initiate_handover(from_user=field_user, to_user=operator_user, amount_minor=2000)
+
+    api_client.force_authenticate(user=operator_user)
+    resp = api_client.post(
+        f"/api/v1/billing/cash/handovers/{handover.id}/confirm/",
+        {"received_amount": 1950, "note": "short by 50"},
+        format="json",
+    )
+    assert resp.status_code == 200, resp.data
+    assert resp.data["status"] == "CONFIRMED"
+    assert resp.data["variance_minor"] == -50
+
+
+def test_admin_can_confirm_handover(api_client, field_user, admin_user, verified_order):
+    from billing.services import initiate_handover, issue_invoice, record_payment
+
+    invoice = issue_invoice(verified_order)
+    record_payment(
+        invoice, method="CASH", amount_minor=4800, idempotency_key="k-1", actor=field_user
+    )
+    handover = initiate_handover(from_user=field_user, to_user=admin_user, amount_minor=2000)
+
+    api_client.force_authenticate(user=admin_user)
+    resp = api_client.post(
+        f"/api/v1/billing/cash/handovers/{handover.id}/confirm/",
+        {"received_amount": 2000},
+        format="json",
+    )
+    assert resp.status_code == 200, resp.data
+
+
+def test_field_cannot_confirm_handover(api_client, field_user, operator_user, verified_order):
+    from billing.services import initiate_handover, issue_invoice, record_payment
+
+    invoice = issue_invoice(verified_order)
+    record_payment(
+        invoice, method="CASH", amount_minor=4800, idempotency_key="k-1", actor=field_user
+    )
+    handover = initiate_handover(from_user=field_user, to_user=operator_user, amount_minor=2000)
+
+    api_client.force_authenticate(user=field_user)
+    resp = api_client.post(
+        f"/api/v1/billing/cash/handovers/{handover.id}/confirm/",
+        {"received_amount": 2000},
+        format="json",
+    )
+    assert resp.status_code == 403
+
+
+def test_field_sees_only_own_handovers(
+    api_client, field_user, operator_user, hub, customer, service, garment_type, verified_order
+):
+    from billing.services import initiate_handover, issue_invoice, record_payment
+    from ordering.models import Order, OrderLine
+
+    invoice = issue_invoice(verified_order)
+    record_payment(
+        invoice, method="CASH", amount_minor=4800, idempotency_key="k-1", actor=field_user
+    )
+    own = initiate_handover(from_user=field_user, to_user=operator_user, amount_minor=1000)
+
+    other_field = _make_field_user(hub, email="other-field@test.local")
+    other_order = Order.objects.create(
+        hub=hub,
+        customer=customer,
+        service=service,
+        channel="COUNTER",
+        status="INTAKE_VERIFIED",
+        declared_total_qty=1,
+        verified_total_qty=1,
+        subtotal_minor=1500,
+        total_minor=1500,
+    )
+    OrderLine.objects.create(
+        hub=hub,
+        order=other_order,
+        garment_type=garment_type,
+        declared_qty=1,
+        verified_qty=1,
+        unit_price_minor=1500,
+        line_total_minor=1500,
+    )
+    other_invoice = issue_invoice(other_order)
+    record_payment(
+        other_invoice,
+        method="CASH",
+        amount_minor=1500,
+        idempotency_key="k-other",
+        actor=other_field,
+    )
+    initiate_handover(from_user=other_field, to_user=operator_user, amount_minor=500)
+
+    api_client.force_authenticate(user=field_user)
+    resp = api_client.get("/api/v1/billing/cash/handovers/")
+    assert resp.status_code == 200
+    ids = {row["id"] for row in resp.data}
+    assert ids == {str(own.id)}
+
+
+def test_admin_can_view_reconciliation(api_client, admin_user):
+    api_client.force_authenticate(user=admin_user)
+    resp = api_client.get("/api/v1/billing/cash/reconciliation")
+    assert resp.status_code == 200, resp.data
+
+
+def test_founder_can_view_reconciliation(api_client, founder_user):
+    api_client.force_authenticate(user=founder_user)
+    resp = api_client.get("/api/v1/billing/cash/reconciliation")
+    assert resp.status_code == 200
+
+
+def test_operator_cannot_view_reconciliation(api_client, operator_user):
+    api_client.force_authenticate(user=operator_user)
+    resp = api_client.get("/api/v1/billing/cash/reconciliation")
+    assert resp.status_code == 403
+
+
+def test_field_cannot_view_reconciliation(api_client, field_user):
+    api_client.force_authenticate(user=field_user)
+    resp = api_client.get("/api/v1/billing/cash/reconciliation")
+    assert resp.status_code == 403
+
+
+def test_operator_can_record_deposit(api_client, field_user, operator_user, verified_order):
+    from billing.services import initiate_handover, issue_invoice, record_payment
+
+    invoice = issue_invoice(verified_order)
+    record_payment(
+        invoice, method="CASH", amount_minor=4800, idempotency_key="k-1", actor=field_user
+    )
+    handover = initiate_handover(from_user=field_user, to_user=operator_user, amount_minor=2000)
+    from billing.services import confirm_handover
+
+    confirm_handover(handover, received_amount_minor=2000, actor=operator_user)
+
+    api_client.force_authenticate(user=operator_user)
+    resp = api_client.post(
+        "/api/v1/billing/cash/deposits/", {"amount": 1000, "reference": "slip-1"}, format="json"
+    )
+    assert resp.status_code == 201, resp.data
+    assert resp.data["amount_minor"] == 1000
+
+
+def test_field_cannot_record_deposit(api_client, field_user):
+    api_client.force_authenticate(user=field_user)
+    resp = api_client.post("/api/v1/billing/cash/deposits/", {"amount": 100}, format="json")
+    assert resp.status_code == 403
+
+
+def test_customer_cannot_record_deposit(api_client, customer_user):
+    api_client.force_authenticate(user=customer_user)
+    resp = api_client.post("/api/v1/billing/cash/deposits/", {"amount": 100}, format="json")
+    assert resp.status_code == 403
+
+
+def _make_field_user(hub, *, email):
+    from identity.models import Role, RoleCode, User, UserRole
+
+    user = User.objects.create_user(email=email, password="testpass1234")
+    role, _ = Role.objects.get_or_create(code=RoleCode.FIELD, defaults={"name": RoleCode.FIELD})
+    UserRole.objects.create(user=user, role=role, hub=hub)
+    return user

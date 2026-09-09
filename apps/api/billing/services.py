@@ -8,12 +8,24 @@ nothing upstream has ever computed `Order.tax_minor`."""
 
 from __future__ import annotations
 
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError, models, transaction
 from django.utils import timezone
 
-from billing.models import CreditNote, Invoice, InvoiceStatus, Payment, PaymentStatus, _invoice_ref
+from billing.models import (
+    CashDeposit,
+    CashHandover,
+    CreditNote,
+    HandoverStatus,
+    Invoice,
+    InvoiceStatus,
+    Payment,
+    PaymentMethod,
+    PaymentStatus,
+    _invoice_ref,
+)
 from billing.pdf import render_credit_note_pdf, render_invoice_pdf
 from common.errors import ApiError
+from identity.models import User
 from ordering.models import OrderStatus
 from ordering.models import PaymentStatus as OrderPaymentStatus
 from territory.models import Hub, TaxSettings
@@ -234,3 +246,201 @@ def record_payment(
     locked.order.save(update_fields=["payment_status"])
 
     return payment
+
+
+# ── Cash custody (docs/00 G-5 / R-405, batch 3.3) ─────────────────────────
+
+
+def cash_balance(user) -> int:
+    """A rider's running cash-in-hand: every CASH `Payment` they've
+    collected, minus what confirmed handovers say actually left their
+    hands. Deliberately reads `received_amount_minor`, not
+    `declared_amount_minor` — a `PENDING` handover (declared but not yet
+    counted at the hub) still counts as cash the rider is carrying, and
+    once confirmed, any shortfall the count turns up (`variance_minor`)
+    stays their liability rather than silently vanishing from the balance."""
+    collected = (
+        Payment.objects.filter(
+            collected_by=user, method=PaymentMethod.CASH, status=PaymentStatus.SUCCEEDED
+        ).aggregate(total=models.Sum("amount_minor"))["total"]
+        or 0
+    )
+    handed_over = (
+        CashHandover.objects.filter(from_user=user, status=HandoverStatus.CONFIRMED).aggregate(
+            total=models.Sum("received_amount_minor")
+        )["total"]
+        or 0
+    )
+    return collected - handed_over
+
+
+def hub_cash_on_hand(hub) -> int:
+    """The hub-side counterpart to `cash_balance`: cash that has actually
+    arrived (confirmed handovers) minus what's already been banked
+    (`CashDeposit`). This is the number `record_deposit` won't let a
+    deposit exceed."""
+    received = (
+        CashHandover.objects.filter(hub=hub, status=HandoverStatus.CONFIRMED).aggregate(
+            total=models.Sum("received_amount_minor")
+        )["total"]
+        or 0
+    )
+    deposited = (
+        CashDeposit.objects.filter(hub=hub).aggregate(total=models.Sum("amount_minor"))["total"]
+        or 0
+    )
+    return received - deposited
+
+
+@transaction.atomic
+def initiate_handover(*, from_user, to_user, amount_minor: int) -> CashHandover:
+    if amount_minor <= 0:
+        raise ApiError("Handover amount must be positive.", code="validation_error")
+    if to_user.id == from_user.id:
+        raise ApiError("Cannot hand cash over to yourself.", code="validation_error")
+    if not (to_user.role_codes & {"OPERATOR", "ADMIN", "FOUNDER"}):
+        raise ApiError("Cash can only be handed over to ops staff.", code="validation_error")
+    hub_ids = from_user.hub_scope
+    if not hub_ids:
+        raise ApiError(
+            "Your account has no hub assigned — ask an admin to fix your staff record.",
+            code="validation_error",
+        )
+    # Locks the rider's own hub row (same technique as `issue_invoice`'s
+    # hub lock) so two concurrent handover-initiations from the same rider
+    # can't both read the same pre-handover balance and together declare
+    # more cash than the rider actually has.
+    hub = Hub.objects.select_for_update().get(pk=hub_ids[0])
+
+    if amount_minor > cash_balance(from_user):
+        raise ApiError(
+            "You're declaring more cash than your current balance.", code="validation_error"
+        )
+
+    return CashHandover.objects.create(
+        hub=hub,
+        from_user=from_user,
+        to_user=to_user,
+        declared_amount_minor=amount_minor,
+        created_by=from_user,
+    )
+
+
+@transaction.atomic
+def confirm_handover(
+    handover: CashHandover, *, received_amount_minor: int, actor, note: str = ""
+) -> CashHandover:
+    """The hub side counting what actually arrived. Not restricted to the
+    exact `to_user` named at initiation — any ops staff scoped to the
+    handover's hub may confirm, same "whoever's on duty can act" scoping
+    `custody.scan` already uses, rather than requiring one specific person
+    to be present."""
+    locked = CashHandover.objects.select_for_update().get(pk=handover.pk)
+    if locked.status != HandoverStatus.PENDING:
+        raise ApiError(f"Handover is already {locked.status.lower()}.", code="validation_error")
+    if received_amount_minor < 0:
+        raise ApiError("Received amount cannot be negative.", code="validation_error")
+
+    locked.received_amount_minor = received_amount_minor
+    locked.variance_minor = received_amount_minor - locked.declared_amount_minor
+    locked.variance_note = note
+    locked.status = HandoverStatus.CONFIRMED
+    locked.confirmed_by = actor
+    locked.confirmed_at = timezone.now()
+    locked.updated_by = actor
+    locked.save(
+        update_fields=[
+            "received_amount_minor",
+            "variance_minor",
+            "variance_note",
+            "status",
+            "confirmed_by",
+            "confirmed_at",
+            "updated_by",
+            "updated_at",
+        ]
+    )
+    return locked
+
+
+@transaction.atomic
+def record_deposit(
+    hub, *, amount_minor: int, actor, reference: str = "", notes: str = ""
+) -> CashDeposit:
+    if amount_minor <= 0:
+        raise ApiError("Deposit amount must be positive.", code="validation_error")
+    # Same hub-row-lock reasoning as everywhere else in this file: two
+    # concurrent deposits for the same hub can't both read the same
+    # pre-deposit available balance and together overdraw it.
+    locked_hub = Hub.objects.select_for_update().get(pk=hub.pk)
+    available = hub_cash_on_hand(locked_hub)
+    if amount_minor > available:
+        raise ApiError(
+            f"Only {available}p is available to deposit for this hub.", code="validation_error"
+        )
+    return CashDeposit.objects.create(
+        hub=locked_hub,
+        amount_minor=amount_minor,
+        deposited_by=actor,
+        reference=reference,
+        notes=notes,
+    )
+
+
+def cash_reconciliation(hub_ids: list | None, *, date) -> list[dict]:
+    """One row per rider with cash activity that day (docs/04 §3.7
+    `GET /billing/cash/reconciliation?date=`), scoped to the caller's
+    hub(s) — `views.CashReconciliationView` passes `request.user.hub_scope`
+    straight through, same idiom `ScopedQuerysetMixin` uses everywhere
+    else, just not expressible as a single queryset filter here since the
+    result mixes two models grouped by `from_user`. `hub_ids=None` means
+    unrestricted (a founder), matching `ScopedQuerysetMixin.scope_to_hub`'s
+    own founder/superuser bypass rather than `filter(hub_id__in=None)`,
+    which Django would reject outright."""
+    day_handovers = CashHandover.objects.filter(created_at__date=date)
+    day_payments = Payment.objects.filter(
+        method=PaymentMethod.CASH,
+        status=PaymentStatus.SUCCEEDED,
+        at__date=date,
+    )
+    if hub_ids is not None:
+        day_handovers = day_handovers.filter(hub_id__in=hub_ids)
+        day_payments = day_payments.filter(hub_id__in=hub_ids)
+
+    rider_ids = set(day_handovers.values_list("from_user_id", flat=True)) | set(
+        day_payments.values_list("collected_by_id", flat=True)
+    )
+    rider_ids.discard(None)
+
+    names = dict(User.objects.filter(id__in=rider_ids).values_list("id", "full_name"))
+
+    rows = []
+    for rider_id in rider_ids:
+        collected = (
+            day_payments.filter(collected_by_id=rider_id).aggregate(
+                total=models.Sum("amount_minor")
+            )["total"]
+            or 0
+        )
+        rider_handovers = day_handovers.filter(from_user_id=rider_id)
+        confirmed = rider_handovers.filter(status=HandoverStatus.CONFIRMED)
+        declared_minor = (
+            rider_handovers.aggregate(total=models.Sum("declared_amount_minor"))["total"] or 0
+        )
+        received_minor = (
+            confirmed.aggregate(total=models.Sum("received_amount_minor"))["total"] or 0
+        )
+        variance_minor = confirmed.aggregate(total=models.Sum("variance_minor"))["total"] or 0
+        rows.append(
+            {
+                "rider_id": rider_id,
+                "rider_name": names.get(rider_id, ""),
+                "collected_minor": collected,
+                "declared_minor": declared_minor,
+                "received_minor": received_minor,
+                "variance_minor": variance_minor,
+                "outstanding_minor": collected - received_minor,
+                "pending_handovers": rider_handovers.filter(status=HandoverStatus.PENDING).count(),
+            }
+        )
+    return rows

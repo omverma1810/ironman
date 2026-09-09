@@ -3,9 +3,15 @@ import type {
   Apartment,
   ApartmentContact,
   BagDetail,
+  CashBalance,
+  CashDeposit,
+  CashHandover,
+  CashReconciliationRow,
   Cluster,
+  ConfirmHandoverInput,
   ConsumptionRule,
   ConsumptionRuleInput,
+  CreateDepositInput,
   CreateOrderInput,
   CreditNote,
   CreditNoteInput,
@@ -14,8 +20,11 @@ import type {
   GarmentLine,
   GarmentStage,
   GarmentType,
+  HandoverRecipient,
+  HandoverStatus,
   Hub,
   DeclaredLine,
+  InitiateHandoverInput,
   Invoice,
   InvoiceDetail,
   Job,
@@ -396,6 +405,23 @@ export const billingApi = {
       method: "POST",
       body: input,
     }),
+  cashMine: () => apiFetch<CashBalance>("/billing/cash/mine"),
+  handoverRecipients: () =>
+    apiFetch<HandoverRecipient[]>("/billing/cash/handover-recipients"),
+  handovers: (params?: { status?: HandoverStatus }) =>
+    apiFetch<CashHandover[]>("/billing/cash/handovers/", { params }),
+  initiateHandover: (input: InitiateHandoverInput) =>
+    apiFetch<CashHandover>("/billing/cash/handovers/", { method: "POST", body: input }),
+  confirmHandover: (id: string, input: ConfirmHandoverInput) =>
+    apiFetch<CashHandover>(`/billing/cash/handovers/${id}/confirm/`, {
+      method: "POST",
+      body: input,
+    }),
+  deposits: () => apiFetch<CashDeposit[]>("/billing/cash/deposits/"),
+  recordDeposit: (input: CreateDepositInput) =>
+    apiFetch<CashDeposit>("/billing/cash/deposits/", { method: "POST", body: input }),
+  cashReconciliation: (date?: string) =>
+    apiFetch<CashReconciliationRow[]>("/billing/cash/reconciliation", { params: { date } }),
 };
 
 // ── Platform ───────────────────────────────────────────────────────────

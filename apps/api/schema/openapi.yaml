@@ -264,6 +264,262 @@ paths:
               schema:
                 $ref: '#/components/schemas/TokenRefresh'
           description: ''
+  /api/v1/billing/cash/deposits/:
+    get:
+      operationId: billing_cash_deposits_list
+      description: |-
+        `/billing/cash/deposits` — the far end of the same liability chain
+        (docs/00 G-5): closing the books by banking hub cash. Not in docs/04's
+        endpoint list (that doc covers handover/reconciliation only), but
+        explicitly called out as in-scope by docs/08 batch 3.3 and docs/00
+        G-5/R-405 — `IsOpsStaff` since this is day-to-day hub closing, the
+        same tier that confirms handovers, not admin-only like a credit note.
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - billing
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCashDepositList'
+          description: ''
+    post:
+      operationId: billing_cash_deposits_create
+      description: |-
+        `/billing/cash/deposits` — the far end of the same liability chain
+        (docs/00 G-5): closing the books by banking hub cash. Not in docs/04's
+        endpoint list (that doc covers handover/reconciliation only), but
+        explicitly called out as in-scope by docs/08 batch 3.3 and docs/00
+        G-5/R-405 — `IsOpsStaff` since this is day-to-day hub closing, the
+        same tier that confirms handovers, not admin-only like a credit note.
+      tags:
+      - billing
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDepositRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateDepositRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateDepositRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CashDeposit'
+          description: ''
+  /api/v1/billing/cash/handover-recipients:
+    get:
+      operationId: billing_cash_handover_recipients_list
+      description: |-
+        GET /billing/cash/handover-recipients — who a field rider can hand
+        cash to: ops staff at their own hub, plus any founder (hub-independent,
+        same eligibility `services.initiate_handover` itself enforces). Deliberately
+        not `/identity/staff` (Admin/Founder-only, docs/06 §3.1) — a rider needs
+        this list to fill in `POST .../handovers`'s `to_user`, so it has to be
+        reachable by field staff themselves.
+      tags:
+      - billing
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HandoverRecipient'
+          description: ''
+  /api/v1/billing/cash/handovers/:
+    get:
+      operationId: billing_cash_handovers_list
+      description: |-
+        `/billing/cash/handovers` — list/create is the field-initiated side
+        (docs/04 `POST /billing/cash/handover`, pluralised here to match every
+        other router-based resource in this app), `confirm` is the hub side
+        (`POST .../{id}/confirm`). Not `ScopedQuerysetMixin`: field staff need
+        "my own handovers" scoping, not hub scoping, so `get_queryset` builds
+        both branches directly — same reasoning as `InvoiceViewSet`'s own
+        override.
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - CONFIRMED
+          - PENDING
+        description: |-
+          * `PENDING` - Pending
+          * `CONFIRMED` - Confirmed
+      tags:
+      - billing
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCashHandoverList'
+          description: ''
+    post:
+      operationId: billing_cash_handovers_create
+      description: |-
+        `/billing/cash/handovers` — list/create is the field-initiated side
+        (docs/04 `POST /billing/cash/handover`, pluralised here to match every
+        other router-based resource in this app), `confirm` is the hub side
+        (`POST .../{id}/confirm`). Not `ScopedQuerysetMixin`: field staff need
+        "my own handovers" scoping, not hub scoping, so `get_queryset` builds
+        both branches directly — same reasoning as `InvoiceViewSet`'s own
+        override.
+      tags:
+      - billing
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InitiateHandoverRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/InitiateHandoverRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/InitiateHandoverRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CashHandover'
+          description: ''
+  /api/v1/billing/cash/handovers/{id}/confirm/:
+    post:
+      operationId: billing_cash_handovers_confirm_create
+      description: |-
+        `/billing/cash/handovers` — list/create is the field-initiated side
+        (docs/04 `POST /billing/cash/handover`, pluralised here to match every
+        other router-based resource in this app), `confirm` is the hub side
+        (`POST .../{id}/confirm`). Not `ScopedQuerysetMixin`: field staff need
+        "my own handovers" scoping, not hub scoping, so `get_queryset` builds
+        both branches directly — same reasoning as `InvoiceViewSet`'s own
+        override.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this cash handover.
+        required: true
+      tags:
+      - billing
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmHandoverRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ConfirmHandoverRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ConfirmHandoverRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CashHandover'
+          description: ''
+  /api/v1/billing/cash/mine:
+    get:
+      operationId: billing_cash_mine_retrieve
+      description: |-
+        GET /billing/cash/mine — a rider's own running cash-in-hand
+        balance (docs/04 §3.7, docs/06 §3.1 "Own cash balance / handover").
+      tags:
+      - billing
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CashBalance'
+          description: ''
+  /api/v1/billing/cash/reconciliation:
+    get:
+      operationId: billing_cash_reconciliation_list
+      description: |-
+        GET /billing/cash/reconciliation?date= — docs/06 §3.1 restricts
+        this specific view (not handover confirmation) to Admin/Founder: it
+        surfaces every rider's variance in one place, which is oversight
+        territory the RBAC matrix explicitly keeps narrower than day-to-day
+        hub operations.
+      tags:
+      - billing
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CashReconciliationRow'
+          description: ''
   /api/v1/billing/invoices/:
     get:
       operationId: billing_invoices_list
@@ -6208,6 +6464,156 @@ components:
       required:
       - code
       - to_stage
+    CashBalance:
+      type: object
+      properties:
+        balance_minor:
+          type: integer
+      required:
+      - balance_minor
+    CashDeposit:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        hub:
+          type: string
+          format: uuid
+          readOnly: true
+        amount_minor:
+          type: integer
+          readOnly: true
+        deposited_by_name:
+          type: string
+          readOnly: true
+          default: ''
+        reference:
+          type: string
+          readOnly: true
+        notes:
+          type: string
+          readOnly: true
+        at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - amount_minor
+      - at
+      - deposited_by_name
+      - hub
+      - id
+      - notes
+      - reference
+    CashHandover:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        hub:
+          type: string
+          format: uuid
+          readOnly: true
+        from_user:
+          type: string
+          format: uuid
+          readOnly: true
+        from_user_name:
+          type: string
+          readOnly: true
+        to_user:
+          type: string
+          format: uuid
+          readOnly: true
+        to_user_name:
+          type: string
+          readOnly: true
+        declared_amount_minor:
+          type: integer
+          readOnly: true
+        received_amount_minor:
+          type: integer
+          readOnly: true
+          nullable: true
+        variance_minor:
+          type: integer
+          readOnly: true
+        variance_note:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/CashHandoverStatusEnum'
+          readOnly: true
+        confirmed_by_name:
+          type: string
+          readOnly: true
+          default: ''
+        confirmed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - confirmed_at
+      - confirmed_by_name
+      - created_at
+      - declared_amount_minor
+      - from_user
+      - from_user_name
+      - hub
+      - id
+      - received_amount_minor
+      - status
+      - to_user
+      - to_user_name
+      - variance_minor
+      - variance_note
+    CashHandoverStatusEnum:
+      enum:
+      - PENDING
+      - CONFIRMED
+      type: string
+      description: |-
+        * `PENDING` - Pending
+        * `CONFIRMED` - Confirmed
+    CashReconciliationRow:
+      type: object
+      properties:
+        rider_id:
+          type: string
+          format: uuid
+        rider_name:
+          type: string
+        collected_minor:
+          type: integer
+        declared_minor:
+          type: integer
+        received_minor:
+          type: integer
+        variance_minor:
+          type: integer
+        outstanding_minor:
+          type: integer
+        pending_handovers:
+          type: integer
+      required:
+      - collected_minor
+      - declared_minor
+      - outstanding_minor
+      - pending_handovers
+      - received_minor
+      - rider_id
+      - rider_name
+      - variance_minor
     CategoryEnum:
       enum:
       - HANGER
@@ -6280,6 +6686,18 @@ components:
       required:
       - hub
       - name
+    ConfirmHandoverRequest:
+      type: object
+      properties:
+        received_amount:
+          type: integer
+          minimum: 0
+        note:
+          type: string
+          default: ''
+          maxLength: 255
+      required:
+      - received_amount
     ConsentRecord:
       type: object
       properties:
@@ -6391,6 +6809,22 @@ components:
       required:
       - service
       - stock_item
+    CreateDepositRequest:
+      type: object
+      properties:
+        amount:
+          type: integer
+          minimum: 1
+        reference:
+          type: string
+          default: ''
+          maxLength: 64
+        notes:
+          type: string
+          default: ''
+          maxLength: 255
+      required:
+      - amount
     CreditNote:
       type: object
       properties:
@@ -6866,6 +7300,26 @@ components:
       - code
       - name
       - service
+    HandoverRecipient:
+      type: object
+      description: |-
+        A minimal picker shape for `InitiateHandoverSerializer.to_user` —
+        scoped to this app rather than reusing `identity.StaffSerializer`,
+        since the eligible-recipient set here (ops staff at the rider's hub,
+        plus any founder) is a cash-custody concern, not a general staff list
+        (that one stays Admin/Founder-only, docs/06 §3.1).
+      properties:
+        id:
+          type: string
+          format: uuid
+        full_name:
+          type: string
+        email:
+          type: string
+      required:
+      - email
+      - full_name
+      - id
     Hub:
       type: object
       properties:
@@ -6926,6 +7380,18 @@ components:
       required:
       - code
       - name
+    InitiateHandoverRequest:
+      type: object
+      properties:
+        to_user:
+          type: string
+          format: uuid
+        amount:
+          type: integer
+          minimum: 1
+      required:
+      - amount
+      - to_user
     InvoiceDetail:
       type: object
       properties:
@@ -8254,6 +8720,44 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/BagDetail'
+    PaginatedCashDepositList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CashDeposit'
+    PaginatedCashHandoverList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CashHandover'
     PaginatedClusterList:
       type: object
       required:

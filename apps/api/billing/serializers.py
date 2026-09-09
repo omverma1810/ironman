@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from billing.models import CreditNote, Invoice, Payment
+from billing.models import CashDeposit, CashHandover, CreditNote, Invoice, Payment
 
 
 class InvoiceListSerializer(serializers.ModelSerializer):
@@ -135,3 +135,95 @@ class RecordPaymentSerializer(serializers.Serializer):
     amount = serializers.IntegerField(min_value=1)
     idempotency_key = serializers.CharField(max_length=64)
     gateway_ref = serializers.CharField(max_length=64, required=False, allow_blank=True)
+
+
+class CashBalanceSerializer(serializers.Serializer):
+    balance_minor = serializers.IntegerField()
+
+
+class CashHandoverSerializer(serializers.ModelSerializer):
+    from_user_name = serializers.CharField(source="from_user.full_name", read_only=True)
+    to_user_name = serializers.CharField(source="to_user.full_name", read_only=True)
+    confirmed_by_name = serializers.CharField(
+        source="confirmed_by.full_name", read_only=True, default=""
+    )
+
+    class Meta:
+        model = CashHandover
+        fields = [
+            "id",
+            "hub",
+            "from_user",
+            "from_user_name",
+            "to_user",
+            "to_user_name",
+            "declared_amount_minor",
+            "received_amount_minor",
+            "variance_minor",
+            "variance_note",
+            "status",
+            "confirmed_by_name",
+            "confirmed_at",
+            "created_at",
+        ]
+        read_only_fields = fields
+
+
+class InitiateHandoverSerializer(serializers.Serializer):
+    to_user = serializers.UUIDField()
+    # Minor units (paise) on the wire, same convention as every other
+    # money field in this app.
+    amount = serializers.IntegerField(min_value=1)
+
+
+class ConfirmHandoverSerializer(serializers.Serializer):
+    received_amount = serializers.IntegerField(min_value=0)
+    note = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
+
+
+class CashDepositSerializer(serializers.ModelSerializer):
+    deposited_by_name = serializers.CharField(
+        source="deposited_by.full_name", read_only=True, default=""
+    )
+
+    class Meta:
+        model = CashDeposit
+        fields = [
+            "id",
+            "hub",
+            "amount_minor",
+            "deposited_by_name",
+            "reference",
+            "notes",
+            "at",
+        ]
+        read_only_fields = fields
+
+
+class CreateDepositSerializer(serializers.Serializer):
+    amount = serializers.IntegerField(min_value=1)
+    reference = serializers.CharField(max_length=64, required=False, allow_blank=True, default="")
+    notes = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
+
+
+class HandoverRecipientSerializer(serializers.Serializer):
+    """A minimal picker shape for `InitiateHandoverSerializer.to_user` —
+    scoped to this app rather than reusing `identity.StaffSerializer`,
+    since the eligible-recipient set here (ops staff at the rider's hub,
+    plus any founder) is a cash-custody concern, not a general staff list
+    (that one stays Admin/Founder-only, docs/06 §3.1)."""
+
+    id = serializers.UUIDField()
+    full_name = serializers.CharField()
+    email = serializers.CharField()
+
+
+class CashReconciliationRowSerializer(serializers.Serializer):
+    rider_id = serializers.UUIDField()
+    rider_name = serializers.CharField()
+    collected_minor = serializers.IntegerField()
+    declared_minor = serializers.IntegerField()
+    received_minor = serializers.IntegerField()
+    variance_minor = serializers.IntegerField()
+    outstanding_minor = serializers.IntegerField()
+    pending_handovers = serializers.IntegerField()

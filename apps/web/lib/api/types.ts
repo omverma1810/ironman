@@ -634,3 +634,71 @@ export type CreditNoteInput = {
   reason: string;
   amount: number;
 };
+
+// ── Cash custody (docs/08 batch 3.3) ─────────────────────────────────────
+export type CashBalance = {
+  balance_minor: number;
+};
+
+export type HandoverRecipient = {
+  id: string;
+  full_name: string;
+  email: string;
+};
+
+export type HandoverStatus = "PENDING" | "CONFIRMED";
+
+export type CashHandover = {
+  id: string;
+  hub: string;
+  from_user: string;
+  from_user_name: string;
+  to_user: string;
+  to_user_name: string;
+  declared_amount_minor: number;
+  received_amount_minor: number | null;
+  variance_minor: number;
+  variance_note: string;
+  status: HandoverStatus;
+  confirmed_by_name: string;
+  confirmed_at: string | null;
+  created_at: string;
+};
+
+export type InitiateHandoverInput = {
+  to_user: string;
+  amount: number;
+};
+
+export type ConfirmHandoverInput = {
+  received_amount: number;
+  note?: string;
+};
+
+export type CashDeposit = {
+  id: string;
+  hub: string;
+  amount_minor: number;
+  deposited_by_name: string;
+  reference: string;
+  notes: string;
+  at: string;
+};
+
+export type CreateDepositInput = {
+  hub?: string;
+  amount: number;
+  reference?: string;
+  notes?: string;
+};
+
+export type CashReconciliationRow = {
+  rider_id: string;
+  rider_name: string;
+  collected_minor: number;
+  declared_minor: number;
+  received_minor: number;
+  variance_minor: number;
+  outstanding_minor: number;
+  pending_handovers: number;
+};

@@ -249,18 +249,22 @@ class Command(BaseCommand):
         self._seed_supplies(hub, service, garment_types)
 
         self.stdout.write("Seeding invoices...")
-        invoice_count = self._seed_invoices(founder)
+        invoice_count = self._seed_invoices(founder, field_staff)
+
+        self.stdout.write("Seeding cash custody...")
+        handover_count = self._seed_cash_custody(hub, field_staff)
 
         self.stdout.write(
             self.style.SUCCESS(
                 f"Seed complete: 1 hub, 2 clusters, {len(apartments)} apartments, "
                 f"{len(customers)} customers, {created_count} orders, "
                 f"{exception_count} exceptions, {invoice_count} invoices, "
+                f"{handover_count} cash handovers, "
                 "4 staff accounts (password: IronMan@2026)."
             )
         )
 
-    def _seed_invoices(self, actor) -> int:
+    def _seed_invoices(self, issuer, collector) -> int:
         """docs/08 Phase 3 exit criterion: "every delivered order has an
         invoice" — so every DELIVERED/CLOSED order in `demo_states` above
         gets one, not just a sample, and the console's Invoices screen
@@ -273,6 +277,11 @@ class Command(BaseCommand):
         by the rider" is normal, not a bug (`docs/01 §5.2`) — so only some
         DELIVERED orders get a payment, and some of those only a partial
         one.
+
+        `collector` (the field rider), not `issuer` (founder), is who
+        actually collects CASH/UPI at the door — `record_payment`'s
+        `collected_by` needs to be the rider for `_seed_cash_custody`
+        (batch 3.3) to have a real balance to seed a handover from.
         """
         import billing.services as billing_services
 
@@ -283,7 +292,7 @@ class Command(BaseCommand):
         for order in orders:
             if hasattr(order, "invoice"):
                 continue
-            invoice = billing_services.issue_invoice(order, actor=actor)
+            invoice = billing_services.issue_invoice(order, actor=issuer)
             count += 1
 
             if order.status == OrderStatus.CLOSED:
@@ -292,7 +301,7 @@ class Command(BaseCommand):
                     method="CASH",
                     amount_minor=invoice.total_minor,
                     idempotency_key=f"seed-{invoice.ref}-full",
-                    actor=actor,
+                    actor=collector,
                 )
             elif random.random() < 0.6:
                 partial = max(1, invoice.total_minor // 2)
@@ -301,8 +310,54 @@ class Command(BaseCommand):
                     method=random.choice(["CASH", "UPI_QR"]),
                     amount_minor=partial,
                     idempotency_key=f"seed-{invoice.ref}-partial",
-                    actor=actor,
+                    actor=collector,
                 )
+        return count
+
+    def _seed_cash_custody(self, hub, field_staff) -> int:
+        """docs/08 batch 3.3 / docs/00 G-5: gives the reconciliation screen
+        real rows on first load rather than an empty state. Deliberately
+        leaves the rider's balance *not* fully cleared and one handover
+        still `PENDING` — an operator exploring the console should see
+        both "needs confirming" and "already reconciled with a small
+        variance" on the very first load, not just a tidy zero.
+        """
+        import billing.services as billing_services
+
+        operator = User.objects.get(email="operator@ironman.test")
+        balance = billing_services.cash_balance(field_staff)
+        if balance < 200:
+            return 0
+
+        count = 0
+        # First chunk: confirmed with a small shortfall, so the
+        # reconciliation table has a real (non-zero) variance to show.
+        first_declared = balance // 2
+        first = billing_services.initiate_handover(
+            from_user=field_staff, to_user=operator, amount_minor=first_declared
+        )
+        shortfall = min(50, first_declared)
+        billing_services.confirm_handover(
+            first, received_amount_minor=first_declared - shortfall, actor=operator
+        )
+        count += 1
+
+        # Second chunk: left PENDING — the operator console's "confirm"
+        # action needs something real to act on.
+        remaining = billing_services.cash_balance(field_staff)
+        if remaining >= 100:
+            billing_services.initiate_handover(
+                from_user=field_staff, to_user=operator, amount_minor=remaining // 2
+            )
+            count += 1
+
+        # Bank part of what's been confirmed, leaving some hub cash on
+        # hand too — "record deposit" has a real available balance to act on.
+        on_hand = billing_services.hub_cash_on_hand(hub)
+        if on_hand >= 100:
+            billing_services.record_deposit(
+                hub, amount_minor=on_hand // 2, actor=operator, reference="seed-deposit-1"
+            )
         return count
 
     def _seed_supplies(self, hub, service, garment_types):

@@ -69,6 +69,22 @@ export function canRecordAdjustment(roles: Role[] | undefined): boolean {
   return hasRole(roles, ...MONEY_ROLES);
 }
 
+// docs/06 §3.1 "Own cash balance / handover" row is `✓` for Operator —
+// confirming a rider's handover and banking hub cash are day-to-day hub
+// closing, the same tier that records a payment (`canManageOrders`), not
+// admin-only. The cross-rider reconciliation *report* is narrower —
+// see `canViewCashReconciliation` below.
+export function canManageCashCustody(roles: Role[] | undefined): boolean {
+  return hasRole(roles, ...OPS_ROLES);
+}
+
+// docs/06 §3.1 "Cash reconciliation (all staff)" row is Admin/Founder
+// only — narrower than day-to-day hub operations, same reasoning as
+// `canSeeMoney`.
+export function canViewCashReconciliation(roles: Role[] | undefined): boolean {
+  return hasRole(roles, ...MONEY_ROLES);
+}
+
 export function canEditPricing(roles: Role[] | undefined): boolean {
   return hasRole(roles, "FOUNDER");
 }

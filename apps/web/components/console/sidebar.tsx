@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import type { Role } from "@/lib/api/types";
 import {
   canEditPricing,
+  canManageCashCustody,
   canManageStaff,
   canManageSupplies,
   canPlanRouteDays,
@@ -41,6 +42,12 @@ const NAV: NavItem[] = [
     label: "Invoices",
     icon: "file-text",
     show: (roles) => canViewInvoices(roles),
+  },
+  {
+    href: "/console/cash-reconciliation",
+    label: "Cash",
+    icon: "wallet",
+    show: (roles) => canManageCashCustody(roles),
   },
   {
     href: "/console/pricing",
