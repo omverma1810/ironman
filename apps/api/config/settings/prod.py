@@ -5,6 +5,8 @@ gracefully so the container never crashes at import time over an
 integration that isn't wired up yet.
 """
 
+from urllib.parse import urlparse
+
 from .base import *  # noqa: F401,F403
 
 DEBUG = False
@@ -38,6 +40,20 @@ X_FRAME_OPTIONS = "DENY"
 # it (docs/03 §5) — both come from env so a domain change is a redeploy,
 # not a code change.
 ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=[".run.app"])  # noqa: F405
+
+# next.config.ts proxies /api/v1/* to this service so the browser only ever
+# sees a same-site cookie (docs/06 §2.2's cross-site-cookie fix) — but that
+# rewrite forwards the browser's original Host header unchanged rather than
+# rewriting it to this service's own host, so every proxied request arrives
+# here as Host: <console domain>, not the Cloud Run hostname. Without this,
+# Django's own DisallowedHost check rejects every single one of them with a
+# bare 400 before routing or auth ever runs — indistinguishable from the
+# console's own request failing, which is exactly what made this look like
+# a still-broken login rather than a rejected Host header. CORS_ALLOWED_ORIGINS
+# (just above, via base.py) already has to list the console's real domain for
+# CORS/CSRF to work at all, so read it from there instead of a second secret
+# nobody would remember to keep in sync.
+ALLOWED_HOSTS += [urlparse(origin).hostname for origin in CORS_ALLOWED_ORIGINS]  # noqa: F405
 
 # ── Static files ─────────────────────────────────────────────────────────
 # WhiteNoise for static assets regardless — Django Admin's own CSS/JS,
