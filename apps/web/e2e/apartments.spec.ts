@@ -59,9 +59,20 @@ test.describe("Apartments master data", () => {
     await expect(dialog.getByRole("heading", { name: "Clusters" })).toBeVisible();
     await expect(dialog.getByText("Koramangala 4th Block")).toBeVisible();
 
-    await dialog.getByPlaceholder("Cluster name…").fill("E2E Cluster");
+    // A hardcoded name collides with itself on Playwright's automatic
+    // retry-on-failure (playwright.config.ts): (hub, name) is unique
+    // (territory.models.Cluster.Meta.constraints), so if this test's own
+    // first attempt already created "E2E Cluster" before failing for any
+    // unrelated reason, the retry's identical create request 400s on a
+    // duplicate — and that 400 (not the original failure) is what a
+    // retry actually reports. A per-run name makes retries independent
+    // attempts instead of the second one being doomed by the first.
+    const clusterName = `E2E Cluster ${Date.now()}`;
+    await dialog.getByPlaceholder("Cluster name…").fill(clusterName);
     await dialog.getByRole("button", { name: "Add" }).click();
-    await expect(page.getByText(/cluster "e2e cluster" created/i)).toBeVisible();
-    await expect(dialog.getByText("E2E Cluster")).toBeVisible();
+    await expect(
+      page.getByText(new RegExp(`cluster "${clusterName}" created`, "i"))
+    ).toBeVisible();
+    await expect(dialog.getByText(clusterName)).toBeVisible();
   });
 });
