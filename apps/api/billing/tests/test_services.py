@@ -7,7 +7,18 @@ transitions a full payment triggers."""
 import pytest
 
 from billing.models import CreditNote, Invoice, Payment
-from billing.services import issue_credit_note, issue_invoice, paid_minor, record_payment
+from billing.services import (
+    cash_balance,
+    cash_reconciliation,
+    confirm_handover,
+    hub_cash_on_hand,
+    initiate_handover,
+    issue_credit_note,
+    issue_invoice,
+    paid_minor,
+    record_deposit,
+    record_payment,
+)
 from common.errors import ApiError
 
 pytestmark = pytest.mark.django_db
@@ -244,3 +255,188 @@ def test_record_payment_is_append_only(verified_order):
     payment.amount_minor = 1
     with pytest.raises(RuntimeError):
         payment.save()
+
+
+# ── Cash custody (batch 3.3) ───────────────────────────────────────────
+
+
+def test_cash_balance_is_zero_with_no_activity(field_user):
+    assert cash_balance(field_user) == 0
+
+
+def test_cash_balance_reflects_collected_cash(field_user, verified_order):
+    invoice = issue_invoice(verified_order)
+    record_payment(
+        invoice, method="CASH", amount_minor=4800, idempotency_key="k-1", actor=field_user
+    )
+    assert cash_balance(field_user) == 4800
+
+
+def test_cash_balance_ignores_upi_payments(field_user, verified_order):
+    # Only CASH is a physical liability the rider is carrying — UPI money
+    # never touches their hands.
+    invoice = issue_invoice(verified_order)
+    record_payment(
+        invoice, method="UPI_QR", amount_minor=4800, idempotency_key="k-upi", actor=field_user
+    )
+    assert cash_balance(field_user) == 0
+
+
+def test_pending_handover_does_not_reduce_balance(field_user, operator_user, verified_order):
+    invoice = issue_invoice(verified_order)
+    record_payment(
+        invoice, method="CASH", amount_minor=4800, idempotency_key="k-1", actor=field_user
+    )
+    initiate_handover(from_user=field_user, to_user=operator_user, amount_minor=2000)
+    # Still carrying it all — only a *confirmed* handover relieves the rider.
+    assert cash_balance(field_user) == 4800
+
+
+def test_confirmed_handover_reduces_balance_by_received_amount(
+    field_user, operator_user, verified_order
+):
+    invoice = issue_invoice(verified_order)
+    record_payment(
+        invoice, method="CASH", amount_minor=4800, idempotency_key="k-1", actor=field_user
+    )
+    handover = initiate_handover(from_user=field_user, to_user=operator_user, amount_minor=2000)
+    confirm_handover(handover, received_amount_minor=1800, actor=operator_user)
+    # Only the *received* 1800 is relieved — the 200p shortfall stays the
+    # rider's liability until someone resolves it, per `cash_balance`'s docstring.
+    assert cash_balance(field_user) == 4800 - 1800
+    handover.refresh_from_db()
+    assert handover.variance_minor == -200
+    assert handover.status == "CONFIRMED"
+
+
+def test_initiate_handover_rejects_amount_exceeding_balance(
+    field_user, operator_user, verified_order
+):
+    invoice = issue_invoice(verified_order)
+    record_payment(
+        invoice, method="CASH", amount_minor=1000, idempotency_key="k-1", actor=field_user
+    )
+    with pytest.raises(ApiError):
+        initiate_handover(from_user=field_user, to_user=operator_user, amount_minor=2000)
+
+
+def test_initiate_handover_rejects_non_positive_amount(field_user, operator_user):
+    with pytest.raises(ApiError):
+        initiate_handover(from_user=field_user, to_user=operator_user, amount_minor=0)
+
+
+def test_initiate_handover_rejects_self_handover(field_user):
+    with pytest.raises(ApiError):
+        initiate_handover(from_user=field_user, to_user=field_user, amount_minor=100)
+
+
+def test_initiate_handover_rejects_non_ops_recipient(field_user, customer_user):
+    with pytest.raises(ApiError):
+        initiate_handover(from_user=field_user, to_user=customer_user, amount_minor=100)
+
+
+def test_confirm_handover_rejects_already_confirmed(field_user, operator_user, verified_order):
+    invoice = issue_invoice(verified_order)
+    record_payment(
+        invoice, method="CASH", amount_minor=4800, idempotency_key="k-1", actor=field_user
+    )
+    handover = initiate_handover(from_user=field_user, to_user=operator_user, amount_minor=2000)
+    confirm_handover(handover, received_amount_minor=2000, actor=operator_user)
+    with pytest.raises(ApiError):
+        confirm_handover(handover, received_amount_minor=2000, actor=operator_user)
+
+
+def test_confirm_handover_rejects_negative_received_amount(
+    field_user, operator_user, verified_order
+):
+    invoice = issue_invoice(verified_order)
+    record_payment(
+        invoice, method="CASH", amount_minor=4800, idempotency_key="k-1", actor=field_user
+    )
+    handover = initiate_handover(from_user=field_user, to_user=operator_user, amount_minor=2000)
+    with pytest.raises(ApiError):
+        confirm_handover(handover, received_amount_minor=-1, actor=operator_user)
+
+
+def test_hub_cash_on_hand_nets_confirmed_handovers_against_deposits(
+    hub, field_user, operator_user, verified_order
+):
+    invoice = issue_invoice(verified_order)
+    record_payment(
+        invoice, method="CASH", amount_minor=4800, idempotency_key="k-1", actor=field_user
+    )
+    handover = initiate_handover(from_user=field_user, to_user=operator_user, amount_minor=4800)
+    confirm_handover(handover, received_amount_minor=4800, actor=operator_user)
+    assert hub_cash_on_hand(hub) == 4800
+
+    record_deposit(hub, amount_minor=3000, actor=operator_user)
+    assert hub_cash_on_hand(hub) == 1800
+
+
+def test_record_deposit_rejects_amount_exceeding_available(
+    hub, field_user, operator_user, verified_order
+):
+    invoice = issue_invoice(verified_order)
+    record_payment(
+        invoice, method="CASH", amount_minor=1000, idempotency_key="k-1", actor=field_user
+    )
+    handover = initiate_handover(from_user=field_user, to_user=operator_user, amount_minor=1000)
+    confirm_handover(handover, received_amount_minor=1000, actor=operator_user)
+    with pytest.raises(ApiError):
+        record_deposit(hub, amount_minor=2000, actor=operator_user)
+
+
+def test_record_deposit_rejects_non_positive_amount(hub, operator_user):
+    with pytest.raises(ApiError):
+        record_deposit(hub, amount_minor=0, actor=operator_user)
+
+
+def test_deposit_is_append_only(hub, field_user, operator_user, verified_order):
+    invoice = issue_invoice(verified_order)
+    record_payment(
+        invoice, method="CASH", amount_minor=1000, idempotency_key="k-1", actor=field_user
+    )
+    handover = initiate_handover(from_user=field_user, to_user=operator_user, amount_minor=1000)
+    confirm_handover(handover, received_amount_minor=1000, actor=operator_user)
+    deposit = record_deposit(hub, amount_minor=500, actor=operator_user)
+    deposit.amount_minor = 1
+    with pytest.raises(RuntimeError):
+        deposit.save()
+
+
+def test_cash_reconciliation_aggregates_one_row_per_rider(
+    hub, field_user, operator_user, verified_order
+):
+    invoice = issue_invoice(verified_order)
+    record_payment(
+        invoice, method="CASH", amount_minor=4800, idempotency_key="k-1", actor=field_user
+    )
+    handover = initiate_handover(from_user=field_user, to_user=operator_user, amount_minor=2000)
+    confirm_handover(handover, received_amount_minor=1900, actor=operator_user)
+
+    from django.utils import timezone
+
+    rows = cash_reconciliation([hub.id], date=timezone.localdate())
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["rider_id"] == field_user.id
+    assert row["collected_minor"] == 4800
+    assert row["declared_minor"] == 2000
+    assert row["received_minor"] == 1900
+    assert row["variance_minor"] == -100
+    assert row["outstanding_minor"] == 4800 - 1900
+    assert row["pending_handovers"] == 0
+
+
+def test_cash_reconciliation_scoped_to_requested_hubs(field_user, operator_user, verified_order):
+    invoice = issue_invoice(verified_order)
+    record_payment(
+        invoice, method="CASH", amount_minor=4800, idempotency_key="k-1", actor=field_user
+    )
+    from django.utils import timezone
+
+    from territory.models import Hub
+
+    other_hub = Hub.objects.create(code="OTH", name="Other Hub")
+    rows = cash_reconciliation([other_hub.id], date=timezone.localdate())
+    assert rows == []

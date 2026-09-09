@@ -47,6 +47,11 @@ class PaymentStatus(models.TextChoices):
     # async PENDING state belongs to the gateway batch (3.5).
 
 
+class HandoverStatus(models.TextChoices):
+    PENDING = "PENDING", "Pending"
+    CONFIRMED = "CONFIRMED", "Confirmed"
+
+
 def _invoice_ref() -> str:
     now = timezone.localtime()
     seq = Invoice.objects.filter(created_at__year=now.year, created_at__month=now.month).count() + 1
@@ -181,3 +186,79 @@ class Payment(AppendOnlyModel):
 
     def __str__(self) -> str:
         return f"Payment — {self.invoice.ref} ({self.amount_minor}p {self.method})"
+
+
+class CashHandover(BaseModel):
+    """docs/00 G-5 / R-405, batch 3.3: cash a field rider collects (COD
+    `Payment` rows with `method=CASH`) is a liability until it physically
+    reaches the hub. A handover is the one place this row is mutated —
+    `services.initiate_handover` creates it `PENDING` with only what the
+    rider *declares* they're carrying; `services.confirm_handover` is the
+    hub side (operator/admin) counting what actually arrived and recording
+    any shortfall/overage as `variance_minor`, same "declare now, confirm
+    on the other end" shape as `fulfilment.OfflineOp`.
+
+    `hub` is the rider's own hub at handover time (`from_user.hub_scope`),
+    not the receiver's — reconciliation groups by where the cash actually
+    originated, matching every other hub-scoped ledger row in this app.
+    """
+
+    hub = models.ForeignKey("territory.Hub", on_delete=models.PROTECT, related_name="+")
+    from_user = models.ForeignKey(
+        "identity.User", on_delete=models.PROTECT, related_name="cash_handovers_given"
+    )
+    to_user = models.ForeignKey(
+        "identity.User", on_delete=models.PROTECT, related_name="cash_handovers_received"
+    )
+    declared_amount_minor = models.PositiveIntegerField()
+    # Null until confirmed — `services.cash_balance` only ever reads
+    # `received_amount_minor` (see its own docstring for why: a declared-
+    # but-unconfirmed handover still counts as cash in the rider's hand).
+    received_amount_minor = models.PositiveIntegerField(null=True, blank=True)
+    variance_minor = models.IntegerField(
+        default=0
+    )  # received - declared; signed, 0 until confirmed
+    status = models.CharField(
+        max_length=16, choices=HandoverStatus.choices, default=HandoverStatus.PENDING
+    )
+    confirmed_by = models.ForeignKey(
+        "identity.User", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    variance_note = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        db_table = "billing_cash_handover"
+        indexes = [
+            models.Index(fields=["from_user", "-created_at"]),
+            models.Index(fields=["hub", "-created_at"]),
+            models.Index(fields=["status"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"Handover — {self.from_user} → {self.to_user} ({self.declared_amount_minor}p)"
+
+
+class CashDeposit(AppendOnlyModel):
+    """docs/00 G-5: the far end of the same liability chain — cash that
+    has reached the hub (via confirmed handovers) eventually gets banked.
+    Append-only like `Payment`/`StockMovement`: a bad entry gets reversed
+    with a new row, never edited. `services.hub_cash_on_hand` is this
+    row's own reconciliation counterpart on the handover side.
+    """
+
+    hub = models.ForeignKey("territory.Hub", on_delete=models.PROTECT, related_name="+")
+    amount_minor = models.PositiveIntegerField()
+    deposited_by = models.ForeignKey(
+        "identity.User", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    reference = models.CharField(max_length=64, blank=True)
+    notes = models.CharField(max_length=255, blank=True)
+    at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "billing_cash_deposit"
+        indexes = [models.Index(fields=["hub", "-at"])]
+
+    def __str__(self) -> str:
+        return f"Deposit — {self.hub} ({self.amount_minor}p)"

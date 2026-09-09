@@ -1,16 +1,24 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Icon } from "@/components/icons/icon";
+import Link from "next/link";
+import { useRouter, usePathname } from "next/navigation";
+import { Icon, type IconName } from "@/components/icons/icon";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLogout, useMe, usePendingSyncCount, useSyncOfflineQueue } from "@/lib/api/hooks";
 import { ApiError } from "@/lib/api/errors";
 import { flushOfflineQueue } from "@/lib/offline/sync";
+import { cn } from "@/lib/utils";
+
+const TABS: { href: string; icon: IconName; label: string }[] = [
+  { href: "/field", icon: "truck", label: "Jobs" },
+  { href: "/field/cash", icon: "wallet", label: "Cash" },
+];
 
 export function FieldShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const me = useMe();
   const logout = useLogout();
   const pending = usePendingSyncCount();
@@ -131,6 +139,29 @@ export function FieldShell({ children }: { children: React.ReactNode }) {
       </header>
 
       <main className="flex-1 p-4 pb-8">{children}</main>
+
+      <nav
+        className="sticky bottom-0 flex border-t border-border-default bg-surface-raised"
+        aria-label="Field navigation"
+      >
+        {TABS.map((tab) => {
+          const active = tab.href === "/field" ? pathname === "/field" : pathname.startsWith(tab.href);
+          return (
+            <Link
+              key={tab.href}
+              href={tab.href}
+              aria-current={active ? "page" : undefined}
+              className={cn(
+                "flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs font-medium",
+                active ? "bg-brand-yellow text-text-on-brand" : "text-text-muted"
+              )}
+            >
+              <Icon name={tab.icon} className="size-5" />
+              {tab.label}
+            </Link>
+          );
+        })}
+      </nav>
     </div>
   );
 }

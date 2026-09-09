@@ -25,11 +25,15 @@ import {
 } from "./endpoints";
 import { ApiError } from "./errors";
 import type {
+  ConfirmHandoverInput,
   ConsumptionRuleInput,
+  CreateDepositInput,
   CreateOrderInput,
   CreditNoteInput,
   DeclaredLine,
   GarmentStage,
+  HandoverStatus,
+  InitiateHandoverInput,
   Job,
   OrderException,
   ProofKind,
@@ -1067,5 +1071,82 @@ export function useRecordPayment() {
       toast.success(`Payment recorded — ₹${(payment.amount_minor / 100).toFixed(2)}`);
     },
     onError: (err) => errorToast(err, "Couldn't record the payment."),
+  });
+}
+
+// ── Cash custody (docs/08 batch 3.3) ──────────────────────────────────────
+export function useCashMine() {
+  return useQuery({
+    queryKey: ["cash-mine"],
+    queryFn: billingApi.cashMine,
+  });
+}
+
+export function useHandoverRecipients() {
+  return useQuery({
+    queryKey: ["handover-recipients"],
+    queryFn: billingApi.handoverRecipients,
+    staleTime: 60_000,
+  });
+}
+
+export function useHandovers(params?: { status?: HandoverStatus }) {
+  return useQuery({
+    queryKey: ["handovers", params],
+    queryFn: () => billingApi.handovers(params),
+  });
+}
+
+export function useInitiateHandover() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: InitiateHandoverInput) => billingApi.initiateHandover(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cash-mine"] });
+      queryClient.invalidateQueries({ queryKey: ["handovers"] });
+      toast.success("Handover initiated");
+    },
+    onError: (err) => errorToast(err, "Couldn't initiate the handover."),
+  });
+}
+
+export function useConfirmHandover() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: ConfirmHandoverInput }) =>
+      billingApi.confirmHandover(id, input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["handovers"] });
+      queryClient.invalidateQueries({ queryKey: ["cash-reconciliation"] });
+      toast.success("Handover confirmed");
+    },
+    onError: (err) => errorToast(err, "Couldn't confirm the handover."),
+  });
+}
+
+export function useCashDeposits() {
+  return useQuery({
+    queryKey: ["cash-deposits"],
+    queryFn: billingApi.deposits,
+  });
+}
+
+export function useRecordDeposit() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateDepositInput) => billingApi.recordDeposit(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cash-deposits"] });
+      queryClient.invalidateQueries({ queryKey: ["cash-reconciliation"] });
+      toast.success("Deposit recorded");
+    },
+    onError: (err) => errorToast(err, "Couldn't record the deposit."),
+  });
+}
+
+export function useCashReconciliation(date?: string) {
+  return useQuery({
+    queryKey: ["cash-reconciliation", date],
+    queryFn: () => billingApi.cashReconciliation(date),
   });
 }
