@@ -31,6 +31,14 @@ jobs:
       # `lint-imports` actually imports every module in scope (including
       # `billing.pdf`, which imports WeasyPrint) to build the dependency
       # graph — same system libraries as the `api-test`/`e2e` jobs.
+      #
+      # GitHub's Ubuntu runner image preconfigures a google-chrome apt
+      # source none of these jobs use (e2e installs Chromium via
+      # Playwright, not apt) — when Google's mirror serves an
+      # inconsistent Packages.gz/InRelease pair, `apt-get update` fails
+      # outright on that source alone and the whole `&&` chain never
+      # reaches the packages this job actually needs. Drop it first.
+      - run: sudo rm -f /etc/apt/sources.list.d/google-chrome.list
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libcairo2 fonts-dejavu-core
       - run: pip install -r requirements/dev.txt
       - run: ruff check .
@@ -85,6 +93,11 @@ jobs:
       # default, so a plain `pip install` succeeds but the first render
       # fails with an OSError. Same package set the invoice template's
       # font stack expects (`fonts-dejavu-core`).
+      #
+      # See api-quality's identical step: this job doesn't touch Chrome
+      # either, so the preconfigured google-chrome apt source is just a
+      # single point of failure to drop before updating.
+      - run: sudo rm -f /etc/apt/sources.list.d/google-chrome.list
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libcairo2 fonts-dejavu-core
       - run: pip install -r requirements/dev.txt
       # A migration nobody generated is a schema drift nobody reviewed.
@@ -149,6 +162,13 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
+
+      # This job installs its own Chromium below via Playwright, not apt
+      # — the google-chrome source GitHub preconfigures on this image is
+      # dead weight that can take `apt-get update` down with it (see
+      # api-quality's identical step).
+      - name: Remove unused google-chrome apt source
+        run: sudo rm -f /etc/apt/sources.list.d/google-chrome.list
 
       - name: Install WeasyPrint system libraries
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libcairo2 fonts-dejavu-core
