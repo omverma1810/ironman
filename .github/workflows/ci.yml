@@ -195,6 +195,19 @@ jobs:
           nohup npm run start --workspace=apps/web -- -p 3000 > /tmp/web.log 2>&1 &
           npx --yes wait-on http://localhost:3000 --timeout 30000
 
+      # `--with-deps` shells out to its own internal apt-get update/install
+      # for Chromium's OS libraries — unlike our own steps above, that
+      # internal call isn't ours to make tolerant of a partial-index
+      # failure, and it treats any non-zero apt exit as fatal. Removing
+      # the broken google-chrome source first avoids the failure outright
+      # rather than working around its exit code. Globbed because Ubuntu
+      # 24.04's preconfigured repos are inconsistently named between the
+      # legacy one-line `.list` format and the newer deb822 `.sources`
+      # format — confirmed by hand that an exact `google-chrome.list`
+      # guess silently no-ops here while the source keeps getting fetched.
+      - name: Remove unused google-chrome apt source
+        run: sudo rm -f /etc/apt/sources.list.d/google-chrome*
+
       - name: Install Playwright browsers
         working-directory: apps/web
         run: npx playwright install --with-deps chromium
