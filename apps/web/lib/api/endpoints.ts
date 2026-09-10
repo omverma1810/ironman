@@ -1,5 +1,6 @@
 import { apiFetch, newIdempotencyKey } from "./client";
 import type {
+  ActivatePriceListInput,
   Apartment,
   ApartmentContact,
   BagDetail,
@@ -13,6 +14,7 @@ import type {
   ConsumptionRuleInput,
   CreateDepositInput,
   CreateOrderInput,
+  CreatePriceListInput,
   CreditEntry,
   CreditNote,
   CreditNoteInput,
@@ -35,6 +37,8 @@ import type {
   JobKind,
   Me,
   OfflineOpResult,
+  Offer,
+  OfferInput,
   OrderContributionMargin,
   OrderDetail,
   OrderEvent,
@@ -42,6 +46,8 @@ import type {
   OrderListItem,
   Paginated,
   Payment,
+  PriceList,
+  PriceListStatus,
   Proof,
   ProofKind,
   ProofMeta,
@@ -54,6 +60,7 @@ import type {
   RouteDayDetail,
   ScanResult,
   Service,
+  SetPriceLinesInput,
   Staff,
   StageEvent,
   StockAdjustmentInput,
@@ -168,6 +175,19 @@ export const catalogApi = {
     is_first_order?: boolean;
     lines: { garment_type: string; qty: number }[];
   }) => apiFetch<Quote>("/catalog/quote", { method: "POST", body: input }),
+  priceLists: (params?: { hub?: string; service?: string; status?: PriceListStatus }) =>
+    apiFetch<Paginated<PriceList>>("/catalog/price-lists/", { params }),
+  createPriceList: (input: CreatePriceListInput) =>
+    apiFetch<PriceList>("/catalog/price-lists/", { method: "POST", body: input }),
+  setPriceLines: (id: string, input: SetPriceLinesInput) =>
+    apiFetch<PriceList>(`/catalog/price-lists/${id}/lines/`, { method: "PUT", body: input }),
+  activatePriceList: (id: string, input?: ActivatePriceListInput) =>
+    apiFetch<PriceList>(`/catalog/price-lists/${id}/activate/`, { method: "POST", body: input ?? {} }),
+  offers: () => apiFetch<Paginated<Offer>>("/catalog/offers/"),
+  createOffer: (input: OfferInput) =>
+    apiFetch<Offer>("/catalog/offers/", { method: "POST", body: input }),
+  updateOffer: (id: string, patch: Partial<OfferInput>) =>
+    apiFetch<Offer>(`/catalog/offers/${id}/`, { method: "PATCH", body: patch }),
 };
 
 // ── Customers ──────────────────────────────────────────────────────────

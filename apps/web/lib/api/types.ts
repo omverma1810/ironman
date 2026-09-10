@@ -106,6 +106,75 @@ export type GarmentType = {
   is_active: boolean;
 };
 
+// ── Pricing & offers (docs/08 batch 3.7) ─────────────────────────────────
+export type PriceListStatus = "DRAFT" | "ACTIVE" | "SUPERSEDED";
+
+export type PriceLine = {
+  id: string;
+  garment_type: string;
+  garment_type_name: string;
+  unit_price_minor: number;
+  min_qty: number;
+};
+
+export type PriceList = {
+  id: string;
+  hub: string;
+  service: string;
+  service_name: string;
+  version: number;
+  status: PriceListStatus;
+  effective_from: string | null;
+  effective_to: string | null;
+  notes: string;
+  lines: PriceLine[];
+  created_at: string;
+};
+
+export type CreatePriceListInput = {
+  hub: string;
+  service: string;
+  notes?: string;
+};
+
+export type ActivatePriceListInput = {
+  effective_from?: string;
+};
+
+export type SetPriceLinesInput = {
+  lines: { garment_type: string; unit_price_minor: number; min_qty?: number }[];
+};
+
+export type OfferKind = "FIRST_ORDER" | "REFERRAL_CREDIT" | "APARTMENT_PROMO" | "FLAT" | "PERCENT";
+
+export type Offer = {
+  id: string;
+  code: string;
+  kind: OfferKind;
+  value_bps: number;
+  value_minor: number;
+  cap_minor: number | null;
+  apartment: string | null;
+  effective_from: string;
+  effective_to: string | null;
+  max_redemptions: number | null;
+  redemptions_count: number;
+  is_active: boolean;
+};
+
+export type OfferInput = {
+  code: string;
+  kind: OfferKind;
+  value_bps?: number;
+  value_minor?: number;
+  cap_minor?: number | null;
+  apartment?: string | null;
+  effective_from: string;
+  effective_to?: string | null;
+  max_redemptions?: number | null;
+  is_active?: boolean;
+};
+
 export type QuoteLine = {
   garment_type: string;
   garment_type_name: string;

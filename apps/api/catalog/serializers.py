@@ -49,6 +49,24 @@ class PriceListActivateSerializer(serializers.Serializer):
     effective_from = serializers.DateTimeField(required=False)
 
 
+class PriceLineInputSerializer(serializers.Serializer):
+    garment_type = serializers.PrimaryKeyRelatedField(queryset=GarmentType.objects.all())
+    # Minor units (paise) on the wire, same convention `OfferSerializer`
+    # already uses for `value_minor` — this app's Offer/PriceLine writes
+    # take the `_minor` field directly rather than a rupees `amount`.
+    unit_price_minor = serializers.IntegerField(min_value=1)
+    min_qty = serializers.IntegerField(min_value=1, default=1)
+
+
+class PriceLineSetSerializer(serializers.Serializer):
+    """Replaces a DRAFT price list's entire line set in one call — same
+    "PUT the whole list" shape `supplies.ConsumptionRuleReplaceSerializer`
+    uses, since a price list's lines are edited as a set, not one at a
+    time (docs/08 3.7)."""
+
+    lines = PriceLineInputSerializer(many=True)
+
+
 class OfferSerializer(serializers.ModelSerializer):
     class Meta:
         model = Offer

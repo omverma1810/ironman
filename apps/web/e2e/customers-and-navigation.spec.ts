@@ -35,16 +35,29 @@ test.describe("Navigation & error states", () => {
     await page.waitForURL("**/console");
   });
 
-  test("phase-3+ stub pages render an honest coming-soon state, not a dead link", async ({
+  test("phase-2+ stub pages render an honest coming-soon state, not a dead link", async ({
+    page,
+  }) => {
+    await loginAs(page, DEMO_USERS.operator);
+    // Staff's nav link is admin/founder-only (lib/permissions.ts's
+    // canManageStaff), but the page itself carries no RBAC guard of its
+    // own — go straight there rather than via a link an operator can't see.
+    await page.goto("/console/staff");
+    await expect(page.getByText(/staff management/i)).toBeVisible();
+    await expect(page.getByText(/phase 2 —/i)).toBeVisible();
+  });
+
+  test("pricing is founder-only, with its own restricted state for anyone else", async ({
     page,
   }) => {
     await loginAs(page, DEMO_USERS.operator);
     // Pricing's nav link is founder-only (lib/permissions.ts's
-    // canEditPricing), but the page itself carries no RBAC guard of its
-    // own — go straight there rather than via a link an operator can't see.
+    // canEditPricing) — go straight there rather than via a link an
+    // operator can't see, since batch 3.7 replaced the old stub with a
+    // real screen that gates itself.
     await page.goto("/console/pricing");
-    await expect(page.getByText(/price list management/i)).toBeVisible();
-    await expect(page.getByText(/phase 3 —/i)).toBeVisible();
+    await expect(page.getByText(/founder-only/i)).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Price lists" })).toBeHidden();
   });
 
   test("the sidebar hides founder-only items from an operator", async ({ page }) => {
