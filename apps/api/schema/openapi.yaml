@@ -1028,6 +1028,10 @@ paths:
   /api/v1/catalog/offers/:
     get:
       operationId: catalog_offers_list
+      description: |-
+        Founder-only, same tier as `PriceListViewSet` — docs/04 §3.3 marks
+        offer CRUD `[B]`, and an offer is pricing-and-discount configuration,
+        not day-to-day order handling.
       parameters:
       - in: query
         name: apartment
@@ -1080,6 +1084,10 @@ paths:
           description: ''
     post:
       operationId: catalog_offers_create
+      description: |-
+        Founder-only, same tier as `PriceListViewSet` — docs/04 §3.3 marks
+        offer CRUD `[B]`, and an offer is pricing-and-discount configuration,
+        not day-to-day order handling.
       tags:
       - catalog
       requestBody:
@@ -1107,6 +1115,10 @@ paths:
   /api/v1/catalog/offers/{id}/:
     get:
       operationId: catalog_offers_retrieve
+      description: |-
+        Founder-only, same tier as `PriceListViewSet` — docs/04 §3.3 marks
+        offer CRUD `[B]`, and an offer is pricing-and-discount configuration,
+        not day-to-day order handling.
       parameters:
       - in: path
         name: id
@@ -1129,6 +1141,10 @@ paths:
           description: ''
     put:
       operationId: catalog_offers_update
+      description: |-
+        Founder-only, same tier as `PriceListViewSet` — docs/04 §3.3 marks
+        offer CRUD `[B]`, and an offer is pricing-and-discount configuration,
+        not day-to-day order handling.
       parameters:
       - in: path
         name: id
@@ -1163,6 +1179,10 @@ paths:
           description: ''
     patch:
       operationId: catalog_offers_partial_update
+      description: |-
+        Founder-only, same tier as `PriceListViewSet` — docs/04 §3.3 marks
+        offer CRUD `[B]`, and an offer is pricing-and-discount configuration,
+        not day-to-day order handling.
       parameters:
       - in: path
         name: id
@@ -1196,6 +1216,10 @@ paths:
           description: ''
     delete:
       operationId: catalog_offers_destroy
+      description: |-
+        Founder-only, same tier as `PriceListViewSet` — docs/04 §3.3 marks
+        offer CRUD `[B]`, and an offer is pricing-and-discount configuration,
+        not day-to-day order handling.
       parameters:
       - in: path
         name: id
@@ -1603,6 +1627,47 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/PriceListRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceList'
+          description: ''
+  /api/v1/catalog/price-lists/{id}/lines/:
+    put:
+      operationId: catalog_price_lists_lines_update
+      description: |-
+        Replaces this DRAFT price list's entire line set — the model's
+        own `PriceLine.save()` guard (ADR-005) already refuses to touch an
+        ACTIVE/SUPERSEDED list's lines, but that check only fires on a
+        per-row `save()`, not `bulk_create()`, so it's re-asserted here
+        before either the soft-delete or the create.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this price list.
+        required: true
+      tags:
+      - catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PriceLineSetRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PriceLineSetRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PriceLineSetRequest'
         required: true
       security:
       - jwtAuth: []
@@ -9975,6 +10040,22 @@ components:
       - garment_type_name
       - id
       - unit_price_minor
+    PriceLineInputRequest:
+      type: object
+      properties:
+        garment_type:
+          type: string
+          format: uuid
+        unit_price_minor:
+          type: integer
+          minimum: 1
+        min_qty:
+          type: integer
+          minimum: 1
+          default: 1
+      required:
+      - garment_type
+      - unit_price_minor
     PriceLineRequest:
       type: object
       properties:
@@ -9993,6 +10074,20 @@ components:
       required:
       - garment_type
       - unit_price_minor
+    PriceLineSetRequest:
+      type: object
+      description: |-
+        Replaces a DRAFT price list's entire line set in one call — same
+        "PUT the whole list" shape `supplies.ConsumptionRuleReplaceSerializer`
+        uses, since a price list's lines are edited as a set, not one at a
+        time (docs/08 3.7).
+      properties:
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/PriceLineInputRequest'
+      required:
+      - lines
     PriceList:
       type: object
       properties:
