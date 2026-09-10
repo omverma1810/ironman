@@ -12,12 +12,15 @@ from billing.services import (
     cash_reconciliation,
     compute_delivery_labour_cost,
     confirm_handover,
+    credit_entries,
+    customer_credit_balance,
     hub_cash_on_hand,
     initiate_handover,
     issue_credit_note,
     issue_invoice,
     order_contribution_margin,
     paid_minor,
+    record_credit,
     record_deposit,
     record_order_cost,
     record_payment,
@@ -576,3 +579,106 @@ def _make_bag_with_garment_lines(hub, order):
     from custody.services import create_bag_for_order
 
     return create_bag_for_order(order)
+
+
+# ── Customer credit ledger (batch 3.6) ────────────────────────────────────
+
+
+def test_customer_credit_balance_defaults_to_zero(customer):
+    assert customer_credit_balance(customer) == 0
+    assert list(credit_entries(customer)) == []
+
+
+def test_record_credit_grants_referral_and_updates_balance(customer, admin_user):
+    entry = record_credit(
+        customer, delta_minor=500, reason="REFERRAL", actor=admin_user, note="Referred a friend"
+    )
+    assert entry.delta_minor == 500
+    assert entry.reason == "REFERRAL"
+    assert entry.created_by_id == admin_user.id
+    assert customer_credit_balance(customer) == 500
+
+
+def test_record_credit_accumulates_across_multiple_grants(customer):
+    record_credit(customer, delta_minor=500, reason="GOODWILL")
+    record_credit(customer, delta_minor=300, reason="REFUND")
+    assert customer_credit_balance(customer) == 800
+    assert credit_entries(customer).count() == 2
+
+
+def test_record_credit_rejects_zero_amount(customer):
+    with pytest.raises(ApiError):
+        record_credit(customer, delta_minor=0, reason="GOODWILL")
+
+
+def test_record_credit_rejects_negative_amount_for_positive_reason(customer):
+    with pytest.raises(ApiError):
+        record_credit(customer, delta_minor=-100, reason="REFERRAL")
+
+
+def test_record_credit_rejects_positive_amount_for_negative_reason(customer):
+    with pytest.raises(ApiError):
+        record_credit(customer, delta_minor=100, reason="SPEND")
+
+
+def test_record_credit_rejects_overdraw(customer):
+    record_credit(customer, delta_minor=200, reason="GOODWILL")
+    with pytest.raises(ApiError):
+        record_credit(customer, delta_minor=-300, reason="SPEND")
+    # The rejected spend must not have partially applied.
+    assert customer_credit_balance(customer) == 200
+
+
+def test_credit_entries_are_scoped_to_the_customer(hub, customer):
+    from customers.models import Customer
+
+    other = Customer.objects.create(hub=hub, phone="+919999912399", name="Other Customer")
+    record_credit(customer, delta_minor=100, reason="GOODWILL")
+    record_credit(other, delta_minor=200, reason="GOODWILL")
+
+    assert customer_credit_balance(customer) == 100
+    assert customer_credit_balance(other) == 200
+    assert credit_entries(customer).count() == 1
+
+
+def test_record_payment_with_credit_deducts_customer_balance(verified_order):
+    record_credit(verified_order.customer, delta_minor=4800, reason="GOODWILL")
+    invoice = issue_invoice(verified_order)
+    payment = record_payment(
+        invoice, method="CREDIT", amount_minor=4800, idempotency_key="k-credit"
+    )
+    assert payment.status == "SUCCEEDED"
+    assert customer_credit_balance(verified_order.customer) == 0
+
+    invoice.refresh_from_db()
+    assert invoice.status == "PAID"
+    entries = list(credit_entries(verified_order.customer))
+    assert len(entries) == 2  # the original grant + the SPEND deduction
+    spend = next(e for e in entries if e.reason == "SPEND")
+    assert spend.delta_minor == -4800
+    assert spend.order_id == verified_order.id
+
+
+def test_record_payment_with_credit_rejects_insufficient_balance(verified_order):
+    record_credit(verified_order.customer, delta_minor=1000, reason="GOODWILL")
+    invoice = issue_invoice(verified_order)
+    with pytest.raises(ApiError):
+        record_payment(invoice, method="CREDIT", amount_minor=4800, idempotency_key="k-short")
+    # Nothing should have been deducted or paid.
+    assert customer_credit_balance(verified_order.customer) == 1000
+    invoice.refresh_from_db()
+    assert invoice.status == "ISSUED"
+
+
+def test_record_payment_with_credit_is_idempotent_and_does_not_double_spend(verified_order):
+    record_credit(verified_order.customer, delta_minor=4800, reason="GOODWILL")
+    invoice = issue_invoice(verified_order)
+    first = record_payment(
+        invoice, method="CREDIT", amount_minor=4800, idempotency_key="k-replay-credit"
+    )
+    replay = record_payment(
+        invoice, method="CREDIT", amount_minor=4800, idempotency_key="k-replay-credit"
+    )
+    assert first.id == replay.id
+    # A replayed idempotency key must not spend the customer's credit twice.
+    assert customer_credit_balance(verified_order.customer) == 0

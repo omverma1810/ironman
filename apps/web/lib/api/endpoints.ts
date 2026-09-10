@@ -13,13 +13,16 @@ import type {
   ConsumptionRuleInput,
   CreateDepositInput,
   CreateOrderInput,
+  CreditEntry,
   CreditNote,
   CreditNoteInput,
   Customer,
+  CustomerCredit,
   CustomerDetail,
   GarmentLine,
   GarmentStage,
   GarmentType,
+  GrantCreditInput,
   HandoverRecipient,
   HandoverStatus,
   Hub,
@@ -425,6 +428,13 @@ export const billingApi = {
     apiFetch<CashReconciliationRow[]>("/billing/cash/reconciliation", { params: { date } }),
   orderCosts: (orderId: string) =>
     apiFetch<OrderContributionMargin>(`/billing/orders/${orderId}/costs`),
+  customerCredit: (customerId: string) =>
+    apiFetch<CustomerCredit>(`/billing/credits/${customerId}`),
+  grantCredit: (customerId: string, input: GrantCreditInput) =>
+    apiFetch<CreditEntry>(`/billing/credits/${customerId}/grant`, {
+      method: "POST",
+      body: input,
+    }),
 };
 
 // ── Platform ───────────────────────────────────────────────────────────

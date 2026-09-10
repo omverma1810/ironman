@@ -30,4 +30,14 @@ urlpatterns = [
         views.OrderCostView.as_view(),
         name="billing-order-costs",
     ),
+    path(
+        "billing/credits/<uuid:customer_id>",
+        views.CustomerCreditView.as_view(),
+        name="billing-customer-credit",
+    ),
+    path(
+        "billing/credits/<uuid:customer_id>/grant",
+        views.GrantCreditView.as_view(),
+        name="billing-credit-grant",
+    ),
 ] + router.urls

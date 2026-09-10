@@ -1,6 +1,14 @@
 from rest_framework import serializers
 
-from billing.models import CashDeposit, CashHandover, CreditNote, Invoice, OrderCost, Payment
+from billing.models import (
+    CashDeposit,
+    CashHandover,
+    CreditEntry,
+    CreditNote,
+    Invoice,
+    OrderCost,
+    Payment,
+)
 
 
 class InvoiceListSerializer(serializers.ModelSerializer):
@@ -130,7 +138,7 @@ class CreditNoteCreateSerializer(serializers.Serializer):
 
 
 class RecordPaymentSerializer(serializers.Serializer):
-    method = serializers.ChoiceField(choices=["CASH", "UPI_QR", "ADJUSTMENT"])
+    method = serializers.ChoiceField(choices=["CASH", "UPI_QR", "ADJUSTMENT", "CREDIT"])
     # Minor units (paise) on the wire, same convention as `amount` above.
     amount = serializers.IntegerField(min_value=1)
     idempotency_key = serializers.CharField(max_length=64)
@@ -249,3 +257,40 @@ class OrderContributionMarginSerializer(serializers.Serializer):
     contribution_minor = serializers.IntegerField()
     contribution_pct = serializers.FloatField(allow_null=True)
     costs = OrderCostSerializer(many=True)
+
+
+class CreditEntrySerializer(serializers.ModelSerializer):
+    created_by_name = serializers.CharField(
+        source="created_by.full_name", read_only=True, default=""
+    )
+    order_ref = serializers.CharField(source="order.ref", read_only=True, default="")
+
+    class Meta:
+        model = CreditEntry
+        fields = [
+            "id",
+            "delta_minor",
+            "reason",
+            "order",
+            "order_ref",
+            "note",
+            "created_by_name",
+            "at",
+        ]
+        read_only_fields = fields
+
+
+class CustomerCreditSerializer(serializers.Serializer):
+    balance_minor = serializers.IntegerField()
+    entries = CreditEntrySerializer(many=True)
+
+
+class GrantCreditSerializer(serializers.Serializer):
+    # SPEND only ever happens automatically (`services.record_payment`
+    # redeeming credit against an invoice) and EXPIRY has no automated
+    # trigger yet (no scheduled job) — neither is something an admin
+    # manually "grants", so this endpoint's choices stop at the three
+    # reasons that are.
+    reason = serializers.ChoiceField(choices=["REFERRAL", "GOODWILL", "REFUND"])
+    amount = serializers.IntegerField(min_value=1)
+    note = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")

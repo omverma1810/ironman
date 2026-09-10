@@ -14,7 +14,10 @@ from django.utils import timezone
 from billing.models import (
     CashDeposit,
     CashHandover,
+    CreditEntry,
     CreditNote,
+    CreditReason,
+    CustomerCredit,
     HandoverStatus,
     Invoice,
     InvoiceStatus,
@@ -236,8 +239,25 @@ def record_payment(
     except IntegrityError:
         # Lost a race on the same idempotency_key to a request this one's
         # own upfront check missed (submitted between that check and the
-        # lock above) — the winner's row is the answer either way.
+        # lock above) — the winner's row is the answer either way. Deducting
+        # credit only below this point (not before) means the loser of this
+        # race never touches the ledger — the winner already did, for the
+        # same logical payment — so a retried CREDIT payment can't be
+        # double-spent against the customer's balance.
         return Payment.objects.get(idempotency_key=idempotency_key)
+
+    if method == PaymentMethod.CREDIT:
+        # Insufficient balance raises from inside `record_credit`, which
+        # (being called from within this function's own `@transaction.atomic`)
+        # rolls the just-created `payment` row back along with everything
+        # else — never a Payment left standing without the credit to back it.
+        record_credit(
+            locked.customer,
+            delta_minor=-amount_minor,
+            reason=CreditReason.SPEND,
+            order=locked.order,
+            actor=actor,
+        )
 
     if amount_minor == remaining:
         locked.status = InvoiceStatus.PAID
@@ -566,3 +586,59 @@ def compute_delivery_labour_cost(order, *, actor=None) -> list[OrderCost]:
     if delivery_cost:
         created.append(delivery_cost)
     return created
+
+
+# ── Customer credit ledger (docs/02 §3.8, docs/09 D-06, batch 3.6) ───────
+# `M-8` flagged "simple referral credit" as a contradiction: a balance that
+# can be earned, partly spent, refunded and expired *is* a ledger whether
+# the source doc calls it one or not (`00 §3.3`). `CreditEntry` is that
+# ledger; `CustomerCredit.balance_minor` is its own running sum, same
+# "movement ledger + derived cache" split `supplies.StockMovement`/
+# `StockLevel` already establish for stock.
+
+_POSITIVE_CREDIT_REASONS = {CreditReason.REFERRAL, CreditReason.GOODWILL, CreditReason.REFUND}
+_NEGATIVE_CREDIT_REASONS = {CreditReason.SPEND, CreditReason.EXPIRY}
+
+
+@transaction.atomic
+def record_credit(
+    customer, *, delta_minor: int, reason: str, order=None, actor=None, note: str = ""
+) -> CreditEntry:
+    if delta_minor == 0:
+        raise ApiError("Credit amount cannot be zero.", code="validation_error")
+    if reason in _POSITIVE_CREDIT_REASONS and delta_minor < 0:
+        raise ApiError(f"{reason.title()} must increase the balance.", code="validation_error")
+    if reason in _NEGATIVE_CREDIT_REASONS and delta_minor > 0:
+        raise ApiError(f"{reason.title()} must decrease the balance.", code="validation_error")
+
+    # Locks the customer's own credit row so two concurrent spends (or a
+    # spend racing a grant) can't both read the same balance and together
+    # overdraw it — same discipline `supplies._apply_movement` uses for
+    # `StockLevel`.
+    credit, _ = CustomerCredit.objects.select_for_update().get_or_create(customer=customer)
+    new_balance = credit.balance_minor + delta_minor
+    if new_balance < 0:
+        raise ApiError(
+            f"Only {credit.balance_minor}p of credit available.", code="validation_error"
+        )
+
+    entry = CreditEntry.objects.create(
+        customer=customer,
+        delta_minor=delta_minor,
+        reason=reason,
+        order=order,
+        note=note,
+        created_by=actor,
+    )
+    credit.balance_minor = new_balance
+    credit.save(update_fields=["balance_minor"])
+    return entry
+
+
+def customer_credit_balance(customer) -> int:
+    credit = CustomerCredit.objects.filter(customer=customer).first()
+    return credit.balance_minor if credit else 0
+
+
+def credit_entries(customer) -> models.QuerySet[CreditEntry]:
+    return CreditEntry.objects.filter(customer=customer).select_related("order", "created_by")

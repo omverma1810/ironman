@@ -520,6 +520,72 @@ paths:
                 items:
                   $ref: '#/components/schemas/CashReconciliationRow'
           description: ''
+  /api/v1/billing/credits/{customer_id}:
+    get:
+      operationId: billing_credits_retrieve
+      description: |-
+        GET /billing/credits/{customer_id} — docs/04 §3.7 `[C own][A]`
+        (Founder included too, same "Founder is unrestricted everywhere Admin
+        is" convention this app already uses for every other admin-tier view,
+        e.g. `CashReconciliationView`).
+      parameters:
+      - in: path
+        name: customer_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - billing
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerCredit'
+          description: ''
+  /api/v1/billing/credits/{customer_id}/grant:
+    post:
+      operationId: billing_credits_grant_create
+      description: |-
+        POST /billing/credits/{customer_id}/grant — Admin/Founder only.
+        Automated referral accrual is growth's job once it ships (docs/08
+        Phase 5); until then, this is how a REFERRAL reward or a
+        GOODWILL/REFUND credit actually lands on the ledger.
+      parameters:
+      - in: path
+        name: customer_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - billing
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GrantCreditRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GrantCreditRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GrantCreditRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreditEntry'
+          description: ''
   /api/v1/billing/invoices/:
     get:
       operationId: billing_invoices_list
@@ -6854,6 +6920,63 @@ components:
           maxLength: 255
       required:
       - amount
+    CreditEntry:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        delta_minor:
+          type: integer
+          readOnly: true
+        reason:
+          allOf:
+          - $ref: '#/components/schemas/CreditEntryReasonEnum'
+          readOnly: true
+        order:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        order_ref:
+          type: string
+          readOnly: true
+          default: ''
+        note:
+          type: string
+          readOnly: true
+        created_by_name:
+          type: string
+          readOnly: true
+          default: ''
+        at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - at
+      - created_by_name
+      - delta_minor
+      - id
+      - note
+      - order
+      - order_ref
+      - reason
+    CreditEntryReasonEnum:
+      enum:
+      - REFERRAL
+      - GOODWILL
+      - REFUND
+      - SPEND
+      - EXPIRY
+      type: string
+      description: |-
+        * `REFERRAL` - Referral reward
+        * `GOODWILL` - Goodwill
+        * `REFUND` - Refund
+        * `SPEND` - Spend
+        * `EXPIRY` - Expiry
     CreditNote:
       type: object
       properties:
@@ -6904,6 +7027,18 @@ components:
       required:
       - amount
       - reason
+    CustomerCredit:
+      type: object
+      properties:
+        balance_minor:
+          type: integer
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreditEntry'
+      required:
+      - balance_minor
+      - entries
     CustomerDetail:
       type: object
       properties:
@@ -7329,6 +7464,31 @@ components:
       - code
       - name
       - service
+    GrantCreditReasonEnum:
+      enum:
+      - REFERRAL
+      - GOODWILL
+      - REFUND
+      type: string
+      description: |-
+        * `REFERRAL` - REFERRAL
+        * `GOODWILL` - GOODWILL
+        * `REFUND` - REFUND
+    GrantCreditRequest:
+      type: object
+      properties:
+        reason:
+          $ref: '#/components/schemas/GrantCreditReasonEnum'
+        amount:
+          type: integer
+          minimum: 1
+        note:
+          type: string
+          default: ''
+          maxLength: 255
+      required:
+      - amount
+      - reason
     HandoverRecipient:
       type: object
       description: |-
@@ -10158,11 +10318,13 @@ components:
       - CASH
       - UPI_QR
       - ADJUSTMENT
+      - CREDIT
       type: string
       description: |-
         * `CASH` - CASH
         * `UPI_QR` - UPI_QR
         * `ADJUSTMENT` - ADJUSTMENT
+        * `CREDIT` - CREDIT
     RecordPaymentRequest:
       type: object
       properties:

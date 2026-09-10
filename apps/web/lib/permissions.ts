@@ -85,6 +85,29 @@ export function canViewCashReconciliation(roles: Role[] | undefined): boolean {
   return hasRole(roles, ...MONEY_ROLES);
 }
 
+// docs/04 §3.7 `[C own][A]` — Customer sees their own balance; Admin/Founder
+// (config-and-correction territory, same tier as credit notes) see any
+// customer's. The console page this gates is staff-only, so it resolves to
+// Admin/Founder here.
+export function canViewCustomerCredit(roles: Role[] | undefined): boolean {
+  return hasRole(roles, ...MONEY_ROLES);
+}
+
+// Granting a REFERRAL/GOODWILL/REFUND credit is Admin/Founder-only
+// config-and-correction territory, same tier as credit notes and
+// ADJUSTMENT payments.
+export function canGrantCredit(roles: Role[] | undefined): boolean {
+  return hasRole(roles, ...MONEY_ROLES);
+}
+
+// docs/08 batch 3.6: CREDIT is a selectable payment method for
+// Operator/Admin/Founder — Field is left out, same door-collection-only
+// restriction as `canRecordAdjustment`, since store credit isn't something
+// a rider redeems standing at the customer's door.
+export function canRecordCreditPayment(roles: Role[] | undefined): boolean {
+  return hasRole(roles, ...OPS_ROLES);
+}
+
 export function canEditPricing(roles: Role[] | undefined): boolean {
   return hasRole(roles, "FOUNDER");
 }

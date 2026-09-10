@@ -209,6 +209,7 @@ export default function InvoiceDetailPage() {
             {canRecord && (
               <RecordPaymentDialog
                 invoiceRef={invoice.ref}
+                customerId={invoice.customer}
                 remainingMinor={remainingMinor}
                 roles={roles}
                 open={paymentOpen}
