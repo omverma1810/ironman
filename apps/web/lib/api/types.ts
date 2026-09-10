@@ -585,9 +585,9 @@ export type CreditNote = {
   pdf_url: string | null;
 };
 
-// COD / UPI-QR-at-door (docs/08 3.2) — GATEWAY and CREDIT exist in the
-// domain model but aren't recordable through this batch's UI (later
-// batches: 3.5 gateway, 3.6 credit ledger).
+// COD / UPI-QR-at-door (docs/08 3.2), plus CREDIT (docs/08 3.6, store
+// credit) — GATEWAY exists in the domain model but isn't recordable
+// through this UI yet (docs/08 3.5).
 export type PaymentMethod = "CASH" | "UPI_QR" | "GATEWAY" | "CREDIT" | "ADJUSTMENT";
 // Named distinctly from the order-level `PaymentStatus` above (billing's
 // per-payment SUCCEEDED/FAILED vs ordering's UNPAID/PARTIALLY_PAID/PAID/
@@ -607,7 +607,7 @@ export type Payment = {
 };
 
 export type RecordPaymentInput = {
-  method: "CASH" | "UPI_QR" | "ADJUSTMENT";
+  method: "CASH" | "UPI_QR" | "ADJUSTMENT" | "CREDIT";
   // Minor units (paise) on the wire, same convention as `CreditNoteInput`.
   amount: number;
   idempotency_key: string;
@@ -724,4 +724,32 @@ export type OrderContributionMargin = {
   contribution_minor: number;
   contribution_pct: number | null;
   costs: OrderCost[];
+};
+
+// ── Customer credit ledger (docs/08 batch 3.6) ────────────────────────────
+export type CreditReason = "REFERRAL" | "GOODWILL" | "REFUND" | "SPEND" | "EXPIRY";
+
+export type CreditEntry = {
+  id: string;
+  delta_minor: number;
+  reason: CreditReason;
+  order: string | null;
+  order_ref: string;
+  note: string;
+  created_by_name: string;
+  at: string;
+};
+
+export type CustomerCredit = {
+  balance_minor: number;
+  entries: CreditEntry[];
+};
+
+// SPEND/EXPIRY are never manually granted (docs/08 3.6: SPEND happens only
+// via `record_payment`, EXPIRY has no scheduled job yet) — same narrowing
+// `GrantCreditSerializer` enforces server-side.
+export type GrantCreditInput = {
+  reason: "REFERRAL" | "GOODWILL" | "REFUND";
+  amount: number;
+  note?: string;
 };

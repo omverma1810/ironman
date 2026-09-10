@@ -234,6 +234,7 @@ export default function OrderDetailPage() {
                   <InvoiceSection
                     orderId={order.id}
                     orderStatus={order.status}
+                    customerId={order.customer}
                     roles={me.data?.roles}
                   />
 

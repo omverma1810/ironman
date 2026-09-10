@@ -1,6 +1,15 @@
 from django.contrib import admin
 
-from billing.models import CashDeposit, CashHandover, CreditNote, Invoice, OrderCost, Payment
+from billing.models import (
+    CashDeposit,
+    CashHandover,
+    CreditEntry,
+    CreditNote,
+    CustomerCredit,
+    Invoice,
+    OrderCost,
+    Payment,
+)
 
 
 class CreditNoteInline(admin.TabularInline):
@@ -103,6 +112,34 @@ class OrderCostAdmin(admin.ModelAdmin):
     list_display = ["order", "kind", "amount_minor", "source_ref", "at"]
     list_filter = ["kind"]
     search_fields = ["order__ref", "source_ref"]
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(CreditEntry)
+class CreditEntryAdmin(admin.ModelAdmin):
+    list_display = ["customer", "reason", "delta_minor", "order", "created_by", "at"]
+    list_filter = ["reason"]
+    search_fields = ["customer__name", "customer__phone"]
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(CustomerCredit)
+class CustomerCreditAdmin(admin.ModelAdmin):
+    list_display = ["customer", "balance_minor", "updated_at"]
+    search_fields = ["customer__name", "customer__phone"]
+
+    def has_add_permission(self, request):
+        return False
 
     def has_change_permission(self, request, obj=None):
         return False

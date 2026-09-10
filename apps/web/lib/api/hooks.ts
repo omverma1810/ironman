@@ -32,6 +32,7 @@ import type {
   CreditNoteInput,
   DeclaredLine,
   GarmentStage,
+  GrantCreditInput,
   HandoverStatus,
   InitiateHandoverInput,
   Job,
@@ -1157,5 +1158,27 @@ export function useOrderCosts(orderId: string | undefined) {
     queryKey: ["order-costs", orderId],
     queryFn: () => billingApi.orderCosts(orderId as string),
     enabled: !!orderId,
+  });
+}
+
+// ── Customer credit ledger (docs/08 batch 3.6) ────────────────────────────
+export function useCustomerCredit(customerId: string | undefined) {
+  return useQuery({
+    queryKey: ["customer-credit", customerId],
+    queryFn: () => billingApi.customerCredit(customerId as string),
+    enabled: !!customerId,
+  });
+}
+
+export function useGrantCredit() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ customerId, input }: { customerId: string; input: GrantCreditInput }) =>
+      billingApi.grantCredit(customerId, input),
+    onSuccess: (_entry, { customerId }) => {
+      queryClient.invalidateQueries({ queryKey: ["customer-credit", customerId] });
+      toast.success("Credit granted");
+    },
+    onError: (err) => errorToast(err, "Couldn't grant credit."),
   });
 }

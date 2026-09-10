@@ -556,3 +556,108 @@ def test_customer_cannot_view_order_costs(api_client, customer_user, verified_or
     api_client.force_authenticate(user=customer_user)
     resp = api_client.get(f"/api/v1/billing/orders/{verified_order.id}/costs")
     assert resp.status_code == 403
+
+
+# ── Customer credit ledger (batch 3.6) ─────────────────────────────────────
+# docs/04 §3.7's `[C own][A]` — treated the same as every other admin-tier
+# view this app already has: Customer for their *own* balance, plus
+# Admin/Founder (Founder is unrestricted everywhere Admin is, this session's
+# standing convention). Granting credit is Admin/Founder-only config-and-
+# correction territory, same tier as credit notes.
+
+
+def test_customer_can_view_own_credit_balance(api_client, customer_user, customer):
+    from billing.services import record_credit
+
+    record_credit(customer, delta_minor=500, reason="GOODWILL")
+    api_client.force_authenticate(user=customer_user)
+    resp = api_client.get(f"/api/v1/billing/credits/{customer.id}")
+    assert resp.status_code == 200, resp.data
+    assert resp.data["balance_minor"] == 500
+    assert len(resp.data["entries"]) == 1
+
+
+def test_customer_cannot_view_someone_elses_credit_balance(api_client, customer_user, hub):
+    from customers.models import Customer
+
+    other = Customer.objects.create(hub=hub, phone="+919999912398", name="Other Customer")
+    api_client.force_authenticate(user=customer_user)
+    resp = api_client.get(f"/api/v1/billing/credits/{other.id}")
+    assert resp.status_code == 403
+
+
+def test_admin_can_view_any_customer_credit_balance(api_client, admin_user, customer):
+    api_client.force_authenticate(user=admin_user)
+    resp = api_client.get(f"/api/v1/billing/credits/{customer.id}")
+    assert resp.status_code == 200, resp.data
+    assert resp.data["balance_minor"] == 0
+
+
+def test_founder_can_view_any_customer_credit_balance(api_client, founder_user, customer):
+    api_client.force_authenticate(user=founder_user)
+    resp = api_client.get(f"/api/v1/billing/credits/{customer.id}")
+    assert resp.status_code == 200
+
+
+def test_operator_cannot_view_customer_credit_balance(api_client, operator_user, customer):
+    api_client.force_authenticate(user=operator_user)
+    resp = api_client.get(f"/api/v1/billing/credits/{customer.id}")
+    assert resp.status_code == 403
+
+
+def test_field_cannot_view_customer_credit_balance(api_client, field_user, customer):
+    api_client.force_authenticate(user=field_user)
+    resp = api_client.get(f"/api/v1/billing/credits/{customer.id}")
+    assert resp.status_code == 403
+
+
+def test_admin_can_grant_credit(api_client, admin_user, customer):
+    api_client.force_authenticate(user=admin_user)
+    resp = api_client.post(
+        f"/api/v1/billing/credits/{customer.id}/grant",
+        {"reason": "REFERRAL", "amount": 500, "note": "Referred a friend"},
+        format="json",
+    )
+    assert resp.status_code == 201, resp.data
+    assert resp.data["delta_minor"] == 500
+    assert resp.data["reason"] == "REFERRAL"
+
+
+def test_founder_can_grant_credit(api_client, founder_user, customer):
+    api_client.force_authenticate(user=founder_user)
+    resp = api_client.post(
+        f"/api/v1/billing/credits/{customer.id}/grant",
+        {"reason": "GOODWILL", "amount": 300},
+        format="json",
+    )
+    assert resp.status_code == 201, resp.data
+
+
+def test_operator_cannot_grant_credit(api_client, operator_user, customer):
+    api_client.force_authenticate(user=operator_user)
+    resp = api_client.post(
+        f"/api/v1/billing/credits/{customer.id}/grant",
+        {"reason": "GOODWILL", "amount": 300},
+        format="json",
+    )
+    assert resp.status_code == 403
+
+
+def test_customer_cannot_grant_credit(api_client, customer_user, customer):
+    api_client.force_authenticate(user=customer_user)
+    resp = api_client.post(
+        f"/api/v1/billing/credits/{customer.id}/grant",
+        {"reason": "GOODWILL", "amount": 300},
+        format="json",
+    )
+    assert resp.status_code == 403
+
+
+def test_grant_credit_rejects_spend_reason(api_client, admin_user, customer):
+    api_client.force_authenticate(user=admin_user)
+    resp = api_client.post(
+        f"/api/v1/billing/credits/{customer.id}/grant",
+        {"reason": "SPEND", "amount": 300},
+        format="json",
+    )
+    assert resp.status_code == 400

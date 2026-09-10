@@ -34,7 +34,7 @@ class PaymentMethod(models.TextChoices):
     CASH = "CASH", "Cash"
     UPI_QR = "UPI_QR", "UPI (QR at door)"
     GATEWAY = "GATEWAY", "Gateway"  # wired in a later batch (docs/08 3.5)
-    CREDIT = "CREDIT", "Customer credit"  # wired in a later batch (docs/08 3.6)
+    CREDIT = "CREDIT", "Customer credit"  # docs/08 3.6: services.record_payment
     ADJUSTMENT = "ADJUSTMENT", "Adjustment"
 
 
@@ -301,3 +301,62 @@ class OrderCost(AppendOnlyModel):
 
     def __str__(self) -> str:
         return f"{self.order_id} {self.kind} {self.amount_minor}p"
+
+
+class CreditReason(models.TextChoices):
+    REFERRAL = "REFERRAL", "Referral reward"
+    GOODWILL = "GOODWILL", "Goodwill"
+    REFUND = "REFUND", "Refund"
+    SPEND = "SPEND", "Spend"
+    EXPIRY = "EXPIRY", "Expiry"
+
+
+class CreditEntry(AppendOnlyModel):
+    """docs/02 §3.8, docs/09 D-06: `M-8` flagged "simple referral credit"
+    as a contradiction — a balance that can be earned, partly spent,
+    refunded and expired *is* a ledger whether the source doc calls it one
+    or not. `delta_minor` is signed: positive for REFERRAL/GOODWILL/REFUND,
+    negative for SPEND/EXPIRY — `services.record_credit` enforces which.
+    `CustomerCredit.balance_minor` is this table's own running sum, same
+    "movement ledger + derived cache" split `supplies.StockMovement`/
+    `StockLevel` already establish.
+    """
+
+    customer = models.ForeignKey(
+        "customers.Customer", on_delete=models.CASCADE, related_name="credit_entries"
+    )
+    delta_minor = models.IntegerField()
+    reason = models.CharField(max_length=16, choices=CreditReason.choices)
+    order = models.ForeignKey(
+        "ordering.Order", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    note = models.CharField(max_length=255, blank=True)
+    created_by = models.ForeignKey(
+        "identity.User", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "billing_credit_entry"
+        indexes = [models.Index(fields=["customer", "-at"])]
+
+    def __str__(self) -> str:
+        return f"{self.customer_id} {self.reason} {self.delta_minor:+d}p"
+
+
+class CustomerCredit(models.Model):
+    """Derived — never written directly outside `services.record_credit`,
+    same convention `supplies.StockLevel`'s own docstring describes for
+    its relationship to `StockMovement`."""
+
+    customer = models.OneToOneField(
+        "customers.Customer", on_delete=models.CASCADE, related_name="credit"
+    )
+    balance_minor = models.IntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "billing_customer_credit"
+
+    def __str__(self) -> str:
+        return f"{self.customer_id}: {self.balance_minor}p"

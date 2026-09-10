@@ -11,12 +11,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Icon } from "@/components/icons/icon";
 import { MoneyText } from "@/components/patterns/money-text";
-import { useCustomer } from "@/lib/api/hooks";
+import { CustomerCreditSection } from "@/components/billing/customer-credit-section";
+import { useCustomer, useMe } from "@/lib/api/hooks";
 import { formatDate } from "@/lib/format";
 
 export default function CustomerDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const me = useMe();
   const customerQuery = useCustomer(params.id);
 
   return (
@@ -49,6 +51,8 @@ export default function CustomerDetailPage() {
               <StatBlock label="Lifetime spend" value={<MoneyText minor={customer.lifetime_gross_minor} />} />
               <StatBlock label="Last order" value={formatDate(customer.last_order_at)} />
             </div>
+
+            <CustomerCreditSection customerId={customer.id} roles={me.data?.roles} />
 
             <Card>
               <CardHeader>

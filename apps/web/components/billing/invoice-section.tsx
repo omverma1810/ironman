@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/select";
 import { Icon } from "@/components/icons/icon";
 import {
+  useCustomerCredit,
   useInvoices,
   useIssueCreditNote,
   useIssueInvoice,
@@ -35,7 +36,9 @@ import { newIdempotencyKey } from "@/lib/api/client";
 import {
   canIssueInvoices,
   canRecordAdjustment,
+  canRecordCreditPayment,
   canRecordPayment,
+  canViewCustomerCredit,
   canViewInvoices,
 } from "@/lib/permissions";
 import { formatDateTime } from "@/lib/format";
@@ -59,10 +62,12 @@ const ORDER_STATUSES_WITH_INVOICING = new Set([
 export function InvoiceSection({
   orderId,
   orderStatus,
+  customerId,
   roles,
 }: {
   orderId: string;
   orderStatus: string;
+  customerId: string;
   roles: Role[] | undefined;
 }) {
   const issueInvoice = useIssueInvoice();
@@ -109,7 +114,7 @@ export function InvoiceSection({
             isEmpty={() => !invoice}
             empty={<p className="text-sm text-text-muted">No invoice issued yet.</p>}
           >
-            {() => invoice && <InvoiceSummary invoice={invoice} roles={roles} />}
+            {() => invoice && <InvoiceSummary invoice={invoice} customerId={customerId} roles={roles} />}
           </AsyncBoundary>
         )}
       </CardContent>
@@ -117,7 +122,15 @@ export function InvoiceSection({
   );
 }
 
-function InvoiceSummary({ invoice, roles }: { invoice: Invoice; roles: Role[] | undefined }) {
+function InvoiceSummary({
+  invoice,
+  customerId,
+  roles,
+}: {
+  invoice: Invoice;
+  customerId: string;
+  roles: Role[] | undefined;
+}) {
   const [creditOpen, setCreditOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const remainingMinor = invoice.total_minor - invoice.paid_minor;
@@ -164,6 +177,7 @@ function InvoiceSummary({ invoice, roles }: { invoice: Invoice; roles: Role[] | 
       {canRecord && (
         <RecordPaymentDialog
           invoiceRef={invoice.ref}
+          customerId={customerId}
           remainingMinor={remainingMinor}
           roles={roles}
           open={paymentOpen}
@@ -249,12 +263,14 @@ export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
 
 export function RecordPaymentDialog({
   invoiceRef,
+  customerId,
   remainingMinor,
   roles,
   open,
   onOpenChange,
 }: {
   invoiceRef: string;
+  customerId: string;
   remainingMinor: number;
   roles: Role[] | undefined;
   open: boolean;
@@ -263,19 +279,38 @@ export function RecordPaymentDialog({
   // Field staff collect COD/UPI at the door only — ADJUSTMENT is a
   // correction, Admin/Founder territory (docs/06 §3.1, same reasoning as
   // credit notes), same restriction `_FIELD_ALLOWED_METHODS` enforces
-  // server-side. Narrower than `PaymentMethod` — GATEWAY/CREDIT aren't
-  // recordable through this batch's UI (later batches: 3.5, 3.6).
-  type RecordableMethod = "CASH" | "UPI_QR" | "ADJUSTMENT";
-  const methods: RecordableMethod[] = canRecordAdjustment(roles)
-    ? ["CASH", "UPI_QR", "ADJUSTMENT"]
-    : ["CASH", "UPI_QR"];
+  // server-side. CREDIT (batch 3.6) is Operator/Admin/Founder — not Field,
+  // same reasoning as ADJUSTMENT. GATEWAY isn't recordable through this
+  // UI (batch 3.5).
+  type RecordableMethod = "CASH" | "UPI_QR" | "ADJUSTMENT" | "CREDIT";
+  const canCredit = canRecordCreditPayment(roles);
+  // `/billing/credits/{id}` (the balance this reads) is narrower than
+  // "can spend credit" — Admin/Founder only (docs/04 §3.7). An operator
+  // can still submit a CREDIT payment (the server doesn't gate the method
+  // itself beyond Field), just without this dialog knowing the balance
+  // ahead of time — `record_payment` rejects an amount past what's
+  // actually available, same as any other over-the-cap submission.
+  const canViewBalance = canViewCustomerCredit(roles);
+  const creditQuery = useCustomerCredit(canViewBalance ? customerId : undefined);
+  const creditBalanceMinor = creditQuery.data?.balance_minor;
+  const showCredit = canCredit && (creditBalanceMinor === undefined || creditBalanceMinor > 0);
+  const methods: RecordableMethod[] = [
+    "CASH",
+    "UPI_QR",
+    ...(showCredit ? (["CREDIT"] as const) : []),
+    ...(canRecordAdjustment(roles) ? (["ADJUSTMENT"] as const) : []),
+  ];
   const [method, setMethod] = useState<RecordableMethod>("CASH");
   const [amount, setAmount] = useState("");
   const recordPayment = useRecordPayment();
 
   const amountNum = Number(amount);
   const remainingRupees = remainingMinor / 100;
-  const valid = amountNum > 0 && amountNum <= remainingRupees;
+  const capRupees =
+    method === "CREDIT" && creditBalanceMinor !== undefined
+      ? Math.min(remainingRupees, creditBalanceMinor / 100)
+      : remainingRupees;
+  const valid = amountNum > 0 && amountNum <= capRupees;
 
   function handleSave() {
     recordPayment.mutate(
@@ -325,13 +360,19 @@ export function RecordPaymentDialog({
               id="payment-amount"
               type="number"
               min={0}
-              max={remainingRupees}
+              max={capRupees}
               step="0.01"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
             />
             <p className="text-xs text-text-muted">
               Balance due: <MoneyText minor={remainingMinor} className="inline" />
+              {method === "CREDIT" && creditBalanceMinor !== undefined && (
+                <>
+                  {" "}
+                  · Available credit: <MoneyText minor={creditBalanceMinor} className="inline" />
+                </>
+              )}
             </p>
           </div>
         </div>

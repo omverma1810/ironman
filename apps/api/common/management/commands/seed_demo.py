@@ -268,6 +268,9 @@ class Command(BaseCommand):
         self.stdout.write("Seeding exceptions...")
         exception_count = self._seed_exceptions(hub, founder)
 
+        self.stdout.write("Seeding customer credit...")
+        credit_count = self._seed_customer_credit(customers, founder)
+
         self.stdout.write("Seeding invoices...")
         invoice_count = self._seed_invoices(founder, field_staff)
 
@@ -279,10 +282,44 @@ class Command(BaseCommand):
                 f"Seed complete: 1 hub, 2 clusters, {len(apartments)} apartments, "
                 f"{len(customers)} customers, {created_count} orders, "
                 f"{exception_count} exceptions, {invoice_count} invoices, "
-                f"{handover_count} cash handovers, "
+                f"{handover_count} cash handovers, {credit_count} credit grants, "
                 "4 staff accounts (password: IronMan@2026)."
             )
         )
+
+    def _seed_customer_credit(self, customers, founder) -> int:
+        """docs/08 batch 3.6: gives the credit ledger real rows on first
+        load — a referral reward for every customer who actually came in
+        via `CUSTOMER_REFERRAL`, plus a goodwill gesture on a couple of
+        others — so the customer detail "Store credit" section and the
+        Admin/Founder grant-credit dialog both have real data rather than
+        an empty state. Runs before `_seed_invoices` so some of these
+        balances get spent there too (docs/08 3.6's CREDIT payment method).
+        """
+        import billing.services as billing_services
+        from billing.models import CreditReason
+
+        count = 0
+        for i, customer in enumerate(customers):
+            if customer.acquisition_channel == "CUSTOMER_REFERRAL":
+                billing_services.record_credit(
+                    customer,
+                    delta_minor=random.choice([300, 500, 800]),
+                    reason=CreditReason.REFERRAL,
+                    actor=founder,
+                    note="Referral reward",
+                )
+                count += 1
+            elif i % 5 == 0:
+                billing_services.record_credit(
+                    customer,
+                    delta_minor=200,
+                    reason=CreditReason.GOODWILL,
+                    actor=founder,
+                    note="Goodwill gesture — service delay",
+                )
+                count += 1
+        return count
 
     def _seed_invoices(self, issuer, collector) -> int:
         """docs/08 Phase 3 exit criterion: "every delivered order has an
@@ -315,15 +352,33 @@ class Command(BaseCommand):
             invoice = billing_services.issue_invoice(order, actor=issuer)
             count += 1
 
-            if order.status == OrderStatus.CLOSED:
+            # Spend down whatever store credit `_seed_customer_credit`
+            # already granted this customer, if any — unconditionally, on
+            # *both* branches below, so the CREDIT payment method (batch
+            # 3.6) always has at least one real row rather than depending
+            # on luck across a small demo dataset.
+            credit_balance = billing_services.customer_credit_balance(order.customer)
+            credit_used = min(credit_balance, invoice.total_minor)
+            if credit_used > 0:
                 billing_services.record_payment(
                     invoice,
-                    method="CASH",
-                    amount_minor=invoice.total_minor,
-                    idempotency_key=f"seed-{invoice.ref}-full",
+                    method="CREDIT",
+                    amount_minor=credit_used,
+                    idempotency_key=f"seed-{invoice.ref}-credit",
                     actor=collector,
                 )
-            elif random.random() < 0.6:
+
+            if order.status == OrderStatus.CLOSED:
+                remaining = invoice.total_minor - credit_used
+                if remaining > 0:
+                    billing_services.record_payment(
+                        invoice,
+                        method="CASH",
+                        amount_minor=remaining,
+                        idempotency_key=f"seed-{invoice.ref}-full",
+                        actor=collector,
+                    )
+            elif credit_used == 0 and random.random() < 0.6:
                 partial = max(1, invoice.total_minor // 2)
                 billing_services.record_payment(
                     invoice,

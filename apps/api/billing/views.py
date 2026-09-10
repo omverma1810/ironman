@@ -26,6 +26,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+import customers.services as customers_services
 import ordering.services as ordering_services
 import territory.services as territory_services
 from billing import services
@@ -37,8 +38,11 @@ from billing.serializers import (
     CashReconciliationRowSerializer,
     ConfirmHandoverSerializer,
     CreateDepositSerializer,
+    CreditEntrySerializer,
     CreditNoteCreateSerializer,
     CreditNoteSerializer,
+    CustomerCreditSerializer,
+    GrantCreditSerializer,
     HandoverRecipientSerializer,
     InitiateHandoverSerializer,
     InvoiceDetailSerializer,
@@ -346,3 +350,56 @@ class OrderCostView(APIView):
         margin = services.order_contribution_margin(order)
         costs = services.order_costs(order)
         return Response(OrderContributionMarginSerializer({**margin, "costs": costs}).data)
+
+
+_CAN_VIEW_CREDIT = HasRole.any("CUSTOMER", "ADMIN", "FOUNDER")
+
+
+class CustomerCreditView(APIView):
+    """GET /billing/credits/{customer_id} — docs/04 §3.7 `[C own][A]`
+    (Founder included too, same "Founder is unrestricted everywhere Admin
+    is" convention this app already uses for every other admin-tier view,
+    e.g. `CashReconciliationView`)."""
+
+    permission_classes = [_CAN_VIEW_CREDIT]
+
+    @extend_schema(responses={200: CustomerCreditSerializer})
+    def get(self, request, customer_id):
+        customer = customers_services.get_customer(customer_id)
+        user = request.user
+        if "CUSTOMER" in user.role_codes and not (user.role_codes - {"CUSTOMER"}):
+            if customer.user_id != user.id:
+                raise ApiError(
+                    "You can only view your own credit balance.",
+                    code="permission_denied",
+                    status_code=403,
+                )
+        balance = services.customer_credit_balance(customer)
+        entries = services.credit_entries(customer)
+        return Response(
+            CustomerCreditSerializer({"balance_minor": balance, "entries": entries}).data
+        )
+
+
+class GrantCreditView(APIView):
+    """POST /billing/credits/{customer_id}/grant — Admin/Founder only.
+    Automated referral accrual is growth's job once it ships (docs/08
+    Phase 5); until then, this is how a REFERRAL reward or a
+    GOODWILL/REFUND credit actually lands on the ledger."""
+
+    permission_classes = [IsAdminOrFounder]
+
+    @extend_schema(request=GrantCreditSerializer, responses={201: CreditEntrySerializer})
+    def post(self, request, customer_id):
+        customer = customers_services.get_customer(customer_id)
+        serializer = GrantCreditSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        entry = services.record_credit(
+            customer,
+            delta_minor=data["amount"],
+            reason=data["reason"],
+            actor=request.user,
+            note=data["note"],
+        )
+        return Response(CreditEntrySerializer(entry).data, status=201)
