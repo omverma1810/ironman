@@ -5,6 +5,7 @@ from territory.models import (
     ApartmentContact,
     Cluster,
     Hub,
+    OrderCostSettings,
     RouteDayCapacity,
     ServiceArea,
     TaxSettings,
@@ -24,6 +25,16 @@ class HubAdmin(admin.ModelAdmin):
 @admin.register(TaxSettings)
 class TaxSettingsAdmin(admin.ModelAdmin):
     list_display = ["hub", "gst_enabled", "gstin", "default_rate_bps"]
+
+
+@admin.register(OrderCostSettings)
+class OrderCostSettingsAdmin(admin.ModelAdmin):
+    list_display = [
+        "hub",
+        "labour_rate_minor_per_minute",
+        "press_minutes_per_garment",
+        "delivery_allowance_minor_per_job",
+    ]
 
 
 @admin.register(Cluster)

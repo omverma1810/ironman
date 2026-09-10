@@ -10,13 +10,16 @@ from billing.models import CreditNote, Invoice, Payment
 from billing.services import (
     cash_balance,
     cash_reconciliation,
+    compute_delivery_labour_cost,
     confirm_handover,
     hub_cash_on_hand,
     initiate_handover,
     issue_credit_note,
     issue_invoice,
+    order_contribution_margin,
     paid_minor,
     record_deposit,
+    record_order_cost,
     record_payment,
 )
 from common.errors import ApiError
@@ -440,3 +443,136 @@ def test_cash_reconciliation_scoped_to_requested_hubs(field_user, operator_user,
     other_hub = Hub.objects.create(code="OTH", name="Other Hub")
     rows = cash_reconciliation([other_hub.id], date=timezone.localdate())
     assert rows == []
+
+
+# ── Order cost model (docs/08 batch 3.4) ──────────────────────────────────
+
+
+def test_record_order_cost_skips_non_positive_amount(verified_order):
+    assert record_order_cost(verified_order, kind="CONSUMABLE", amount_minor=0) is None
+    assert record_order_cost(verified_order, kind="CONSUMABLE", amount_minor=-5) is None
+
+
+def test_record_order_cost_creates_a_row(verified_order):
+    cost = record_order_cost(verified_order, kind="LABOUR", amount_minor=120, source_ref="test")
+    assert cost.kind == "LABOUR"
+    assert cost.amount_minor == 120
+    assert cost.source_ref == "test"
+
+
+def test_order_contribution_margin_nets_costs_against_revenue(verified_order):
+    issue_invoice(verified_order)
+    record_order_cost(verified_order, kind="CONSUMABLE", amount_minor=100)
+    record_order_cost(verified_order, kind="LABOUR", amount_minor=200)
+
+    margin = order_contribution_margin(verified_order)
+    assert margin["revenue_minor"] == 4800
+    assert margin["consumable_minor"] == 100
+    assert margin["labour_minor"] == 200
+    assert margin["delivery_minor"] == 0
+    assert margin["contribution_minor"] == 4800 - 300
+    assert margin["contribution_pct"] == round((4800 - 300) * 100 / 4800, 1)
+
+
+def test_order_contribution_margin_nets_credit_notes_out_of_revenue(admin_user, verified_order):
+    invoice = issue_invoice(verified_order)
+    issue_credit_note(invoice, reason="Damaged item", amount_minor=500, actor=admin_user)
+
+    margin = order_contribution_margin(verified_order)
+    assert margin["revenue_minor"] == 4800 - 500
+
+
+def test_order_contribution_margin_with_no_invoice_is_zero_revenue(verified_order):
+    margin = order_contribution_margin(verified_order)
+    assert margin["revenue_minor"] == 0
+    assert margin["contribution_minor"] == 0
+    assert margin["contribution_pct"] is None
+
+
+def _make_done_job(*, hub, order, kind, started_minutes_ago, duration_minutes):
+    from django.utils import timezone
+
+    from fulfilment.models import Job, JobStatus, RouteDay
+    from territory.models import Cluster
+
+    cluster = Cluster.objects.create(hub=hub, name=f"Cluster-{order.id}-{kind}")
+    route_day = RouteDay.objects.create(hub=hub, cluster=cluster, date=timezone.localdate())
+    now = timezone.now()
+    started_at = now - timezone.timedelta(minutes=started_minutes_ago)
+    return Job.objects.create(
+        hub=hub,
+        route_day=route_day,
+        order=order,
+        kind=kind,
+        status=JobStatus.DONE,
+        started_at=started_at,
+        completed_at=started_at + timezone.timedelta(minutes=duration_minutes),
+    )
+
+
+def test_compute_delivery_labour_cost_allocates_rider_minutes_and_delivery_allowance(
+    hub, verified_order
+):
+    from territory.models import OrderCostSettings
+
+    OrderCostSettings.objects.create(
+        hub=hub,
+        labour_rate_minor_per_minute=10,
+        press_minutes_per_garment=0,
+        delivery_allowance_minor_per_job=50,
+    )
+    _make_done_job(
+        hub=hub, order=verified_order, kind="PICKUP", started_minutes_ago=60, duration_minutes=20
+    )
+    _make_done_job(
+        hub=hub, order=verified_order, kind="DELIVERY", started_minutes_ago=30, duration_minutes=30
+    )
+
+    costs = compute_delivery_labour_cost(verified_order)
+    by_kind = {c.kind: c.amount_minor for c in costs}
+    assert by_kind["LABOUR"] == 500  # (20 + 30) minutes * 10
+    assert by_kind["DELIVERY"] == 100  # 2 jobs * 50
+
+
+def test_compute_delivery_labour_cost_includes_press_minutes_per_garment(hub, verified_order):
+    from territory.models import OrderCostSettings
+
+    OrderCostSettings.objects.create(
+        hub=hub,
+        labour_rate_minor_per_minute=10,
+        press_minutes_per_garment="2.0",
+        delivery_allowance_minor_per_job=0,
+    )
+    bag = _make_bag_with_garment_lines(hub, verified_order)
+    assert bag.garment_lines.count() == 3  # verified_order's 2 shirts + 1 trouser
+
+    costs = compute_delivery_labour_cost(verified_order)
+    labour = next(c for c in costs if c.kind == "LABOUR")
+    assert labour.amount_minor == 60  # 3 garments * 2 minutes * 10/minute, no jobs
+
+
+def test_compute_delivery_labour_cost_is_idempotent(hub, verified_order):
+    from territory.models import OrderCostSettings
+
+    OrderCostSettings.objects.create(hub=hub, labour_rate_minor_per_minute=10)
+    _make_done_job(
+        hub=hub, order=verified_order, kind="DELIVERY", started_minutes_ago=10, duration_minutes=10
+    )
+
+    first = compute_delivery_labour_cost(verified_order)
+    assert len(first) >= 1
+    second = compute_delivery_labour_cost(verified_order)
+    assert second == []
+
+
+def test_compute_delivery_labour_cost_noop_without_settings(hub, verified_order):
+    _make_done_job(
+        hub=hub, order=verified_order, kind="DELIVERY", started_minutes_ago=10, duration_minutes=10
+    )
+    assert compute_delivery_labour_cost(verified_order) == []
+
+
+def _make_bag_with_garment_lines(hub, order):
+    from custody.services import create_bag_for_order
+
+    return create_bag_for_order(order)

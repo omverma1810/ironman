@@ -18,6 +18,7 @@ from billing.models import (
     HandoverStatus,
     Invoice,
     InvoiceStatus,
+    OrderCost,
     Payment,
     PaymentMethod,
     PaymentStatus,
@@ -25,10 +26,11 @@ from billing.models import (
 )
 from billing.pdf import render_credit_note_pdf, render_invoice_pdf
 from common.errors import ApiError
+from custody.models import GarmentLine
 from identity.models import User
 from ordering.models import OrderStatus
 from ordering.models import PaymentStatus as OrderPaymentStatus
-from territory.models import Hub, TaxSettings
+from territory.models import Hub, OrderCostSettings, TaxSettings
 
 
 def get_invoice(ref: str) -> Invoice:
@@ -444,3 +446,123 @@ def cash_reconciliation(hub_ids: list | None, *, date) -> list[dict]:
             }
         )
     return rows
+
+
+# ── Order cost model (docs/02 §3.8, docs/07 §2⑧, batch 3.4) ──────────────
+
+
+def record_order_cost(
+    order, *, kind: str, amount_minor: int, source_ref: str = ""
+) -> OrderCost | None:
+    """The one write path for `OrderCost` — append-only, so a correction is
+    a fresh signed-opposite row from whichever caller made the mistake,
+    never an edit of this one. Silently skips a non-positive amount rather
+    than writing a zero-value ledger row that means nothing on the
+    waterfall (`docs/07 §2⑧`)."""
+    if amount_minor <= 0:
+        return None
+    return OrderCost.objects.create(
+        order=order, kind=kind, amount_minor=amount_minor, source_ref=source_ref
+    )
+
+
+def order_costs(order) -> models.QuerySet[OrderCost]:
+    return OrderCost.objects.filter(order=order).order_by("-at")
+
+
+def order_contribution_margin(order) -> dict:
+    """docs/07 §2⑧'s waterfall for one order: revenue (the issued invoice's
+    total, net of discounts and credit notes — 0 if nothing's been issued
+    yet) minus each `OrderCost` kind, minus credit notes. Fixed costs are
+    deliberately absent — this is contribution, not net profit."""
+    invoice = Invoice.objects.filter(order=order).first()
+    revenue_minor = invoice.total_minor if invoice else 0
+    if invoice:
+        credited_minor = (
+            invoice.credit_notes.aggregate(total=models.Sum("amount_minor"))["total"] or 0
+        )
+        revenue_minor -= credited_minor
+
+    by_kind = dict(
+        OrderCost.objects.filter(order=order)
+        .values("kind")
+        .annotate(total=models.Sum("amount_minor"))
+        .values_list("kind", "total")
+    )
+    consumable_minor = by_kind.get("CONSUMABLE", 0)
+    commission_minor = by_kind.get("COMMISSION", 0)
+    labour_minor = by_kind.get("LABOUR", 0)
+    delivery_minor = by_kind.get("DELIVERY", 0)
+    other_minor = by_kind.get("OTHER", 0)
+    total_cost_minor = (
+        consumable_minor + commission_minor + labour_minor + delivery_minor + other_minor
+    )
+    contribution_minor = revenue_minor - total_cost_minor
+
+    return {
+        "revenue_minor": revenue_minor,
+        "consumable_minor": consumable_minor,
+        "commission_minor": commission_minor,
+        "labour_minor": labour_minor,
+        "delivery_minor": delivery_minor,
+        "other_minor": other_minor,
+        "contribution_minor": contribution_minor,
+        "contribution_pct": (
+            round(contribution_minor * 100 / revenue_minor, 1) if revenue_minor else None
+        ),
+    }
+
+
+def compute_delivery_labour_cost(order, *, actor=None) -> list[OrderCost]:
+    """Fires once, when an order's final delivery job completes
+    (`fulfilment.services.complete_job`) — `LABOUR` is rider minutes
+    (actual elapsed `Job.started_at` → `completed_at`, docs/02 §3.7) plus
+    press minutes (a configurable per-garment estimate,
+    `territory.OrderCostSettings.press_minutes_per_garment` — see that
+    model's own docstring for why this isn't derived from `StageEvent`
+    timestamps), both at one configurable per-minute rate (`D-14`).
+    `DELIVERY` is a flat allowance per pickup/delivery job (fuel — a
+    separate bucket the waterfall keeps apart from labour, docs/07 §2⑧).
+
+    Idempotent: an order is only ever finally delivered once (the state
+    machine's failed-delivery branches go to `RETURNED_TO_HUB`, not
+    `DELIVERED`), but this guards against a double-call anyway rather than
+    relying on that alone.
+    """
+    from fulfilment.models import Job, JobKind, JobStatus
+
+    if OrderCost.objects.filter(order=order, kind__in=["LABOUR", "DELIVERY"]).exists():
+        return []
+
+    try:
+        settings_row = OrderCostSettings.objects.get(hub=order.hub)
+    except OrderCostSettings.DoesNotExist:
+        return []
+
+    jobs = list(
+        Job.objects.filter(
+            order=order, status=JobStatus.DONE, kind__in=[JobKind.PICKUP, JobKind.DELIVERY]
+        )
+    )
+    rider_minutes = sum(
+        (j.completed_at - j.started_at).total_seconds() / 60
+        for j in jobs
+        if j.started_at and j.completed_at
+    )
+
+    garment_count = GarmentLine.objects.filter(order_line__order=order).count()
+    press_minutes = float(settings_row.press_minutes_per_garment) * garment_count
+
+    labour_amount_minor = round(
+        (rider_minutes + press_minutes) * settings_row.labour_rate_minor_per_minute
+    )
+    delivery_amount_minor = settings_row.delivery_allowance_minor_per_job * len(jobs)
+
+    created = []
+    labour_cost = record_order_cost(order, kind="LABOUR", amount_minor=labour_amount_minor)
+    if labour_cost:
+        created.append(labour_cost)
+    delivery_cost = record_order_cost(order, kind="DELIVERY", amount_minor=delivery_amount_minor)
+    if delivery_cost:
+        created.append(delivery_cost)
+    return created

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from billing.models import CashDeposit, CashHandover, CreditNote, Invoice, Payment
+from billing.models import CashDeposit, CashHandover, CreditNote, Invoice, OrderCost, Payment
 
 
 class InvoiceListSerializer(serializers.ModelSerializer):
@@ -227,3 +227,25 @@ class CashReconciliationRowSerializer(serializers.Serializer):
     variance_minor = serializers.IntegerField()
     outstanding_minor = serializers.IntegerField()
     pending_handovers = serializers.IntegerField()
+
+
+class OrderCostSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderCost
+        fields = ["id", "kind", "amount_minor", "source_ref", "at"]
+        read_only_fields = fields
+
+
+class OrderContributionMarginSerializer(serializers.Serializer):
+    """docs/07 §2⑧'s waterfall for one order — Admin/Founder only (docs/06
+    §3.1's bold "unit economics / margin" row)."""
+
+    revenue_minor = serializers.IntegerField()
+    consumable_minor = serializers.IntegerField()
+    commission_minor = serializers.IntegerField()
+    labour_minor = serializers.IntegerField()
+    delivery_minor = serializers.IntegerField()
+    other_minor = serializers.IntegerField()
+    contribution_minor = serializers.IntegerField()
+    contribution_pct = serializers.FloatField(allow_null=True)
+    costs = OrderCostSerializer(many=True)

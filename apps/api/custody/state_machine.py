@@ -130,6 +130,20 @@ def transition_garment_line(
             after={"stage": to_stage},
         )
 
+    if from_stage == GarmentStage.QC and to_stage == GarmentStage.PACKED:
+        # docs/02 §3.9: "on PACKED, the system issues stock per rule" — the
+        # QC-pass edge specifically, not every path that can land a line on
+        # PACKED (a HELD garment resuming here, `GarmentStage.HELD`'s own
+        # allowed-set, already had its consumables issued the first time it
+        # passed QC — issuing again would double-count). Local import: the
+        # one place this otherwise-pure state machine reaches into another
+        # bounded context, mirroring `supplies.services`'s own local import
+        # back into `billing.services` for the other half of this same
+        # write.
+        import supplies.services as supplies_services
+
+        supplies_services.issue_consumables_for_garment(garment_line, actor=actor)
+
     return garment_line
 
 

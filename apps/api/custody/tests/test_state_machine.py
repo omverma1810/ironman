@@ -5,9 +5,12 @@ invalid one is rejected."""
 
 import pytest
 
+from billing.models import OrderCost
 from common.errors import InvalidStateTransition
 from custody.models import GarmentStage, StageEvent
 from custody.state_machine import transition_bag, transition_garment_line
+from supplies.models import ConsumptionRule, StockCategory, StockItem, StockLevel, StockUnit
+from supplies.services import receive_stock
 
 pytestmark = pytest.mark.django_db
 
@@ -138,3 +141,111 @@ def test_transition_bag_with_no_movable_lines_raises(bag):
     # Every line is DELIVERED (terminal) now — nothing can move anywhere.
     with pytest.raises(InvalidStateTransition):
         transition_bag(bag, GarmentStage.SORTED)
+
+
+# ── Consumable auto-issue on QC-pass to PACKED (docs/08 batch 3.4) ───────
+
+
+def _advance_to_qc(line):
+    for stage in (
+        GarmentStage.SORTED,
+        GarmentStage.PRESSING,
+        GarmentStage.PRESSED,
+        GarmentStage.QC,
+    ):
+        line = transition_garment_line(line, stage)
+    return line
+
+
+def test_packed_issues_consumables_and_records_cost(bag, hub, garment_type):
+    line = bag.garment_lines.filter(garment_type=garment_type).first()
+    item = StockItem.objects.create(
+        hub=hub,
+        sku="HANGER-T",
+        name="Test hanger",
+        category=StockCategory.HANGER,
+        unit=StockUnit.PIECE,
+    )
+    receive_stock(item, qty=10, unit_cost_minor=50)
+    ConsumptionRule.objects.create(
+        service=garment_type.service, garment_type=garment_type, stock_item=item, qty_per_unit=1
+    )
+
+    line = _advance_to_qc(line)
+    line = transition_garment_line(line, GarmentStage.PACKED)
+    assert line.stage == GarmentStage.PACKED
+
+    assert StockLevel.objects.get(stock_item=item).qty_on_hand == 9
+
+    cost = OrderCost.objects.get(order=bag.order, kind="CONSUMABLE")
+    assert cost.amount_minor == 50
+    assert cost.source_ref.startswith("stockmovement:")
+
+
+def test_packed_applies_whole_service_rule_regardless_of_garment_type(
+    bag, garment_type_trouser, hub
+):
+    line = bag.garment_lines.filter(garment_type=garment_type_trouser).first()
+    item = StockItem.objects.create(
+        hub=hub,
+        sku="COVER-T",
+        name="Test cover",
+        category=StockCategory.COVER,
+        unit=StockUnit.PIECE,
+    )
+    receive_stock(item, qty=10, unit_cost_minor=25)
+    ConsumptionRule.objects.create(
+        service=garment_type_trouser.service, garment_type=None, stock_item=item, qty_per_unit=1
+    )
+
+    line = _advance_to_qc(line)
+    transition_garment_line(line, GarmentStage.PACKED)
+
+    assert StockLevel.objects.get(stock_item=item).qty_on_hand == 9
+    assert OrderCost.objects.filter(order=bag.order, kind="CONSUMABLE").count() == 1
+
+
+def test_packed_with_insufficient_stock_skips_rather_than_blocking(bag, garment_type, hub):
+    line = bag.garment_lines.filter(garment_type=garment_type).first()
+    item = StockItem.objects.create(
+        hub=hub,
+        sku="HANGER-EMPTY",
+        name="Out of stock",
+        category=StockCategory.HANGER,
+        unit=StockUnit.PIECE,
+    )
+    # Never received — zero on hand, so `adjust_stock` would raise.
+    ConsumptionRule.objects.create(
+        service=garment_type.service, garment_type=garment_type, stock_item=item, qty_per_unit=1
+    )
+
+    line = _advance_to_qc(line)
+    line = transition_garment_line(line, GarmentStage.PACKED)  # must not raise
+
+    assert line.stage == GarmentStage.PACKED
+    assert not OrderCost.objects.filter(order=bag.order, kind="CONSUMABLE").exists()
+
+
+def test_held_resume_to_packed_does_not_reissue_consumables(bag, garment_type, hub):
+    line = bag.garment_lines.filter(garment_type=garment_type).first()
+    item = StockItem.objects.create(
+        hub=hub,
+        sku="HANGER-H",
+        name="Test hanger",
+        category=StockCategory.HANGER,
+        unit=StockUnit.PIECE,
+    )
+    receive_stock(item, qty=10, unit_cost_minor=50)
+    ConsumptionRule.objects.create(
+        service=garment_type.service, garment_type=garment_type, stock_item=item, qty_per_unit=1
+    )
+
+    line = _advance_to_qc(line)
+    line = transition_garment_line(line, GarmentStage.PACKED)
+    assert OrderCost.objects.filter(order=bag.order, kind="CONSUMABLE").count() == 1
+
+    line = transition_garment_line(line, GarmentStage.HELD)
+    transition_garment_line(line, GarmentStage.PACKED)  # resume, not a fresh QC pass
+
+    assert OrderCost.objects.filter(order=bag.order, kind="CONSUMABLE").count() == 1
+    assert StockLevel.objects.get(stock_item=item).qty_on_hand == 9

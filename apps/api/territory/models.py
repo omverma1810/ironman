@@ -52,6 +52,31 @@ class TaxSettings(models.Model):
         return f"Tax settings — {self.hub}"
 
 
+class OrderCostSettings(models.Model):
+    """D-14: labour is allocated per order at a configurable per-minute
+    rate, "shown as an estimate" (docs/07 §2⑧) — same admin-tunable,
+    per-hub shape as `TaxSettings` above. `press_minutes_per_garment` is a
+    fixed per-garment estimate rather than something derived from
+    `custody.StageEvent` timestamps: those mark instantaneous stage
+    moves, not active working time, and would count idle queue time as
+    labour. "Precision here is less valuable than consistency over time"
+    (docs/07 §2⑧) — the same reasoning applies to this estimate as to the
+    rate itself. `delivery_allowance_minor_per_job` covers the separate
+    fuel/allowance cost bucket the waterfall keeps apart from labour."""
+
+    hub = models.OneToOneField(Hub, on_delete=models.CASCADE, related_name="order_cost_settings")
+    labour_rate_minor_per_minute = models.PositiveIntegerField(default=0)
+    press_minutes_per_garment = models.DecimalField(max_digits=5, decimal_places=1, default=0)
+    delivery_allowance_minor_per_job = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "territory_order_cost_settings"
+
+    def __str__(self) -> str:
+        return f"Order cost settings — {self.hub}"
+
+
 class Cluster(BaseModel):
     hub = models.ForeignKey(Hub, on_delete=models.PROTECT, related_name="clusters")
     name = models.CharField(max_length=120)

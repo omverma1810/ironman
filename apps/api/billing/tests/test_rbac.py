@@ -518,3 +518,41 @@ def _make_field_user(hub, *, email):
     role, _ = Role.objects.get_or_create(code=RoleCode.FIELD, defaults={"name": RoleCode.FIELD})
     UserRole.objects.create(user=user, role=role, hub=hub)
     return user
+
+
+# ── Order cost model (docs/08 batch 3.4) ──────────────────────────────────
+# docs/06 §3.1's bold "unit economics / margin" row — Admin/Founder only,
+# narrower than "View invoice" (which Operator and a job's own Field rider
+# also get — this module's own top-of-file docstring).
+
+
+def test_admin_can_view_order_costs(api_client, admin_user, verified_order):
+    api_client.force_authenticate(user=admin_user)
+    resp = api_client.get(f"/api/v1/billing/orders/{verified_order.id}/costs")
+    assert resp.status_code == 200, resp.data
+    assert resp.data["revenue_minor"] == 0
+    assert resp.data["contribution_pct"] is None
+
+
+def test_founder_can_view_order_costs(api_client, founder_user, verified_order):
+    api_client.force_authenticate(user=founder_user)
+    resp = api_client.get(f"/api/v1/billing/orders/{verified_order.id}/costs")
+    assert resp.status_code == 200, resp.data
+
+
+def test_operator_cannot_view_order_costs(api_client, operator_user, verified_order):
+    api_client.force_authenticate(user=operator_user)
+    resp = api_client.get(f"/api/v1/billing/orders/{verified_order.id}/costs")
+    assert resp.status_code == 403
+
+
+def test_field_cannot_view_order_costs(api_client, field_user, verified_order):
+    api_client.force_authenticate(user=field_user)
+    resp = api_client.get(f"/api/v1/billing/orders/{verified_order.id}/costs")
+    assert resp.status_code == 403
+
+
+def test_customer_cannot_view_order_costs(api_client, customer_user, verified_order):
+    api_client.force_authenticate(user=customer_user)
+    resp = api_client.get(f"/api/v1/billing/orders/{verified_order.id}/costs")
+    assert resp.status_code == 403

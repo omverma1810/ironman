@@ -761,6 +761,35 @@ paths:
               schema:
                 $ref: '#/components/schemas/InvoiceList'
           description: ''
+  /api/v1/billing/orders/{order_id}/costs:
+    get:
+      operationId: billing_orders_costs_retrieve
+      description: |-
+        GET /billing/orders/{order_id}/costs — docs/07 §2⑧'s per-order
+        contribution-margin waterfall. Admin/Founder only: docs/06 §3.1's
+        matrix keeps "unit economics / margin" in bold — the operator sees the
+        invoice total an operator has to collect (docs/06 §3.1's own "View
+        invoice" row, see this module's own docstring above), not what the
+        business actually nets on it.
+      parameters:
+      - in: path
+        name: order_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - billing
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderContributionMargin'
+          description: ''
   /api/v1/catalog/garment-types/:
     get:
       operationId: catalog_garment_types_list
@@ -7985,6 +8014,85 @@ components:
       required:
       - device_id
       - ops
+    OrderContributionMargin:
+      type: object
+      description: |-
+        docs/07 §2⑧'s waterfall for one order — Admin/Founder only (docs/06
+        §3.1's bold "unit economics / margin" row).
+      properties:
+        revenue_minor:
+          type: integer
+        consumable_minor:
+          type: integer
+        commission_minor:
+          type: integer
+        labour_minor:
+          type: integer
+        delivery_minor:
+          type: integer
+        other_minor:
+          type: integer
+        contribution_minor:
+          type: integer
+        contribution_pct:
+          type: number
+          format: double
+          nullable: true
+        costs:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderCost'
+      required:
+      - commission_minor
+      - consumable_minor
+      - contribution_minor
+      - contribution_pct
+      - costs
+      - delivery_minor
+      - labour_minor
+      - other_minor
+      - revenue_minor
+    OrderCost:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/OrderCostKindEnum'
+          readOnly: true
+        amount_minor:
+          type: integer
+          readOnly: true
+        source_ref:
+          type: string
+          readOnly: true
+        at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - amount_minor
+      - at
+      - id
+      - kind
+      - source_ref
+    OrderCostKindEnum:
+      enum:
+      - CONSUMABLE
+      - LABOUR
+      - COMMISSION
+      - DELIVERY
+      - OTHER
+      type: string
+      description: |-
+        * `CONSUMABLE` - Consumable
+        * `LABOUR` - Labour
+        * `COMMISSION` - Commission
+        * `DELIVERY` - Delivery
+        * `OTHER` - Other
     OrderCreateRequest:
       type: object
       properties:

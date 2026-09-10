@@ -262,3 +262,42 @@ class CashDeposit(AppendOnlyModel):
 
     def __str__(self) -> str:
         return f"Deposit — {self.hub} ({self.amount_minor}p)"
+
+
+class OrderCostKind(models.TextChoices):
+    CONSUMABLE = "CONSUMABLE", "Consumable"
+    LABOUR = "LABOUR", "Labour"
+    COMMISSION = "COMMISSION", "Commission"
+    DELIVERY = "DELIVERY", "Delivery"
+    OTHER = "OTHER", "Other"
+
+
+class OrderCost(AppendOnlyModel):
+    """docs/02 §3.8, docs/07 §2⑧ ("Money made per order") — one row per
+    cost event feeding the contribution-margin waterfall: revenue minus
+    consumables, commission, labour and delivery. Append-only like every
+    other ledger in this app (`Payment`, `CreditEntry`): a correction is a
+    new, signed-opposite row, never an edit.
+
+    This batch (docs/08 3.4) only writes `CONSUMABLE` (on a garment's
+    QC-pass to `PACKED` — `custody.state_machine.transition_garment_line`)
+    and `LABOUR`/`DELIVERY` (on the order's final delivery —
+    `fulfilment.services.complete_job`, via `billing.services`). `COMMISSION`
+    rows are the growth app's to write once it ships (docs/08 Phase 5).
+    """
+
+    order = models.ForeignKey("ordering.Order", on_delete=models.CASCADE, related_name="costs")
+    kind = models.CharField(max_length=16, choices=OrderCostKind.choices)
+    amount_minor = models.PositiveIntegerField()
+    source_ref = models.CharField(max_length=64, blank=True)
+    at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "billing_order_cost"
+        indexes = [
+            models.Index(fields=["order", "-at"]),
+            models.Index(fields=["kind"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.order_id} {self.kind} {self.amount_minor}p"

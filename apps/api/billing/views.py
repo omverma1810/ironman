@@ -44,6 +44,7 @@ from billing.serializers import (
     InvoiceDetailSerializer,
     InvoiceListSerializer,
     IssueInvoiceSerializer,
+    OrderContributionMarginSerializer,
     PaymentSerializer,
     RecordPaymentSerializer,
 )
@@ -327,3 +328,21 @@ class CashReconciliationView(APIView):
         hub_ids = None if user.is_unrestricted else user.hub_scope
         rows = services.cash_reconciliation(hub_ids, date=date)
         return Response(CashReconciliationRowSerializer(rows, many=True).data)
+
+
+class OrderCostView(APIView):
+    """GET /billing/orders/{order_id}/costs — docs/07 §2⑧'s per-order
+    contribution-margin waterfall. Admin/Founder only: docs/06 §3.1's
+    matrix keeps "unit economics / margin" in bold — the operator sees the
+    invoice total an operator has to collect (docs/06 §3.1's own "View
+    invoice" row, see this module's own docstring above), not what the
+    business actually nets on it."""
+
+    permission_classes = [IsAdminOrFounder]
+
+    @extend_schema(responses={200: OrderContributionMarginSerializer})
+    def get(self, request, order_id):
+        order = ordering_services.get_order(order_id)
+        margin = services.order_contribution_margin(order)
+        costs = services.order_costs(order)
+        return Response(OrderContributionMarginSerializer({**margin, "costs": costs}).data)

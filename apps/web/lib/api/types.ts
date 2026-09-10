@@ -702,3 +702,26 @@ export type CashReconciliationRow = {
   outstanding_minor: number;
   pending_handovers: number;
 };
+
+// ── Order cost model (docs/08 batch 3.4) ─────────────────────────────────
+export type OrderCostKind = "CONSUMABLE" | "LABOUR" | "COMMISSION" | "DELIVERY" | "OTHER";
+
+export type OrderCost = {
+  id: string;
+  kind: OrderCostKind;
+  amount_minor: number;
+  source_ref: string;
+  at: string;
+};
+
+export type OrderContributionMargin = {
+  revenue_minor: number;
+  consumable_minor: number;
+  commission_minor: number;
+  labour_minor: number;
+  delivery_minor: number;
+  other_minor: number;
+  contribution_minor: number;
+  contribution_pct: number | null;
+  costs: OrderCost[];
+};

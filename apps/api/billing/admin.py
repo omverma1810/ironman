@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from billing.models import CashDeposit, CashHandover, CreditNote, Invoice, Payment
+from billing.models import CashDeposit, CashHandover, CreditNote, Invoice, OrderCost, Payment
 
 
 class CreditNoteInline(admin.TabularInline):
@@ -90,6 +90,19 @@ class CashDepositAdmin(admin.ModelAdmin):
     list_display = ["hub", "amount_minor", "deposited_by", "reference", "at"]
     list_filter = ["hub"]
     search_fields = ["reference"]
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(OrderCost)
+class OrderCostAdmin(admin.ModelAdmin):
+    list_display = ["order", "kind", "amount_minor", "source_ref", "at"]
+    list_filter = ["kind"]
+    search_fields = ["order__ref", "source_ref"]
 
     def has_change_permission(self, request, obj=None):
         return False

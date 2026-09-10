@@ -10,6 +10,7 @@ from __future__ import annotations
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 
+import billing.services as billing_services
 import custody.services as custody_services
 import ordering.services as ordering_services
 from common.errors import ApiError, InvalidStateTransition
@@ -151,6 +152,12 @@ def complete_job(
             )
         custody_services.verify_bag_codes(job.order, bag_codes)
         ordering_services.mark_delivered(job.order, actor=actor)
+        # docs/07 §2⑧: rider + press minutes at a configurable rate, plus a
+        # flat delivery allowance per job — closes the books on this
+        # order's labour/delivery `OrderCost` rows now that every job on it
+        # is DONE (`compute_delivery_labour_cost` itself no-ops if either
+        # was already written).
+        billing_services.compute_delivery_labour_cost(job.order, actor=actor)
 
     return job
 
