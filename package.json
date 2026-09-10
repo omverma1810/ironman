@@ -4,12 +4,16 @@
   "packageManager": "npm@10.9.7",
   "workspaces": [
     "apps/web",
+    "apps/mobile",
     "packages/*"
   ],
   "scripts": {
     "web:dev": "npm run dev --workspace=apps/web",
     "web:build": "npm run build --workspace=apps/web",
     "web:lint": "npm run lint --workspace=apps/web",
-    "web:test:e2e": "npm run test:e2e --workspace=apps/web"
+    "web:test:e2e": "npm run test:e2e --workspace=apps/web",
+    "mobile:start": "npm run start --workspace=apps/mobile",
+    "mobile:typecheck": "npm run typecheck --workspace=apps/mobile",
+    "postinstall": "node scripts/fix-nativewind-tailwind.js"
   }
 }
