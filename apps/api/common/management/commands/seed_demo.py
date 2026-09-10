@@ -19,7 +19,14 @@ from customers.models import Address, Customer
 from identity.models import Role, RoleCode, User, UserRole
 from ordering import services as ordering_services
 from ordering.models import Order, OrderStatus
-from territory.models import Apartment, Cluster, Hub, RouteDayCapacity, TaxSettings
+from territory.models import (
+    Apartment,
+    Cluster,
+    Hub,
+    OrderCostSettings,
+    RouteDayCapacity,
+    TaxSettings,
+)
 
 
 class Command(BaseCommand):
@@ -44,6 +51,14 @@ class Command(BaseCommand):
         )
         TaxSettings.objects.update_or_create(
             hub=hub, defaults=dict(gst_enabled=False, default_rate_bps=1800)
+        )
+        OrderCostSettings.objects.update_or_create(
+            hub=hub,
+            defaults=dict(
+                labour_rate_minor_per_minute=200,  # ~₹2/minute
+                press_minutes_per_garment="3.0",
+                delivery_allowance_minor_per_job=1500,  # ~₹15/trip, fuel
+            ),
         )
 
         cluster_a, _ = Cluster.objects.update_or_create(
@@ -157,6 +172,14 @@ class Command(BaseCommand):
             )
             UserRole.objects.get_or_create(user=user, role=roles[role_code], hub=hub)
 
+        # Before the order loop below, which fast-forwards orders straight
+        # through custody's PACKED stage (docs/08 batch 3.4's auto-issue
+        # hook, `custody.state_machine.transition_garment_line`) — a
+        # `ConsumptionRule` created only after those garments already
+        # passed PACKED would issue nothing for this seed run.
+        self.stdout.write("Seeding supplies...")
+        self._seed_supplies(hub, service, garment_types)
+
         self.stdout.write("Seeding customers + demo orders...")
         first_names = [
             "Priya",
@@ -244,9 +267,6 @@ class Command(BaseCommand):
 
         self.stdout.write("Seeding exceptions...")
         exception_count = self._seed_exceptions(hub, founder)
-
-        self.stdout.write("Seeding supplies...")
-        self._seed_supplies(hub, service, garment_types)
 
         self.stdout.write("Seeding invoices...")
         invoice_count = self._seed_invoices(founder, field_staff)

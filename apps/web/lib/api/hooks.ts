@@ -1150,3 +1150,12 @@ export function useCashReconciliation(date?: string) {
     queryFn: () => billingApi.cashReconciliation(date),
   });
 }
+
+// ── Order cost model (docs/08 batch 3.4) ──────────────────────────────────
+export function useOrderCosts(orderId: string | undefined) {
+  return useQuery({
+    queryKey: ["order-costs", orderId],
+    queryFn: () => billingApi.orderCosts(orderId as string),
+    enabled: !!orderId,
+  });
+}

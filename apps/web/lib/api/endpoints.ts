@@ -32,6 +32,7 @@ import type {
   JobKind,
   Me,
   OfflineOpResult,
+  OrderContributionMargin,
   OrderDetail,
   OrderEvent,
   OrderException,
@@ -422,6 +423,8 @@ export const billingApi = {
     apiFetch<CashDeposit>("/billing/cash/deposits/", { method: "POST", body: input }),
   cashReconciliation: (date?: string) =>
     apiFetch<CashReconciliationRow[]>("/billing/cash/reconciliation", { params: { date } }),
+  orderCosts: (orderId: string) =>
+    apiFetch<OrderContributionMargin>(`/billing/orders/${orderId}/costs`),
 };
 
 // ── Platform ───────────────────────────────────────────────────────────

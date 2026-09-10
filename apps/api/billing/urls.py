@@ -25,4 +25,9 @@ urlpatterns = [
         views.CashReconciliationView.as_view(),
         name="billing-cash-reconciliation",
     ),
+    path(
+        "billing/orders/<uuid:order_id>/costs",
+        views.OrderCostView.as_view(),
+        name="billing-order-costs",
+    ),
 ] + router.urls
