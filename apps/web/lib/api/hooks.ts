@@ -25,10 +25,12 @@ import {
 } from "./endpoints";
 import { ApiError } from "./errors";
 import type {
+  ActivatePriceListInput,
   ConfirmHandoverInput,
   ConsumptionRuleInput,
   CreateDepositInput,
   CreateOrderInput,
+  CreatePriceListInput,
   CreditNoteInput,
   DeclaredLine,
   GarmentStage,
@@ -36,9 +38,12 @@ import type {
   HandoverStatus,
   InitiateHandoverInput,
   Job,
+  OfferInput,
   OrderException,
+  PriceListStatus,
   ProofKind,
   RecordPaymentInput,
+  SetPriceLinesInput,
   StockAdjustmentInput,
   StockItemInput,
   StockReceiptInput,
@@ -228,6 +233,81 @@ export function useGarmentTypes(service?: string) {
     queryFn: () => catalogApi.garmentTypes(service),
     enabled: !!service,
     staleTime: 300_000,
+  });
+}
+
+// ── Pricing & offers (docs/08 batch 3.7) — Founder-only ──────────────────
+export function usePriceLists(params?: { hub?: string; service?: string; status?: PriceListStatus }) {
+  return useQuery({
+    queryKey: ["price-lists", params],
+    queryFn: () => catalogApi.priceLists(params),
+  });
+}
+
+export function useCreatePriceList() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreatePriceListInput) => catalogApi.createPriceList(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["price-lists"] });
+      toast.success("Draft price list created");
+    },
+    onError: (err) => errorToast(err, "Couldn't create the price list."),
+  });
+}
+
+export function useSetPriceLines() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: SetPriceLinesInput }) =>
+      catalogApi.setPriceLines(id, input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["price-lists"] });
+      toast.success("Price lines saved");
+    },
+    onError: (err) => errorToast(err, "Couldn't save the price lines."),
+  });
+}
+
+export function useActivatePriceList() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input?: ActivatePriceListInput }) =>
+      catalogApi.activatePriceList(id, input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["price-lists"] });
+      toast.success("Price list activated");
+    },
+    onError: (err) => errorToast(err, "Couldn't activate the price list."),
+  });
+}
+
+export function useOffers() {
+  return useQuery({ queryKey: ["offers"], queryFn: catalogApi.offers });
+}
+
+export function useCreateOffer() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: OfferInput) => catalogApi.createOffer(input),
+    onSuccess: (offer) => {
+      queryClient.invalidateQueries({ queryKey: ["offers"] });
+      toast.success(`Offer "${offer.code}" created`);
+    },
+    onError: (err) => errorToast(err, "Couldn't create the offer."),
+  });
+}
+
+export function useUpdateOffer() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: Partial<OfferInput> }) =>
+      catalogApi.updateOffer(id, patch),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["offers"] });
+      toast.success("Offer updated");
+    },
+    onError: (err) => errorToast(err, "Couldn't update the offer."),
   });
 }
 

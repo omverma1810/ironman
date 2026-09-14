@@ -7,18 +7,19 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from catalog import services
-from catalog.models import GarmentType, Offer, Package, PriceList, Service
+from catalog.models import GarmentType, Offer, Package, PriceLine, PriceList, Service
 from catalog.serializers import (
     GarmentTypeSerializer,
     OfferSerializer,
     PackageSerializer,
+    PriceLineSetSerializer,
     PriceListActivateSerializer,
     PriceListSerializer,
     QuoteRequestSerializer,
     ServiceSerializer,
 )
 from common.errors import ApiError
-from common.permissions import IsFounder, IsOpsStaff
+from common.permissions import IsFounder
 
 
 class ServiceViewSet(viewsets.ModelViewSet):
@@ -96,11 +97,52 @@ class PriceListViewSet(viewsets.ModelViewSet):
         )
         return Response(PriceListSerializer(price_list).data)
 
+    @extend_schema(request=PriceLineSetSerializer, responses={200: PriceListSerializer})
+    @action(detail=True, methods=["put"], url_path="lines")
+    @transaction.atomic
+    def lines(self, request, pk=None):
+        """Replaces this DRAFT price list's entire line set — the model's
+        own `PriceLine.save()` guard (ADR-005) already refuses to touch an
+        ACTIVE/SUPERSEDED list's lines, but that check only fires on a
+        per-row `save()`, not `bulk_create()`, so it's re-asserted here
+        before either the soft-delete or the create."""
+        price_list = self.get_object()
+        if price_list.status != PriceList.Status.DRAFT:
+            raise ApiError(
+                "Only a draft price list's lines can be edited.",
+                code="invalid_state_transition",
+                status_code=409,
+            )
+        serializer = PriceLineSetSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        from django.utils import timezone
+
+        PriceLine.objects.filter(price_list=price_list).update(
+            deleted_at=timezone.now(), deleted_by=request.user
+        )
+        PriceLine.objects.bulk_create(
+            PriceLine(
+                price_list=price_list,
+                garment_type=line["garment_type"],
+                unit_price_minor=line["unit_price_minor"],
+                min_qty=line["min_qty"],
+                created_by=request.user,
+            )
+            for line in serializer.validated_data["lines"]
+        )
+        result = PriceList.objects.select_related("service", "hub").get(pk=price_list.pk)
+        return Response(PriceListSerializer(result).data)
+
 
 class OfferViewSet(viewsets.ModelViewSet):
+    """Founder-only, same tier as `PriceListViewSet` — docs/04 §3.3 marks
+    offer CRUD `[B]`, and an offer is pricing-and-discount configuration,
+    not day-to-day order handling."""
+
     queryset = Offer.objects.filter(deleted_at__isnull=True)
     serializer_class = OfferSerializer
-    permission_classes = [IsOpsStaff]
+    permission_classes = [IsFounder]
     filterset_fields = ["kind", "is_active", "apartment"]
 
 

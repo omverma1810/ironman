@@ -144,3 +144,76 @@ def test_zero_qty_lines_are_skipped(hub, service, garment_type, active_price_lis
     )
     assert result.lines == []
     assert result.total_minor == 0
+
+
+def test_apartment_promo_only_applies_to_its_own_apartment(
+    hub, service, garment_type, active_price_list, apartment
+):
+    other_apartment = apartment.__class__.objects.create(
+        cluster=apartment.cluster,
+        name="Other Tower",
+        pincode=apartment.pincode,
+        launched_on=timezone.now().date(),
+    )
+    Offer.objects.create(
+        code="TOWERPROMO",
+        kind=Offer.Kind.APARTMENT_PROMO,
+        value_minor=200,
+        apartment=apartment,
+        effective_from=timezone.now() - timezone.timedelta(days=1),
+        is_active=True,
+    )
+    matching = services.quote(
+        hub_id=hub.id,
+        service_id=service.id,
+        lines=[{"garment_type": garment_type.id, "qty": 1}],
+        apartment_id=apartment.id,
+    )
+    assert matching.discount_minor == 200
+    assert "TOWERPROMO" in matching.offers_applied
+
+    non_matching = services.quote(
+        hub_id=hub.id,
+        service_id=service.id,
+        lines=[{"garment_type": garment_type.id, "qty": 1}],
+        apartment_id=other_apartment.id,
+    )
+    assert non_matching.discount_minor == 0
+    assert non_matching.offers_applied == []
+
+
+def test_offer_discount_is_capped_at_cap_minor(hub, service, garment_type, active_price_list):
+    Offer.objects.create(
+        code="CAPPED20",
+        kind=Offer.Kind.PERCENT,
+        value_bps=5000,  # 50%
+        cap_minor=100,
+        effective_from=timezone.now() - timezone.timedelta(days=1),
+        is_active=True,
+    )
+    result = services.quote(
+        hub_id=hub.id, service_id=service.id, lines=[{"garment_type": garment_type.id, "qty": 1}]
+    )
+    # 50% of 1500 would be 750, but cap_minor=100 limits it.
+    assert result.discount_minor == 100
+    assert result.total_minor == 1400
+
+
+def test_offer_past_max_redemptions_does_not_apply(hub, service, garment_type, active_price_list):
+    Offer.objects.create(
+        code="LIMITED",
+        kind=Offer.Kind.FLAT,
+        value_minor=200,
+        max_redemptions=5,
+        redemptions_count=5,
+        effective_from=timezone.now() - timezone.timedelta(days=1),
+        is_active=True,
+    )
+    result = services.quote(
+        hub_id=hub.id,
+        service_id=service.id,
+        lines=[{"garment_type": garment_type.id, "qty": 1}],
+        offer_codes=["LIMITED"],
+    )
+    assert result.discount_minor == 0
+    assert result.offers_applied == []
