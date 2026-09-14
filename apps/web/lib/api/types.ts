@@ -311,6 +311,7 @@ export type OrderDetail = OrderListItem & {
   cancelled_reason: string;
   cancelled_at: string | null;
   lines: OrderLine[];
+  tracking_token: string;
 };
 
 export type OrderEvent = {
@@ -322,6 +323,62 @@ export type OrderEvent = {
   actor_name: string;
   actor_role: string;
   payload: Record<string, unknown>;
+  created_at: string;
+};
+
+/** The coarse rollup `ordering.stages`/`packages/tokens`' `stageLabels` use
+ * — narrower than `OrderStatus`, kept in sync by hand across API/web/mobile. */
+export type OrderStage =
+  | "booked"
+  | "pickup"
+  | "atHub"
+  | "pressing"
+  | "ready"
+  | "out"
+  | "delivered"
+  | "failed"
+  | "hold";
+
+export type PublicOrderEvent = {
+  event_type: string;
+  to_status: OrderStatus;
+  stage: OrderStage | null;
+  created_at: string;
+};
+
+export type PublicInvoiceSummary = {
+  ref: string;
+  status: string;
+  issued_at: string | null;
+  total_minor: number;
+  pdf_url: string | null;
+};
+
+/** The `/track/{token}` response (batch 4.1) — a deliberately narrower
+ * view than `OrderDetail`: no ids, no phone/email, no staff identity. */
+export type PublicOrderTracking = {
+  ref: string;
+  status: OrderStatus;
+  stage: OrderStage;
+  stage_label: string;
+  payment_status: PaymentStatus;
+  customer_name: string;
+  service_name: string;
+  address: string | null;
+  pickup_slot_start: string | null;
+  pickup_slot_end: string | null;
+  delivery_slot_start: string | null;
+  delivery_slot_end: string | null;
+  pickup_promised_at: string | null;
+  delivery_promised_at: string | null;
+  picked_up_at: string | null;
+  delivered_at: string | null;
+  declared_total_qty: number;
+  verified_total_qty: number | null;
+  total_minor: number;
+  lines: OrderLine[];
+  invoice: PublicInvoiceSummary | null;
+  events: PublicOrderEvent[];
   created_at: string;
 };
 

@@ -173,6 +173,7 @@ REST_FRAMEWORK = {
         "login": "10/min",
         "booking": "5/hour",
         "authenticated": "120/min",
+        "order_tracking": "60/min",
     },
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
 }

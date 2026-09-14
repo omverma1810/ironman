@@ -48,6 +48,7 @@ import type {
   Payment,
   PriceList,
   PriceListStatus,
+  PublicOrderTracking,
   Proof,
   ProofKind,
   ProofMeta,
@@ -241,6 +242,10 @@ export const ordersApi = {
       method: "POST",
       body: { verified_lines, notes },
     }),
+};
+
+export const trackingApi = {
+  get: (token: string) => apiFetch<PublicOrderTracking>(`/track/${token}/`),
 };
 
 export const requotesApi = {

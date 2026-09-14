@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from ordering.models import Channel, Order, OrderEvent, OrderException, OrderLine, ReQuote
+from ordering.stages import stage_for_status, stage_label_for_status
 
 
 class OrderLineSerializer(serializers.ModelSerializer):
@@ -97,6 +98,11 @@ class OrderDetailSerializer(OrderListSerializer):
             "cancelled_reason",
             "cancelled_at",
             "lines",
+            # Ops can copy/share this manually until batch 4.2's
+            # notification router sends it automatically — no incremental
+            # exposure, since staff viewing an order already see everything
+            # short of this credential itself.
+            "tracking_token",
         ]
 
 
@@ -195,3 +201,98 @@ class OrderExceptionSerializer(serializers.ModelSerializer):
             "created_at",
         ]
         read_only_fields = ["raised_by"]
+
+
+class PublicOrderEventSerializer(serializers.ModelSerializer):
+    """The `/track/{token}` timeline — deliberately narrower than
+    `OrderEventSerializer`: no `actor`/`actor_name` (a staff member's name)
+    and no `payload` (may carry internal detail like exception notes)."""
+
+    stage = serializers.SerializerMethodField()
+
+    class Meta:
+        model = OrderEvent
+        fields = ["event_type", "to_status", "stage", "created_at"]
+
+    def get_stage(self, obj: OrderEvent) -> str | None:
+        return stage_for_status(obj.to_status) if obj.to_status else None
+
+
+class PublicOrderTrackingSerializer(serializers.ModelSerializer):
+    """The public, unauthenticated view behind a tracking link (docs/01 §4b
+    C-3, batch 4.1) — reachable by anyone holding the token, so this must
+    never include anything beyond what the order's own customer already
+    knows: no phone/email, no other customers' data, no internal cost or
+    staff detail."""
+
+    stage = serializers.SerializerMethodField()
+    stage_label = serializers.SerializerMethodField()
+    customer_name = serializers.CharField(source="customer.name", read_only=True)
+    service_name = serializers.CharField(source="service.name", read_only=True)
+    address = serializers.SerializerMethodField()
+    lines = OrderLineSerializer(many=True, read_only=True)
+    invoice = serializers.SerializerMethodField()
+    events = PublicOrderEventSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Order
+        fields = [
+            "ref",
+            "status",
+            "stage",
+            "stage_label",
+            "payment_status",
+            "customer_name",
+            "service_name",
+            "address",
+            "pickup_slot_start",
+            "pickup_slot_end",
+            "delivery_slot_start",
+            "delivery_slot_end",
+            "pickup_promised_at",
+            "delivery_promised_at",
+            "picked_up_at",
+            "delivered_at",
+            "declared_total_qty",
+            "verified_total_qty",
+            "total_minor",
+            "lines",
+            "invoice",
+            "events",
+            "created_at",
+        ]
+
+    def get_stage(self, obj: Order) -> str:
+        return stage_for_status(obj.status)
+
+    def get_stage_label(self, obj: Order) -> str:
+        return stage_label_for_status(obj.status)
+
+    def get_address(self, obj: Order) -> str | None:
+        addr = obj.address
+        if not addr:
+            return None
+        parts: list[str] = []
+        if addr.flat_no:
+            parts.append(f"Flat {addr.flat_no}" + (f", Block {addr.block}" if addr.block else ""))
+        if addr.apartment:
+            parts.append(addr.apartment.name)
+        elif addr.free_text_address:
+            parts.append(addr.free_text_address)
+        return ", ".join(parts) if parts else None
+
+    def get_invoice(self, obj: Order) -> dict | None:
+        invoice = getattr(obj, "invoice", None)
+        # Compared as a plain string, not `billing.models.InvoiceStatus.DRAFT`
+        # — `ordering` may not import `billing.models` (docs/03 §3.1's
+        # views-only-through-services boundary, setup.cfg's import-linter
+        # contract).
+        if not invoice or invoice.status == "DRAFT":
+            return None
+        return {
+            "ref": invoice.ref,
+            "status": invoice.status,
+            "issued_at": invoice.issued_at,
+            "total_minor": invoice.total_minor,
+            "pdf_url": invoice.pdf_file.url if invoice.pdf_file else None,
+        }

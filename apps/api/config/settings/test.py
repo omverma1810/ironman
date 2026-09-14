@@ -28,5 +28,6 @@ REST_FRAMEWORK = {
         "login": "1000/min",
         "booking": "1000/min",
         "authenticated": "10000/min",
+        "order_tracking": "1000/min",
     },
 }

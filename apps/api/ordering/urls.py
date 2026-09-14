@@ -10,4 +10,5 @@ router.register("order-exceptions", views.OrderExceptionViewSet, basename="order
 
 urlpatterns = [
     path("orders/counter", views.CounterOrderView.as_view(), name="order-counter"),
+    path("track/<str:token>/", views.OrderTrackingView.as_view(), name="order-tracking"),
 ] + router.urls
