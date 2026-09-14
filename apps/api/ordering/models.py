@@ -7,6 +7,8 @@ never be conflated back into this one.
 
 from __future__ import annotations
 
+import secrets
+
 from django.db import models
 from django.utils import timezone
 
@@ -118,6 +120,11 @@ class Order(HubScopedModel):
 
     referral_code = models.CharField(max_length=32, blank=True)
     offers_applied = models.JSONField(default=list, blank=True)
+
+    # Docs/01 §4b C-3: the tracking link is the primary customer-facing
+    # channel and needs no login, so it can't use the UUIDv7 `id` above —
+    # that's time-ordered and guessable. A dedicated opaque token instead.
+    tracking_token = models.CharField(max_length=64, unique=True, default=secrets.token_urlsafe)
 
     notes = models.TextField(blank=True)
     special_instructions = models.TextField(blank=True)

@@ -15,6 +15,7 @@ import {
   requotesApi,
   suppliesApi,
   territoryApi,
+  trackingApi,
   type ApartmentContactInput,
   type ApartmentInput,
   type ClusterInput,
@@ -344,6 +345,19 @@ export function useOrder(id: string | undefined) {
     queryFn: () => ordersApi.get(id as string),
     enabled: !!id,
     refetchInterval: 20_000,
+  });
+}
+
+/** The public `/track/{token}` page — no session, so a bad/expired token
+ * 404s rather than 401s; `retry: false` keeps that a fast, clean "not
+ * found" render instead of three silent retries first. */
+export function useOrderTracking(token: string | undefined) {
+  return useQuery({
+    queryKey: ["order-tracking", token],
+    queryFn: () => trackingApi.get(token as string),
+    enabled: !!token,
+    refetchInterval: 20_000,
+    retry: false,
   });
 }
 

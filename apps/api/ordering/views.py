@@ -1,8 +1,10 @@
+from django.db.models import Prefetch
+from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema
 from rest_framework import filters, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -12,7 +14,7 @@ import territory.services as territory_services
 from common.permissions import IsOpsStaff, ScopedQuerysetMixin
 from common.throttles import ScopedRateThrottle
 from ordering import services
-from ordering.models import Order, OrderException, OrderStatus, ReQuote
+from ordering.models import Order, OrderEvent, OrderException, OrderStatus, ReQuote
 from ordering.serializers import (
     OrderCancelSerializer,
     OrderCreateSerializer,
@@ -22,6 +24,7 @@ from ordering.serializers import (
     OrderIntakeSerializer,
     OrderListSerializer,
     OrderRescheduleSerializer,
+    PublicOrderTrackingSerializer,
     ReQuoteDecisionSerializer,
     ReQuoteSerializer,
 )
@@ -137,6 +140,29 @@ class OrderViewSet(ScopedQuerysetMixin, viewsets.ModelViewSet):
             actor=request.user,
         )
         return Response(OrderDetailSerializer(order).data)
+
+
+@extend_schema(responses={200: PublicOrderTrackingSerializer})
+class OrderTrackingView(APIView):
+    """GET /track/{token}/ — docs/01 §4b C-3, batch 4.1: the tokenised
+    tracking link, no login. `tracking_token` (not `id`/`ref`, both
+    guessable or enumerable) is the only credential, so this stays
+    strictly read-only and never accepts any other lookup key."""
+
+    permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "order_tracking"
+
+    def get(self, request, token):
+        order = get_object_or_404(
+            Order.objects.filter(deleted_at__isnull=True)
+            .select_related("customer", "service", "address", "address__apartment", "invoice")
+            .prefetch_related(
+                "lines", Prefetch("events", queryset=OrderEvent.objects.order_by("created_at"))
+            ),
+            tracking_token=token,
+        )
+        return Response(PublicOrderTrackingSerializer(order).data)
 
 
 @extend_schema(request=OrderCreateSerializer, responses={201: OrderDetailSerializer})

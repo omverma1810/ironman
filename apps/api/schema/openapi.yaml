@@ -6322,6 +6322,33 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+  /api/v1/track/{token}/:
+    get:
+      operationId: track_retrieve
+      description: |-
+        GET /track/{token}/ — docs/01 §4b C-3, batch 4.1: the tokenised
+        tracking link, no login. `tracking_token` (not `id`/`ref`, both
+        guessable or enumerable) is the only credential, so this stays
+        strictly read-only and never accepts any other lookup key.
+      parameters:
+      - in: path
+        name: token
+        schema:
+          type: string
+        required: true
+      tags:
+      - track
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicOrderTracking'
+          description: ''
 components:
   schemas:
     Address:
@@ -8494,6 +8521,9 @@ components:
           items:
             $ref: '#/components/schemas/OrderLine'
           readOnly: true
+        tracking_token:
+          type: string
+          maxLength: 64
       required:
       - address
       - apartment_name
@@ -10272,6 +10302,139 @@ components:
           nullable: true
       required:
       - kind
+    PublicOrderEvent:
+      type: object
+      description: |-
+        The `/track/{token}` timeline — deliberately narrower than
+        `OrderEventSerializer`: no `actor`/`actor_name` (a staff member's name)
+        and no `payload` (may carry internal detail like exception notes).
+      properties:
+        event_type:
+          type: string
+          maxLength: 48
+        to_status:
+          type: string
+          maxLength: 24
+        stage:
+          type: string
+          nullable: true
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - event_type
+      - stage
+    PublicOrderTracking:
+      type: object
+      description: |-
+        The public, unauthenticated view behind a tracking link (docs/01 §4b
+        C-3, batch 4.1) — reachable by anyone holding the token, so this must
+        never include anything beyond what the order's own customer already
+        knows: no phone/email, no other customers' data, no internal cost or
+        staff detail.
+      properties:
+        ref:
+          type: string
+          readOnly: true
+        status:
+          $ref: '#/components/schemas/OrderStatusEnum'
+        stage:
+          type: string
+          readOnly: true
+        stage_label:
+          type: string
+          readOnly: true
+        payment_status:
+          $ref: '#/components/schemas/PaymentStatusEnum'
+        customer_name:
+          type: string
+          readOnly: true
+        service_name:
+          type: string
+          readOnly: true
+        address:
+          type: string
+          nullable: true
+          readOnly: true
+        pickup_slot_start:
+          type: string
+          format: date-time
+          nullable: true
+        pickup_slot_end:
+          type: string
+          format: date-time
+          nullable: true
+        delivery_slot_start:
+          type: string
+          format: date-time
+          nullable: true
+        delivery_slot_end:
+          type: string
+          format: date-time
+          nullable: true
+        pickup_promised_at:
+          type: string
+          format: date-time
+          nullable: true
+        delivery_promised_at:
+          type: string
+          format: date-time
+          nullable: true
+        picked_up_at:
+          type: string
+          format: date-time
+          nullable: true
+        delivered_at:
+          type: string
+          format: date-time
+          nullable: true
+        declared_total_qty:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        verified_total_qty:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        total_minor:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderLine'
+          readOnly: true
+        invoice:
+          type: object
+          additionalProperties: {}
+          nullable: true
+          readOnly: true
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicOrderEvent'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - address
+      - created_at
+      - customer_name
+      - events
+      - invoice
+      - lines
+      - ref
+      - service_name
+      - stage
+      - stage_label
     QcCheck:
       type: object
       properties:
