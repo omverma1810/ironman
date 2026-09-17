@@ -28,7 +28,8 @@ export function HowItWorks() {
           className="relative mt-16 grid grid-cols-1 gap-10 lg:grid-cols-3"
         >
           <div
-            className="absolute inset-x-[16.5%] top-8 hidden border-t-2 border-dashed border-landing-gold/40 lg:block"
+            className="absolute top-8 hidden border-t-2 border-dashed border-landing-gold/40 lg:block"
+            style={{ left: "16.5%", right: "16.5%" }}
             aria-hidden="true"
           />
           {HOW_IT_WORKS.map((step, i) => {

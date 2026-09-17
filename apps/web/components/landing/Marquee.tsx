@@ -25,7 +25,8 @@ export function Marquee() {
     // tech rather than announced twice (once per duplicated track).
     <div className="overflow-hidden bg-landing-gold py-3 text-landing-ink" aria-hidden="true">
       <motion.div
-        className="flex text-xs font-bold tracking-[0.2em] uppercase"
+        className="flex text-xs font-bold uppercase"
+        style={{ letterSpacing: "0.2em" }}
         animate={reduce ? undefined : { x: ["0%", "-50%"] }}
         transition={reduce ? undefined : { ease: "linear", duration: 22, repeat: Infinity }}
       >
