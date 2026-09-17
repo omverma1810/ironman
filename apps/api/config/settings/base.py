@@ -53,6 +53,7 @@ LOCAL_APPS = [
     "fulfilment",
     "supplies",
     "billing",
+    "notifications",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -205,6 +206,12 @@ SPECTACULAR_SETTINGS = {
         "RouteDayStatusEnum": "fulfilment.models.RouteDayStatus",
         "OfflineOpStatusEnum": "fulfilment.models.OfflineOpStatus",
         "InvoiceStatusEnum": "billing.models.InvoiceStatus",
+        # Both `Order.channel` and `NotificationTemplate`/`NotificationRequest`
+        # .channel are named "channel", and their choices partially overlap
+        # (both include WHATSAPP) — spectacular's dedup logic can't tell
+        # they're different enums without this, and auto-suffixes one.
+        "OrderChannelEnum": "ordering.models.Channel",
+        "NotificationChannelEnum": "notifications.models.NotificationChannel",
     },
 }
 
@@ -257,6 +264,11 @@ IRONMAN = {
     "ON_TIME_GRACE_MINUTES": 15,
     # 07 §2②: days within which a second order counts as "repeat".
     "REPEAT_CUSTOMER_WINDOW_DAYS": 30,
+    # docs/03 §3.3: outside prod, the notification router refuses to send
+    # to anyone not on this allowlist — a staging environment must never
+    # message a real customer's phone. `prod.py` turns the guard off.
+    "NOTIFICATIONS_ENFORCE_RECIPIENT_ALLOWLIST": True,
+    "NOTIFICATION_RECIPIENT_ALLOWLIST": env.list("NOTIFICATION_RECIPIENT_ALLOWLIST", default=[]),
 }
 
 LOGGING = {

@@ -14,6 +14,7 @@ from django.db import transaction
 from django.utils import timezone
 
 import catalog.services as catalog_services
+import notifications.services as notifications_services
 import territory.services as territory_services
 from common.errors import ApiError
 from customers.models import Customer
@@ -100,11 +101,14 @@ def create_order(
             ]
         )
         order = transition(order, OrderStatus.SCHEDULED, actor=actor, event_type="order.scheduled")
+        notifications_services.notify("order.scheduled", order)
     else:
         target = (
             OrderStatus.PENDING_CONFIRMATION if channel == "WHATSAPP" else OrderStatus.SCHEDULED
         )
         order = transition(order, target, actor=actor, event_type="order.created")
+        if target == OrderStatus.SCHEDULED:
+            notifications_services.notify("order.scheduled", order)
 
     return order
 
@@ -324,14 +328,18 @@ def assign_delivery(order: Order, *, actor=None, slot_start=None, slot_end=None)
 
 @transaction.atomic
 def mark_out_for_delivery(order: Order, *, actor=None) -> Order:
-    return transition(
+    order = transition(
         order, OrderStatus.OUT_FOR_DELIVERY, actor=actor, event_type="order.out_for_delivery"
     )
+    notifications_services.notify("order.out_for_delivery", order)
+    return order
 
 
 @transaction.atomic
 def mark_delivered(order: Order, *, actor=None) -> Order:
-    return transition(order, OrderStatus.DELIVERED, actor=actor, event_type="order.delivered")
+    order = transition(order, OrderStatus.DELIVERED, actor=actor, event_type="order.delivered")
+    notifications_services.notify("order.delivered", order)
+    return order
 
 
 @transaction.atomic

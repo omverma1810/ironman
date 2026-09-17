@@ -90,3 +90,8 @@ if REDIS_URL:
     }
 else:
     CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
+
+# A real deployment sends to real customers — the non-prod recipient
+# allowlist guard (base.py's IRONMAN dict) would otherwise block every
+# genuine customer phone number that isn't a developer's own test number.
+IRONMAN = {**IRONMAN, "NOTIFICATIONS_ENFORCE_RECIPIENT_ALLOWLIST": False}  # noqa: F405

@@ -17,6 +17,7 @@ from django.utils import timezone
 from catalog.models import GarmentType, Offer, PriceLine, PriceList, Service
 from customers.models import Address, Customer
 from identity.models import Role, RoleCode, User, UserRole
+from notifications.models import ApprovalStatus, NotificationChannel, NotificationTemplate
 from ordering import services as ordering_services
 from ordering.models import Order, OrderStatus
 from territory.models import (
@@ -134,6 +135,34 @@ class Command(BaseCommand):
                 is_active=True,
             ),
         )
+
+        self.stdout.write("Seeding notification templates...")
+        # SMS needs no per-template approval, so it's usable immediately —
+        # WhatsApp templates start PENDING because there's no real BSP
+        # account behind this pilot yet (docs/00 §5 D-05); `notify()`
+        # falls back to SMS until a founder flips one to APPROVED.
+        sms_templates = {
+            "order.scheduled": "Hi {customer_name}, your {service_name} pickup for {order_ref} is scheduled for {pickup_time}. — IronMan",
+            "order.out_for_delivery": "Hi {customer_name}, {order_ref} is out for delivery, expected {delivery_time}. Total: {total}. — IronMan",
+            "order.delivered": "Hi {customer_name}, {order_ref} has been delivered. Thanks for choosing IronMan!",
+        }
+        for code, body in sms_templates.items():
+            NotificationTemplate.objects.update_or_create(
+                code=code,
+                channel=NotificationChannel.SMS,
+                locale="en",
+                defaults=dict(body=body, variables=["customer_name", "order_ref"]),
+            )
+            NotificationTemplate.objects.update_or_create(
+                code=code,
+                channel=NotificationChannel.WHATSAPP,
+                locale="en",
+                defaults=dict(
+                    body=body,
+                    variables=["customer_name", "order_ref"],
+                    approval_status=ApprovalStatus.PENDING,
+                ),
+            )
 
         self.stdout.write("Seeding capacity...")
         today = timezone.localdate()

@@ -45,6 +45,10 @@ class IsFieldStaff(HasRole):
     allowed_roles = frozenset({"FIELD"})
 
 
+class IsCustomer(HasRole):
+    allowed_roles = frozenset({"CUSTOMER"})
+
+
 class IsStaff(HasRole):
     """Any non-customer role — used to gate the console app broadly, with
     finer scoping applied per-endpoint on top."""
