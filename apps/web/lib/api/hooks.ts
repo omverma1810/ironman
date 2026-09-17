@@ -100,6 +100,23 @@ export function useLogout() {
   });
 }
 
+/** The booking wizard's confirm step (docs/08 batch 4.3) — phone-first,
+ * no password (docs/04 §3.1), same OTP flow the mobile app already uses. */
+export function useRequestOtp() {
+  return useMutation({
+    mutationFn: (phone: string) => authApi.otpRequest(phone, "LOGIN"),
+    onError: (err) => errorToast(err, "Couldn't send a verification code."),
+  });
+}
+
+export function useVerifyOtp() {
+  return useMutation({
+    mutationFn: ({ phone, code, full_name }: { phone: string; code: string; full_name?: string }) =>
+      authApi.otpVerify(phone, code, full_name),
+    onError: (err) => errorToast(err, "That code is incorrect or has expired."),
+  });
+}
+
 // ── Territory ──────────────────────────────────────────────────────────
 export function useHubs() {
   return useQuery({ queryKey: ["hubs"], queryFn: territoryApi.hubs, staleTime: 300_000 });
@@ -135,6 +152,47 @@ export function useUpdateCluster() {
       toast.success("Cluster updated");
     },
     onError: (err) => errorToast(err, "Couldn't update the cluster."),
+  });
+}
+
+/** The booking wizard's pincode step (docs/08 batch 4.3) — public, no
+ * session. `enabled` waits for a plausible 6-digit pincode so it doesn't
+ * fire on every keystroke. */
+export function useServiceability(pincode: string) {
+  return useQuery({
+    queryKey: ["serviceability", pincode],
+    queryFn: () => territoryApi.serviceability(pincode),
+    enabled: pincode.length === 6,
+    retry: false,
+  });
+}
+
+export function useApartmentSearch(q: string, cluster?: string) {
+  return useQuery({
+    queryKey: ["apartment-search", q, cluster],
+    queryFn: () => territoryApi.searchApartments(q, cluster),
+    enabled: q.trim().length >= 2,
+    staleTime: 30_000,
+  });
+}
+
+export function useCapacitySlots(params: {
+  cluster?: string;
+  kind: "PICKUP" | "DELIVERY";
+  from: string;
+  to: string;
+}) {
+  return useQuery({
+    queryKey: ["capacity-slots", params],
+    queryFn: () =>
+      territoryApi.capacity({
+        cluster: params.cluster as string,
+        kind: params.kind,
+        from: params.from,
+        to: params.to,
+      }),
+    enabled: !!params.cluster,
+    staleTime: 10_000,
   });
 }
 
@@ -382,7 +440,15 @@ export function useOrderEvents(id: string | undefined) {
 export function useCreateOrder() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: CreateOrderInput) => ordersApi.create(input),
+    mutationFn: ({
+      input,
+      accessToken,
+      idempotencyKey,
+    }: {
+      input: CreateOrderInput;
+      accessToken?: string;
+      idempotencyKey?: string;
+    }) => ordersApi.create(input, { accessToken, idempotencyKey }),
     onSuccess: (order) => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       toast.success(`Order ${order.ref} created`);

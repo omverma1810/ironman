@@ -92,7 +92,21 @@ class OrderViewSet(ScopedQuerysetMixin, viewsets.ModelViewSet):
             raise ApiError("customer is required.", code="validation_error", status_code=400)
 
         service = catalog_services.get_service(data["service"])
-        address = customers_services.get_address(data.get("address"))
+        if _is_customer_only(request.user):
+            # `get_address` performs no ownership check — never safe to
+            # trust a customer-supplied address id at face value either
+            # (same reasoning as `customer` above).
+            address = customers_services.get_or_create_address_for_customer(
+                customer,
+                address_id=data.get("address"),
+                apartment=apartment,
+                flat_no=data.get("flat_no", ""),
+                block=data.get("block", ""),
+                landmark=data.get("landmark", ""),
+                free_text_address=data.get("free_text_address", ""),
+            )
+        else:
+            address = customers_services.get_address(data.get("address"))
         pickup_capacity = territory_services.get_capacity(data.get("pickup_capacity"))
 
         order = services.create_order(
@@ -108,6 +122,7 @@ class OrderViewSet(ScopedQuerysetMixin, viewsets.ModelViewSet):
             special_instructions=data.get("special_instructions", ""),
             referral_code=data.get("referral_code", ""),
             actor=request.user,
+            idempotency_key=request.headers.get("Idempotency-Key"),
         )
         return Response(OrderDetailSerializer(order).data, status=201)
 
@@ -207,10 +222,16 @@ class CounterOrderView(APIView):
             channel="COUNTER",
             notes=data.get("notes", ""),
             actor=request.user,
+            idempotency_key=request.headers.get("Idempotency-Key"),
         )
-        order = transition(
-            order, OrderStatus.AT_HUB, actor=request.user, event_type="order.counter_intake"
-        )
+        # A replayed Idempotency-Key returns the order from its *first*
+        # call already at AT_HUB (create_order() already ran this same
+        # transition then) — transitioning it again would be a same-state
+        # AT_HUB -> AT_HUB the state machine doesn't allow.
+        if order.status != OrderStatus.AT_HUB:
+            order = transition(
+                order, OrderStatus.AT_HUB, actor=request.user, event_type="order.counter_intake"
+            )
         return Response(OrderDetailSerializer(order).data, status=201)
 
 

@@ -7,7 +7,7 @@ never creates one — docs/04 §3.1), and reuses it on every order after."""
 
 import pytest
 
-from customers.models import Customer
+from customers.models import Address, Customer
 from identity.models import Role, RoleCode, User, UserRole
 from ordering.models import Order
 
@@ -138,3 +138,77 @@ def test_staff_booking_on_a_customers_behalf_still_works(
     assert resp.status_code == 201, resp.data
     order = Order.objects.get(ref=resp.data["ref"])
     assert order.customer_id == customer.id
+
+
+def test_a_first_time_customer_can_book_with_an_inline_flat_address(
+    api_client, customer_user, customer, hub, apartment, service, garment_type, active_price_list
+):
+    """No saved `Address` row exists yet — the wizard's address step sends
+    flat details directly and one is created on the spot, scoped to the
+    caller's own (auto-provisioned) customer."""
+    api_client.force_authenticate(user=customer_user)
+    resp = api_client.post(
+        "/api/v1/orders/",
+        {
+            "hub": str(hub.id),
+            "apartment": str(apartment.id),
+            "flat_no": "402",
+            "block": "B",
+            "service": str(service.id),
+            "channel": "WEB",
+            "lines": [{"garment_type": str(garment_type.id), "qty": 1}],
+        },
+        format="json",
+    )
+    assert resp.status_code == 201, resp.data
+    order = Order.objects.get(ref=resp.data["ref"])
+    assert order.address is not None
+    assert order.address.customer_id == customer.id
+    assert order.address.flat_no == "402"
+
+
+def test_a_customer_cannot_attach_another_customers_saved_address(
+    api_client, customer_user, hub, apartment, service, garment_type, active_price_list
+):
+    """The same IDOR class as the `customer` id, on a different FK:
+    `get_address` alone performs no ownership check, so a customer-role
+    caller must never have their body-supplied `address` id trusted
+    directly either."""
+    victim = Customer.objects.create(hub=hub, phone="+919000000098", name="Victim")
+    victims_address = Address.objects.create(
+        customer=victim, apartment=apartment, flat_no="101", is_default=True
+    )
+
+    api_client.force_authenticate(user=customer_user)
+    resp = api_client.post(
+        "/api/v1/orders/",
+        {
+            "hub": str(hub.id),
+            "address": str(victims_address.id),
+            "service": str(service.id),
+            "channel": "WEB",
+            "lines": [{"garment_type": str(garment_type.id), "qty": 1}],
+        },
+        format="json",
+    )
+    assert resp.status_code == 403, resp.data
+
+
+def test_a_returning_customer_can_reuse_their_own_saved_address(
+    api_client, customer_user, customer, address, hub, service, garment_type, active_price_list
+):
+    api_client.force_authenticate(user=customer_user)
+    resp = api_client.post(
+        "/api/v1/orders/",
+        {
+            "hub": str(hub.id),
+            "address": str(address.id),
+            "service": str(service.id),
+            "channel": "WEB",
+            "lines": [{"garment_type": str(garment_type.id), "qty": 1}],
+        },
+        format="json",
+    )
+    assert resp.status_code == 201, resp.data
+    order = Order.objects.get(ref=resp.data["ref"])
+    assert order.address_id == address.id

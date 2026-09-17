@@ -10,7 +10,7 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.conf import settings
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 import catalog.services as catalog_services
@@ -41,7 +41,18 @@ def create_order(
     special_instructions: str = "",
     actor=None,
     referral_code: str = "",
+    idempotency_key: str | None = None,
 ) -> Order:
+    """`idempotency_key` (the `Idempotency-Key` header, docs/04 §3.4) is
+    checked *before* anything else — a genuine replay (a customer's
+    flaky-network retry after a dropped 201) must return the original
+    order unconditionally, never book a second pickup slot or double-count
+    against capacity for the same logical booking."""
+    if idempotency_key:
+        existing = Order.objects.filter(idempotency_key=idempotency_key).first()
+        if existing:
+            return existing
+
     is_first_order = customer.lifetime_orders == 0
     quote_result = catalog_services.quote(
         hub_id=hub.id,
@@ -51,26 +62,52 @@ def create_order(
         is_first_order=is_first_order,
     )
 
-    order = Order.objects.create(
-        hub=hub,
-        customer=customer,
-        address=address,
-        apartment=apartment,
-        service=service,
-        channel=channel,
-        status=OrderStatus.DRAFT,
-        declared_total_qty=sum(int(entry["qty"]) for entry in lines),
-        price_list_version=quote_result.price_list_version,
-        estimate_minor=quote_result.total_minor,
-        subtotal_minor=quote_result.subtotal_minor,
-        discount_minor=quote_result.discount_minor,
-        total_minor=quote_result.total_minor,
-        offers_applied=quote_result.offers_applied,
-        notes=notes,
-        special_instructions=special_instructions,
-        referral_code=referral_code,
-        created_by=actor,
-    )
+    # `Order.ref` (docs/02 §3.4) is also assigned from a count-based
+    # sequence with the same race this whole block exists to guard
+    # against — a collision there raises the identical IntegrityError as a
+    # genuine idempotency_key replay, so each attempt below must confirm
+    # *which* constraint actually fired before deciding what to do about
+    # it, rather than assuming every IntegrityError here is a replay.
+    for attempt in range(5):
+        try:
+            with transaction.atomic():
+                order = Order.objects.create(
+                    hub=hub,
+                    customer=customer,
+                    address=address,
+                    apartment=apartment,
+                    service=service,
+                    channel=channel,
+                    status=OrderStatus.DRAFT,
+                    declared_total_qty=sum(int(entry["qty"]) for entry in lines),
+                    price_list_version=quote_result.price_list_version,
+                    estimate_minor=quote_result.total_minor,
+                    subtotal_minor=quote_result.subtotal_minor,
+                    discount_minor=quote_result.discount_minor,
+                    total_minor=quote_result.total_minor,
+                    offers_applied=quote_result.offers_applied,
+                    notes=notes,
+                    special_instructions=special_instructions,
+                    referral_code=referral_code,
+                    idempotency_key=idempotency_key,
+                    created_by=actor,
+                )
+            break
+        except IntegrityError:
+            if idempotency_key:
+                existing = Order.objects.filter(idempotency_key=idempotency_key).first()
+                if existing:
+                    # Lost a race on the same idempotency_key to a request
+                    # this one's own upfront check missed — the winner's
+                    # row is the answer; never go on to book a second
+                    # pickup slot for the same logical booking.
+                    return existing
+            if attempt == 4:
+                raise
+            # Not our idempotency_key — a `ref` collision instead (its
+            # count-based sequence races the same way under concurrent
+            # bookings). The next attempt recomputes it against whatever
+            # just committed, so retrying is enough to clear it.
 
     for line in quote_result.lines:
         OrderLine.objects.create(

@@ -126,6 +126,11 @@ class Order(HubScopedModel):
     # that's time-ordered and guessable. A dedicated opaque token instead.
     tracking_token = models.CharField(max_length=64, unique=True, default=secrets.token_urlsafe)
 
+    # The client-supplied `Idempotency-Key` header (docs/04 §3.4) — null
+    # for any call site that doesn't send one; Postgres permits any number
+    # of NULLs under a unique index, so this never blocks those orders.
+    idempotency_key = models.CharField(max_length=64, null=True, blank=True, unique=True)
+
     notes = models.TextField(blank=True)
     special_instructions = models.TextField(blank=True)
 
