@@ -2428,6 +2428,12 @@ paths:
   /api/v1/customer-addresses/:
     get:
       operationId: customer_addresses_list
+      description: |-
+        `[A]` staff manage any customer's addresses; `[C]` a customer manages
+        only their own (docs/08 batch 4.4's account area) — `get_queryset`'s
+        filter is what makes another customer's address 404 rather than
+        editable, the same ownership scoping as `OrderViewSet`/
+        `InvoiceViewSet`.
       parameters:
       - name: cursor
         required: false
@@ -2460,6 +2466,12 @@ paths:
           description: ''
     post:
       operationId: customer_addresses_create
+      description: |-
+        `[A]` staff manage any customer's addresses; `[C]` a customer manages
+        only their own (docs/08 batch 4.4's account area) — `get_queryset`'s
+        filter is what makes another customer's address 404 rather than
+        editable, the same ownership scoping as `OrderViewSet`/
+        `InvoiceViewSet`.
       tags:
       - customer-addresses
       requestBody:
@@ -2486,6 +2498,12 @@ paths:
   /api/v1/customer-addresses/{id}/:
     get:
       operationId: customer_addresses_retrieve
+      description: |-
+        `[A]` staff manage any customer's addresses; `[C]` a customer manages
+        only their own (docs/08 batch 4.4's account area) — `get_queryset`'s
+        filter is what makes another customer's address 404 rather than
+        editable, the same ownership scoping as `OrderViewSet`/
+        `InvoiceViewSet`.
       parameters:
       - in: path
         name: id
@@ -2508,6 +2526,12 @@ paths:
           description: ''
     put:
       operationId: customer_addresses_update
+      description: |-
+        `[A]` staff manage any customer's addresses; `[C]` a customer manages
+        only their own (docs/08 batch 4.4's account area) — `get_queryset`'s
+        filter is what makes another customer's address 404 rather than
+        editable, the same ownership scoping as `OrderViewSet`/
+        `InvoiceViewSet`.
       parameters:
       - in: path
         name: id
@@ -2541,6 +2565,12 @@ paths:
           description: ''
     patch:
       operationId: customer_addresses_partial_update
+      description: |-
+        `[A]` staff manage any customer's addresses; `[C]` a customer manages
+        only their own (docs/08 batch 4.4's account area) — `get_queryset`'s
+        filter is what makes another customer's address 404 rather than
+        editable, the same ownership scoping as `OrderViewSet`/
+        `InvoiceViewSet`.
       parameters:
       - in: path
         name: id
@@ -2574,6 +2604,12 @@ paths:
           description: ''
     delete:
       operationId: customer_addresses_destroy
+      description: |-
+        `[A]` staff manage any customer's addresses; `[C]` a customer manages
+        only their own (docs/08 batch 4.4's account area) — `get_queryset`'s
+        filter is what makes another customer's address 404 rather than
+        editable, the same ownership scoping as `OrderViewSet`/
+        `InvoiceViewSet`.
       parameters:
       - in: path
         name: id
@@ -6545,6 +6581,9 @@ components:
           type: string
           format: uuid
           readOnly: true
+        customer:
+          type: string
+          format: uuid
         apartment:
           type: string
           format: uuid
@@ -6574,6 +6613,9 @@ components:
     AddressRequest:
       type: object
       properties:
+        customer:
+          type: string
+          format: uuid
         apartment:
           type: string
           format: uuid
@@ -9918,6 +9960,9 @@ components:
     PatchedAddressRequest:
       type: object
       properties:
+        customer:
+          type: string
+          format: uuid
         apartment:
           type: string
           format: uuid

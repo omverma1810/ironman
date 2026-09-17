@@ -1,6 +1,8 @@
 import { apiFetch, newIdempotencyKey } from "./client";
 import type {
   ActivatePriceListInput,
+  Address,
+  AddressInput,
   Apartment,
   ApartmentContact,
   BagDetail,
@@ -78,7 +80,9 @@ import type {
 
 // ── Auth / identity ────────────────────────────────────────────────────
 export const authApi = {
-  me: () => apiFetch<Me>("/me"),
+  me: (accessToken?: string) => apiFetch<Me>("/me", { accessToken }),
+  updateMe: (patch: { full_name?: string; preferred_language?: string }, accessToken: string) =>
+    apiFetch<Me>("/me", { method: "PATCH", body: patch, accessToken }),
   login: (email: string, password: string, totp_code?: string) =>
     apiFetch<{ user: Me }>("/auth/login", {
       method: "POST",
@@ -209,6 +213,20 @@ export const customersApi = {
   duplicates: (id: string) => apiFetch<Customer[]>(`/customers/${id}/duplicates/`),
 };
 
+// The account area (docs/08 batch 4.4) — a customer's own addresses, JWT
+// (not session-cookie) authenticated, so every call takes its accessToken
+// explicitly rather than relying on `credentials: "include"`.
+export const addressesApi = {
+  mine: (accessToken: string) =>
+    apiFetch<Paginated<Address>>("/customer-addresses/", { accessToken }),
+  create: (input: AddressInput, accessToken: string) =>
+    apiFetch<Address>("/customer-addresses/", { method: "POST", body: input, accessToken }),
+  update: (id: string, patch: Partial<AddressInput>, accessToken: string) =>
+    apiFetch<Address>(`/customer-addresses/${id}/`, { method: "PATCH", body: patch, accessToken }),
+  delete: (id: string, accessToken: string) =>
+    apiFetch<void>(`/customer-addresses/${id}/`, { method: "DELETE", accessToken }),
+};
+
 // ── Ordering ───────────────────────────────────────────────────────────
 export type OrderListParams = {
   status?: string;
@@ -220,9 +238,10 @@ export type OrderListParams = {
 };
 
 export const ordersApi = {
-  list: (params?: OrderListParams) =>
-    apiFetch<Paginated<OrderListItem>>("/orders/", { params }),
-  get: (id: string) => apiFetch<OrderDetail>(`/orders/${id}/`),
+  list: (params?: OrderListParams, accessToken?: string) =>
+    apiFetch<Paginated<OrderListItem>>("/orders/", { params, accessToken }),
+  get: (id: string, accessToken?: string) =>
+    apiFetch<OrderDetail>(`/orders/${id}/`, { accessToken }),
   events: (id: string) => apiFetch<OrderEvent[]>(`/orders/${id}/events/`),
   create: (
     input: CreateOrderInput,
@@ -445,11 +464,11 @@ export const notificationsApi = {
 };
 
 export const billingApi = {
-  invoices: (params?: { status?: string; order?: string }) =>
-    apiFetch<Paginated<Invoice>>("/billing/invoices/", { params }),
+  invoices: (params?: { status?: string; order?: string }, accessToken?: string) =>
+    apiFetch<Paginated<Invoice>>("/billing/invoices/", { params, accessToken }),
   invoice: (ref: string) => apiFetch<InvoiceDetail>(`/billing/invoices/${ref}/`),
-  invoicePdfUrl: (ref: string) =>
-    apiFetch<{ url: string | null }>(`/billing/invoices/${ref}/pdf/`),
+  invoicePdfUrl: (ref: string, accessToken?: string) =>
+    apiFetch<{ url: string | null }>(`/billing/invoices/${ref}/pdf/`, { accessToken }),
   issueInvoice: (orderId: string, apply_gst?: boolean | null) =>
     apiFetch<InvoiceDetail>(`/billing/invoices/${orderId}/issue`, {
       method: "POST",

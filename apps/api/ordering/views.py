@@ -12,6 +12,7 @@ import catalog.services as catalog_services
 import customers.services as customers_services
 import territory.services as territory_services
 from common.permissions import IsOpsStaff, ScopedQuerysetMixin
+from common.permissions import is_customer_only as _is_customer_only
 from common.throttles import ScopedRateThrottle
 from ordering import services
 from ordering.models import Order, OrderEvent, OrderException, OrderStatus, ReQuote
@@ -30,10 +31,6 @@ from ordering.serializers import (
 )
 from ordering.state_machine import cancel as cancel_order
 from ordering.state_machine import transition
-
-
-def _is_customer_only(user) -> bool:
-    return "CUSTOMER" in user.role_codes and not (user.role_codes - {"CUSTOMER"})
 
 
 class OrderViewSet(ScopedQuerysetMixin, viewsets.ModelViewSet):
