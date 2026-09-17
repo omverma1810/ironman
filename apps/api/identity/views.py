@@ -123,6 +123,29 @@ class OtpVerifyView(APIView):
         return Response({**tokens, "user": MeSerializer(user).data, "created": created})
 
 
+@extend_schema(exclude=True)
+class OtpDebugView(APIView):
+    """E2E-only: `OtpChallenge.code_hash` is hashed at rest, so a test
+    driving the booking wizard's phone-verify step has no other way to
+    learn the code it just triggered. `identity.urls` only ever routes
+    this when `IRONMAN["EXPOSE_OTP_DEBUG_ENDPOINT"]` is on — every
+    environment except `config.settings.test` doesn't register the URL
+    at all (docs/08 batch 4.3). `exclude=True` keeps it out of the
+    checked-in OpenAPI contract too — it isn't real, documented API
+    surface, whatever settings module generated the schema."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        from django.core.cache import cache
+
+        phone = request.query_params.get("phone", "")
+        code = cache.get(f"otp-debug:{phone}")
+        if not code:
+            raise ApiError("No pending code for that phone.", code="not_found", status_code=404)
+        return Response({"code": code})
+
+
 @extend_schema(request=StaffLoginSerializer, responses={200: MeSerializer})
 class StaffLoginView(APIView):
     """POST /auth/login — session-cookie auth for console users

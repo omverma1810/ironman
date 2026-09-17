@@ -8679,6 +8679,7 @@ components:
         customer:
           type: string
           format: uuid
+          nullable: true
         service:
           type: string
           format: uuid
@@ -8686,6 +8687,17 @@ components:
           type: string
           format: uuid
           nullable: true
+        flat_no:
+          type: string
+          maxLength: 32
+        block:
+          type: string
+          maxLength: 32
+        landmark:
+          type: string
+          maxLength: 160
+        free_text_address:
+          type: string
         apartment:
           type: string
           format: uuid
@@ -8709,7 +8721,6 @@ components:
           type: string
       required:
       - channel
-      - customer
       - hub
       - lines
       - service

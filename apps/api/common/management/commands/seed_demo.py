@@ -26,6 +26,7 @@ from territory.models import (
     Hub,
     OrderCostSettings,
     RouteDayCapacity,
+    ServiceArea,
     TaxSettings,
 )
 
@@ -90,6 +91,15 @@ class Command(BaseCommand):
                 ),
             )
             apartments.append(apt)
+
+        # `check_serviceability` (batch 4.3's booking wizard, docs/04 §3.2)
+        # looks these up by pincode — without a ServiceArea row the wizard's
+        # very first step reports every seeded apartment's own pincode as
+        # unserviceable.
+        for pincode in {"560095", "560034"}:
+            ServiceArea.objects.update_or_create(
+                hub=hub, pincode=pincode, defaults={"is_active": True}
+            )
 
         self.stdout.write("Seeding catalogue...")
         service, _ = Service.objects.update_or_create(

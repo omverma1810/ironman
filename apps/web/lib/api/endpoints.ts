@@ -50,6 +50,7 @@ import type {
   Payment,
   PriceList,
   PriceListStatus,
+  PublicApartment,
   PublicOrderTracking,
   Proof,
   ProofKind,
@@ -160,10 +161,15 @@ export const territoryApi = {
   capacity: (params: { cluster: string; kind: "PICKUP" | "DELIVERY"; from: string; to: string }) =>
     apiFetch<RouteDayCapacity[]>("/territory/capacity", { params }),
   serviceability: (pincode: string) =>
-    apiFetch<{ serviceable: boolean; hub: { id: string; code: string; name: string } | null }>(
-      "/territory/serviceability",
-      { params: { pincode } }
-    ),
+    apiFetch<{
+      serviceable: boolean;
+      hub: { id: string; code: string; name: string } | null;
+      clusters: { id: string; name: string }[];
+    }>("/territory/serviceability", { params: { pincode } }),
+  // The public booking-wizard search (docs/04 §3.2) — distinct from
+  // `apartments` above, which hits the staff-only admin endpoint.
+  searchApartments: (q: string, cluster?: string) =>
+    apiFetch<PublicApartment[]>("/territory/apartments", { params: { q, cluster } }),
 };
 
 // ── Catalog ────────────────────────────────────────────────────────────
@@ -218,11 +224,15 @@ export const ordersApi = {
     apiFetch<Paginated<OrderListItem>>("/orders/", { params }),
   get: (id: string) => apiFetch<OrderDetail>(`/orders/${id}/`),
   events: (id: string) => apiFetch<OrderEvent[]>(`/orders/${id}/events/`),
-  create: (input: CreateOrderInput) =>
+  create: (
+    input: CreateOrderInput,
+    options?: { accessToken?: string; idempotencyKey?: string }
+  ) =>
     apiFetch<OrderDetail>("/orders/", {
       method: "POST",
       body: input,
-      idempotencyKey: newIdempotencyKey(),
+      idempotencyKey: options?.idempotencyKey ?? newIdempotencyKey(),
+      accessToken: options?.accessToken,
     }),
   createCounter: (input: Omit<CreateOrderInput, "channel">) =>
     apiFetch<OrderDetail>("/orders/counter", {

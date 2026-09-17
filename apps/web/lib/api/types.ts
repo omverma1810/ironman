@@ -75,6 +75,15 @@ export type Apartment = {
   contacts: ApartmentContact[];
 };
 
+/** `GET /territory/apartments?q=` — the public booking-wizard search
+ * (docs/04 §3.2), deliberately narrower than the staff `Apartment` above:
+ * no gate notes or contacts pre-authentication. */
+export type PublicApartment = {
+  id: string;
+  name: string;
+  cluster: string;
+};
+
 export type RouteDayCapacity = {
   id: string;
   hub: string;
@@ -571,9 +580,18 @@ export type OrderLineInput = { garment_type: string; qty: number };
 
 export type CreateOrderInput = {
   hub: string;
-  customer: string;
+  // Required for a staff caller (booking on someone else's behalf) — a
+  // customer caller's own booking never sends this, their identity comes
+  // from their session instead (apps/api ordering/views.py::_is_customer_only).
+  customer?: string;
   service: string;
   address?: string;
+  // A first-time customer with no saved address sends these instead of
+  // `address` — the API creates one for them on the spot.
+  flat_no?: string;
+  block?: string;
+  landmark?: string;
+  free_text_address?: string;
   apartment?: string;
   channel: Channel;
   pickup_capacity?: string;

@@ -108,9 +108,26 @@ class OrderDetailSerializer(OrderListSerializer):
 
 class OrderCreateSerializer(serializers.Serializer):
     hub = serializers.UUIDField()
-    customer = serializers.UUIDField()
+    # Required for a staff caller (who is booking on someone else's
+    # behalf), but never trusted from a customer caller — the view
+    # derives their own identity from `request.user` instead, since
+    # nothing here is proof they own this id (see
+    # `customers.services.get_or_create_customer_for_user`). Optional at
+    # the serializer level so a customer's own first booking, which has
+    # no customer id yet, validates at all.
+    customer = serializers.UUIDField(required=False, allow_null=True)
     service = serializers.UUIDField()
+    # An existing saved address (staff always; a returning customer
+    # picking a saved one) — ownership is verified for a customer-role
+    # caller (`customers.services.get_or_create_address_for_customer`),
+    # never trusted at face value. A first-time customer instead sends the
+    # flat_no/block/landmark/free_text_address fields below and a new
+    # Address is created for them on the spot.
     address = serializers.UUIDField(required=False, allow_null=True)
+    flat_no = serializers.CharField(required=False, allow_blank=True, max_length=32)
+    block = serializers.CharField(required=False, allow_blank=True, max_length=32)
+    landmark = serializers.CharField(required=False, allow_blank=True, max_length=160)
+    free_text_address = serializers.CharField(required=False, allow_blank=True)
     apartment = serializers.UUIDField(required=False, allow_null=True)
     channel = serializers.ChoiceField(choices=Channel.choices)
     pickup_capacity = serializers.UUIDField(required=False, allow_null=True)

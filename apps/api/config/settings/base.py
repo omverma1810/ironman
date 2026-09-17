@@ -269,6 +269,12 @@ IRONMAN = {
     # message a real customer's phone. `prod.py` turns the guard off.
     "NOTIFICATIONS_ENFORCE_RECIPIENT_ALLOWLIST": True,
     "NOTIFICATION_RECIPIENT_ALLOWLIST": env.list("NOTIFICATION_RECIPIENT_ALLOWLIST", default=[]),
+    # The booking wizard's phone-verify step (docs/08 batch 4.3) has no
+    # other way for an E2E test to learn a code that's hashed at rest —
+    # `identity.urls` only registers the debug read route when this is on.
+    # Only `config.settings.test` turns it on; every other environment
+    # doesn't even route the URL.
+    "EXPOSE_OTP_DEBUG_ENDPOINT": False,
 }
 
 LOGGING = {

@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
 
@@ -35,3 +36,6 @@ urlpatterns = [
     path("me", views.MeView.as_view(), name="me"),
     path("identity/staff", views.StaffListView.as_view(), name="staff-list"),
 ]
+
+if settings.IRONMAN.get("EXPOSE_OTP_DEBUG_ENDPOINT"):
+    urlpatterns.append(path("auth/otp/debug", views.OtpDebugView.as_view(), name="otp-debug"))
