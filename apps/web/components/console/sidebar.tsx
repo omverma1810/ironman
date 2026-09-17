@@ -14,6 +14,7 @@ import {
   canPlanRouteDays,
   canSeeMoney,
   canViewInvoices,
+  canViewNotificationLog,
 } from "@/lib/permissions";
 
 type NavItem = { href: string; label: string; icon: IconName; show?: (roles: Role[]) => boolean };
@@ -66,6 +67,12 @@ const NAV: NavItem[] = [
     label: "Staff",
     icon: "shield",
     show: (roles) => canManageStaff(roles),
+  },
+  {
+    href: "/console/notifications",
+    label: "Notifications",
+    icon: "bell",
+    show: (roles) => canViewNotificationLog(roles),
   },
 ];
 

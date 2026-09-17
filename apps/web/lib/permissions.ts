@@ -123,6 +123,13 @@ export function canPlanRouteDays(roles: Role[] | undefined): boolean {
   return hasRole(roles, "ADMIN", "FOUNDER");
 }
 
+// docs/04 §3.11 "[A]" on both the delivery log and test-send — same
+// day-to-day ops tier as `canManageOrders`, since "did the customer get
+// the message" is a support question any operator needs to answer.
+export function canViewNotificationLog(roles: Role[] | undefined): boolean {
+  return hasRole(roles, ...OPS_ROLES);
+}
+
 export function isViewer(roles: Role[] | undefined): boolean {
   return hasRole(roles, "VIEWER") && !hasRole(roles, ...OPS_ROLES);
 }

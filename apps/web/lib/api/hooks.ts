@@ -11,6 +11,7 @@ import {
   exceptionsApi,
   fulfilmentApi,
   identityApi,
+  notificationsApi,
   ordersApi,
   requotesApi,
   suppliesApi,
@@ -22,6 +23,7 @@ import {
   type ExceptionListParams,
   type GarmentLineListParams,
   type JobAssignEntry,
+  type NotificationLogParams,
   type OrderListParams,
 } from "./endpoints";
 import { ApiError } from "./errors";
@@ -330,6 +332,14 @@ export function useCustomer(id: string | undefined) {
 }
 
 // ── Orders ─────────────────────────────────────────────────────────────
+export function useNotificationLog(params?: NotificationLogParams) {
+  return useQuery({
+    queryKey: ["notification-log", params],
+    queryFn: () => notificationsApi.log(params),
+    placeholderData: keepPreviousData,
+  });
+}
+
 export function useOrders(params?: OrderListParams) {
   return useQuery({
     queryKey: ["orders", params],

@@ -879,3 +879,32 @@ export type GrantCreditInput = {
   amount: number;
   note?: string;
 };
+
+// ── Notifications (batch 4.2) ────────────────────────────────────────────
+export type NotificationChannel = "WHATSAPP" | "SMS" | "PUSH" | "EMAIL";
+export type NotificationRequestStatus = "PENDING" | "SENT" | "SKIPPED" | "FAILED";
+export type NotificationDeliveryStatus = "QUEUED" | "SENT" | "DELIVERED" | "READ" | "FAILED";
+
+export type NotificationDelivery = {
+  id: string;
+  provider: string;
+  provider_message_id: string;
+  status: NotificationDeliveryStatus;
+  error: string;
+  cost_minor: number;
+  created_at: string;
+};
+
+export type NotificationRequestRow = {
+  id: string;
+  order: string | null;
+  order_ref: string;
+  template_code: string;
+  channel: NotificationChannel;
+  recipient_kind: "CUSTOMER" | "STAFF";
+  recipient_id: string;
+  status: NotificationRequestStatus;
+  skipped_reason: string;
+  created_at: string;
+  deliveries: NotificationDelivery[];
+};

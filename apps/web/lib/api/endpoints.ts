@@ -36,6 +36,8 @@ import type {
   JobAttempt,
   JobKind,
   Me,
+  NotificationChannel,
+  NotificationRequestRow,
   OfflineOpResult,
   Offer,
   OfferInput,
@@ -413,6 +415,25 @@ export const suppliesApi = {
 };
 
 // ── Billing (docs/08 batches 3.1-3.2) ────────────────────────────────────
+export type NotificationLogParams = {
+  order?: string;
+  channel?: string;
+  status?: string;
+  search?: string;
+  cursor?: string;
+};
+
+export const notificationsApi = {
+  log: (params?: NotificationLogParams) =>
+    apiFetch<Paginated<NotificationRequestRow>>("/notifications/log/", { params }),
+  preferences: () => apiFetch<{ channel: NotificationChannel; opted_in: boolean }[]>("/notifications/preferences"),
+  setPreference: (channel: NotificationChannel, opted_in: boolean) =>
+    apiFetch<{ channel: NotificationChannel; opted_in: boolean }[]>("/notifications/preferences", {
+      method: "PATCH",
+      body: { channel, opted_in },
+    }),
+};
+
 export const billingApi = {
   invoices: (params?: { status?: string; order?: string }) =>
     apiFetch<Paginated<Invoice>>("/billing/invoices/", { params }),

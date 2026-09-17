@@ -3823,6 +3823,193 @@ paths:
               schema:
                 $ref: '#/components/schemas/Me'
           description: ''
+  /api/v1/notifications/log/:
+    get:
+      operationId: notifications_log_list
+      description: |-
+        GET /notifications/log?order= — docs/04 §3.11 [A]: what was sent,
+        to whom, delivered? The exact-match `order` filter is the documented
+        contract; `search=` on the order's own ref is what a support
+        conversation actually hands an operator ("did ORD-2609-0055 get the
+        message"), same reasoning `OrderViewSet.search_fields` documents.
+      parameters:
+      - in: query
+        name: channel
+        schema:
+          type: string
+          enum:
+          - EMAIL
+          - PUSH
+          - SMS
+          - WHATSAPP
+        description: |-
+          * `WHATSAPP` - WhatsApp
+          * `SMS` - SMS
+          * `PUSH` - Push
+          * `EMAIL` - Email
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: order
+        schema:
+          type: string
+          format: uuid
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - FAILED
+          - PENDING
+          - SENT
+          - SKIPPED
+        description: |-
+          * `PENDING` - Pending
+          * `SENT` - Sent
+          * `SKIPPED` - Skipped
+          * `FAILED` - Failed
+      tags:
+      - notifications
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedNotificationRequestList'
+          description: ''
+  /api/v1/notifications/log/{id}/:
+    get:
+      operationId: notifications_log_retrieve
+      description: |-
+        GET /notifications/log?order= — docs/04 §3.11 [A]: what was sent,
+        to whom, delivered? The exact-match `order` filter is the documented
+        contract; `search=` on the order's own ref is what a support
+        conversation actually hands an operator ("did ORD-2609-0055 get the
+        message"), same reasoning `OrderViewSet.search_fields` documents.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this notification request.
+        required: true
+      tags:
+      - notifications
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationRequest'
+          description: ''
+  /api/v1/notifications/preferences:
+    get:
+      operationId: notifications_preferences_list
+      description: |-
+        GET/PATCH /notifications/preferences — docs/04 §3.11 [C]. A missing
+        row means the router default (opted in); PATCH upserts exactly the
+        one channel it's given, leaving the others untouched.
+      tags:
+      - notifications
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NotificationPreference'
+          description: ''
+    patch:
+      operationId: notifications_preferences_partial_update
+      description: |-
+        GET/PATCH /notifications/preferences — docs/04 §3.11 [C]. A missing
+        row means the router default (opted in); PATCH upserts exactly the
+        one channel it's given, leaving the others untouched.
+      tags:
+      - notifications
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedNotificationPreferenceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedNotificationPreferenceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedNotificationPreferenceRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NotificationPreference'
+          description: ''
+  /api/v1/notifications/test:
+    post:
+      operationId: notifications_test_create
+      description: |-
+        POST /notifications/test — docs/04 §3.11 [A], staging only. Fires
+        `notify()` for real against an existing order, so ops can confirm a
+        template renders and a channel actually dispatches before trusting it
+        on a real lifecycle event — gated off entirely once the recipient
+        allowlist guard itself is (i.e. in production).
+      tags:
+      - notifications
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationTestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NotificationTestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NotificationTestRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationRequest'
+          description: ''
   /api/v1/order-exceptions/:
     get:
       operationId: order_exceptions_list
@@ -6817,20 +7004,6 @@ components:
         * `CHEMICAL` - Chemical
         * `SPARE` - Spare part
         * `OTHER` - Other
-    ChannelEnum:
-      enum:
-      - WEB
-      - WHATSAPP
-      - COUNTER
-      - PHONE
-      - APP
-      type: string
-      description: |-
-        * `WEB` - Web
-        * `WHATSAPP` - WhatsApp
-        * `COUNTER` - Counter / walk-in
-        * `PHONE` - Phone
-        * `APP` - Mobile app
     Cluster:
       type: object
       properties:
@@ -8086,6 +8259,144 @@ components:
       - preferred_language
       - requires_mfa
       - roles
+    NotificationChannelEnum:
+      enum:
+      - WHATSAPP
+      - SMS
+      - PUSH
+      - EMAIL
+      type: string
+      description: |-
+        * `WHATSAPP` - WhatsApp
+        * `SMS` - SMS
+        * `PUSH` - Push
+        * `EMAIL` - Email
+    NotificationDelivery:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        provider:
+          type: string
+          maxLength: 32
+        provider_message_id:
+          type: string
+          maxLength: 128
+        status:
+          $ref: '#/components/schemas/NotificationDeliveryStatusEnum'
+        error:
+          type: string
+        cost_minor:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - provider
+      - status
+    NotificationDeliveryStatusEnum:
+      enum:
+      - QUEUED
+      - SENT
+      - DELIVERED
+      - READ
+      - FAILED
+      type: string
+      description: |-
+        * `QUEUED` - Queued
+        * `SENT` - Sent
+        * `DELIVERED` - Delivered
+        * `READ` - Read
+        * `FAILED` - Failed
+    NotificationPreference:
+      type: object
+      properties:
+        channel:
+          $ref: '#/components/schemas/NotificationChannelEnum'
+        opted_in:
+          type: boolean
+      required:
+      - channel
+      - opted_in
+    NotificationRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        order:
+          type: string
+          format: uuid
+          nullable: true
+        order_ref:
+          type: string
+          readOnly: true
+          default: ''
+        template_code:
+          type: string
+          readOnly: true
+        channel:
+          $ref: '#/components/schemas/NotificationChannelEnum'
+        recipient_kind:
+          $ref: '#/components/schemas/RecipientKindEnum'
+        recipient_id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/NotificationStatusEnum'
+        skipped_reason:
+          type: string
+          maxLength: 64
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        deliveries:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationDelivery'
+          readOnly: true
+      required:
+      - channel
+      - created_at
+      - deliveries
+      - id
+      - order_ref
+      - recipient_id
+      - recipient_kind
+      - template_code
+    NotificationStatusEnum:
+      enum:
+      - PENDING
+      - SENT
+      - SKIPPED
+      - FAILED
+      type: string
+      description: |-
+        * `PENDING` - Pending
+        * `SENT` - Sent
+        * `SKIPPED` - Skipped
+        * `FAILED` - Failed
+    NotificationTestRequest:
+      type: object
+      properties:
+        event_key:
+          type: string
+          minLength: 1
+        order:
+          type: string
+          format: uuid
+      required:
+      - event_key
+      - order
     Offer:
       type: object
       properties:
@@ -8266,6 +8577,20 @@ components:
       required:
       - device_id
       - ops
+    OrderChannelEnum:
+      enum:
+      - WEB
+      - WHATSAPP
+      - COUNTER
+      - PHONE
+      - APP
+      type: string
+      description: |-
+        * `WEB` - Web
+        * `WHATSAPP` - WhatsApp
+        * `COUNTER` - Counter / walk-in
+        * `PHONE` - Phone
+        * `APP` - Mobile app
     OrderContributionMargin:
       type: object
       description: |-
@@ -8366,7 +8691,7 @@ components:
           format: uuid
           nullable: true
         channel:
-          $ref: '#/components/schemas/ChannelEnum'
+          $ref: '#/components/schemas/OrderChannelEnum'
         pickup_capacity:
           type: string
           format: uuid
@@ -8403,7 +8728,7 @@ components:
         payment_status:
           $ref: '#/components/schemas/PaymentStatusEnum'
         channel:
-          $ref: '#/components/schemas/ChannelEnum'
+          $ref: '#/components/schemas/OrderChannelEnum'
         customer:
           type: string
           format: uuid
@@ -8726,7 +9051,7 @@ components:
         payment_status:
           $ref: '#/components/schemas/PaymentStatusEnum'
         channel:
-          $ref: '#/components/schemas/ChannelEnum'
+          $ref: '#/components/schemas/OrderChannelEnum'
         customer:
           type: string
           format: uuid
@@ -8805,7 +9130,7 @@ components:
         payment_status:
           $ref: '#/components/schemas/PaymentStatusEnum'
         channel:
-          $ref: '#/components/schemas/ChannelEnum'
+          $ref: '#/components/schemas/OrderChannelEnum'
         customer:
           type: string
           format: uuid
@@ -9292,6 +9617,25 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Job'
+    PaginatedNotificationRequestList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationRequest'
     PaginatedOfferList:
       type: object
       required:
@@ -9732,6 +10076,13 @@ components:
           type: string
           minLength: 1
           maxLength: 8
+    PatchedNotificationPreferenceRequest:
+      type: object
+      properties:
+        channel:
+          $ref: '#/components/schemas/NotificationChannelEnum'
+        opted_in:
+          type: boolean
     PatchedOfferRequest:
       type: object
       properties:
@@ -9818,7 +10169,7 @@ components:
         payment_status:
           $ref: '#/components/schemas/PaymentStatusEnum'
         channel:
-          $ref: '#/components/schemas/ChannelEnum'
+          $ref: '#/components/schemas/OrderChannelEnum'
         customer:
           type: string
           format: uuid
@@ -10571,6 +10922,14 @@ components:
       - old_total_minor
       - order
       - reason
+    RecipientKindEnum:
+      enum:
+      - CUSTOMER
+      - STAFF
+      type: string
+      description: |-
+        * `CUSTOMER` - Customer
+        * `STAFF` - Staff
     RecordPaymentMethodEnum:
       enum:
       - CASH
