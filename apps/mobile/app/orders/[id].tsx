@@ -1,7 +1,15 @@
 import { useLocalSearchParams } from "expo-router";
-import { ActivityIndicator, ScrollView, Text, View } from "react-native";
+import { useState } from "react";
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { formatMoneyMinor } from "../../lib/format";
-import { useOrder } from "../../lib/orders";
+import { useOrder, useSubmitFeedback } from "../../lib/orders";
 import { statusColor, statusLabel } from "../../lib/status";
 
 export default function OrderDetailScreen() {
@@ -64,6 +72,64 @@ export default function OrderDetailScreen() {
           <Text className="text-sm text-gray-500">{order.notes}</Text>
         </View>
       ) : null}
+
+      {(order.status === "DELIVERED" || order.status === "CLOSED") && (
+        <FeedbackSection orderId={order.id} alreadyRated={order.has_feedback} />
+      )}
     </ScrollView>
+  );
+}
+
+function FeedbackSection({
+  orderId,
+  alreadyRated,
+}: {
+  orderId: string;
+  alreadyRated: boolean;
+}) {
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  const submitFeedback = useSubmitFeedback();
+
+  if (alreadyRated || submitted) {
+    return (
+      <View className="gap-1 rounded-lg border border-gray-200 p-4">
+        <Text className="font-semibold text-base text-brand-ink">Thanks for rating this order</Text>
+      </View>
+    );
+  }
+
+  async function handleSubmit() {
+    await submitFeedback.mutateAsync({ order: orderId, rating, comment: comment || undefined });
+    setSubmitted(true);
+  }
+
+  return (
+    <View className="gap-3 rounded-lg border border-gray-200 p-4">
+      <Text className="font-semibold text-base text-brand-ink">Rate this order</Text>
+      <View className="flex-row gap-1">
+        {[1, 2, 3, 4, 5].map((value) => (
+          <Pressable key={value} onPress={() => setRating(value)} hitSlop={8}>
+            <Text className={value <= rating ? "text-3xl text-brand-yellow" : "text-3xl text-gray-300"}>
+              ★
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+      <TextInput
+        className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+        placeholder="Comment (optional)"
+        value={comment}
+        onChangeText={setComment}
+      />
+      <Pressable
+        className="items-center rounded-lg bg-brand-yellow py-2 disabled:opacity-50"
+        disabled={rating === 0 || submitFeedback.isPending}
+        onPress={handleSubmit}
+      >
+        <Text className="text-sm font-semibold text-brand-ink">Submit rating</Text>
+      </Pressable>
+    </View>
   );
 }

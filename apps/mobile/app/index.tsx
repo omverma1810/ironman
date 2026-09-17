@@ -1,4 +1,5 @@
 import { Redirect, useRouter } from "expo-router";
+import { useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -10,7 +11,7 @@ import {
 } from "react-native";
 import { useAuth } from "../lib/auth";
 import { formatMoneyMinor } from "../lib/format";
-import { useMyOrders } from "../lib/orders";
+import { useMyOrders, usePendingRequotes, useRespondToRequote } from "../lib/orders";
 import { statusColor, statusLabel } from "../lib/status";
 import type { OrderListItem } from "../lib/types";
 
@@ -18,6 +19,9 @@ export default function HomeScreen() {
   const { user, isLoading: authLoading, logout } = useAuth();
   const router = useRouter();
   const ordersQuery = useMyOrders();
+  const requotesQuery = usePendingRequotes();
+  const respondToRequote = useRespondToRequote();
+  const [respondingId, setRespondingId] = useState<string | null>(null);
 
   if (authLoading) {
     return (
@@ -31,6 +35,16 @@ export default function HomeScreen() {
   }
 
   const orders = ordersQuery.data?.results ?? [];
+  const pendingRequotes = requotesQuery.data?.results ?? [];
+
+  async function handleRespond(id: string, approved: boolean) {
+    setRespondingId(id);
+    try {
+      await respondToRequote.mutateAsync({ id, approved });
+    } finally {
+      setRespondingId(null);
+    }
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-white">
@@ -43,6 +57,41 @@ export default function HomeScreen() {
           <Text className="text-status-info text-sm font-medium">Log out</Text>
         </Pressable>
       </View>
+
+      {pendingRequotes.length > 0 && (
+        <View className="gap-3 px-4 pb-3">
+          <Text className="font-semibold text-base text-brand-ink">Needs your approval</Text>
+          {pendingRequotes.map((requote) => (
+            <View key={requote.id} className="gap-2 rounded-lg border border-status-warning p-4">
+              <Text className="text-sm text-brand-ink">
+                <Text className="font-medium">{requote.order_ref}</Text>: {requote.reason}
+              </Text>
+              <Text className="text-sm text-gray-500">
+                {formatMoneyMinor(requote.old_total_minor)} →{" "}
+                <Text className="font-medium text-brand-ink">
+                  {formatMoneyMinor(requote.new_total_minor)}
+                </Text>
+              </Text>
+              <View className="flex-row gap-2">
+                <Pressable
+                  className="flex-1 items-center rounded-md bg-brand-yellow py-2 disabled:opacity-50"
+                  disabled={respondingId === requote.id}
+                  onPress={() => handleRespond(requote.id, true)}
+                >
+                  <Text className="text-sm font-semibold text-brand-ink">Approve new total</Text>
+                </Pressable>
+                <Pressable
+                  className="flex-1 items-center rounded-md border border-gray-300 py-2 disabled:opacity-50"
+                  disabled={respondingId === requote.id}
+                  onPress={() => handleRespond(requote.id, false)}
+                >
+                  <Text className="text-sm font-semibold text-brand-ink">Reject & cancel</Text>
+                </Pressable>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
 
       {ordersQuery.isLoading ? (
         <View className="flex-1 items-center justify-center">

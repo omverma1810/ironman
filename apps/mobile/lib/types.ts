@@ -43,6 +43,7 @@ export type OrderListItem = {
   pickup_slot_start: string | null;
   delivery_slot_start: string | null;
   total_minor: number;
+  has_feedback: boolean;
 };
 
 export type OrderLine = {
@@ -72,4 +73,20 @@ export type Paginated<T> = {
   next: string | null;
   previous: string | null;
   results: T[];
+};
+
+export type ReQuote = {
+  id: string;
+  order: string;
+  order_ref: string;
+  reason: string;
+  old_total_minor: number;
+  new_total_minor: number;
+  decision: "PENDING" | "APPROVED" | "REJECTED";
+};
+
+export type FeedbackInput = {
+  order: string;
+  rating: number;
+  comment?: string;
 };
