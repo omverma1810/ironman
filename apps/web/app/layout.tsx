@@ -3,6 +3,7 @@ import { Providers } from "@/lib/providers";
 import "@fontsource-variable/inter";
 import "@fontsource-variable/inter-tight/wght.css";
 import "@fontsource-variable/plus-jakarta-sans/wght.css";
+import "@fontsource-variable/fraunces/wght.css";
 import "@fontsource/ibm-plex-mono/400.css";
 import "@fontsource/ibm-plex-mono/500.css";
 import "@fontsource/ibm-plex-mono/600.css";

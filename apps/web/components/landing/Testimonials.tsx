@@ -25,23 +25,37 @@ export function Testimonials() {
         </div>
 
         <div className="mt-12 flex snap-x snap-mandatory gap-6 overflow-x-auto pb-4">
-          {TESTIMONIALS.map((testimonial) => (
-            <div
-              key={testimonial.name}
-              className="flex w-80 shrink-0 snap-start flex-col gap-4 rounded-2xl border border-white/10 p-6"
-            >
-              <div className="flex gap-1" aria-hidden="true">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star key={i} className="size-4 fill-landing-gold text-landing-gold" />
-                ))}
+          {TESTIMONIALS.map((testimonial) => {
+            const initials = testimonial.name
+              .split(" ")
+              .map((part) => part[0])
+              .join("");
+            return (
+              <div
+                key={testimonial.name}
+                className="flex w-80 shrink-0 snap-start flex-col gap-4 rounded-2xl border border-white/10 p-6"
+              >
+                <div className="flex gap-1" aria-hidden="true">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star key={i} className="size-4 fill-landing-gold text-landing-gold" />
+                  ))}
+                </div>
+                <p className="text-sm text-white/80">&ldquo;{testimonial.quote}&rdquo;</p>
+                <div className="mt-auto flex items-center gap-3">
+                  <span
+                    className="flex size-9 shrink-0 items-center justify-center rounded-full bg-landing-gold/15 font-landing-heading text-xs font-bold text-landing-gold"
+                    aria-hidden="true"
+                  >
+                    {initials}
+                  </span>
+                  <div>
+                    <p className="text-sm font-semibold text-white">{testimonial.name}</p>
+                    <p className="text-xs text-white/50">{testimonial.locality}</p>
+                  </div>
+                </div>
               </div>
-              <p className="text-sm text-white/80">&ldquo;{testimonial.quote}&rdquo;</p>
-              <div>
-                <p className="text-sm font-semibold text-white">{testimonial.name}</p>
-                <p className="text-xs text-white/50">{testimonial.locality}</p>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </motion.div>
     </section>
