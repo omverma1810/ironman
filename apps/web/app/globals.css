@@ -194,8 +194,13 @@
   --font-display: "Inter Tight Variable", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   /* Marketing landing page only — its own heading face, separate from
-     --font-display (Inter Tight) used by every product screen. */
-  --font-landing-heading: "Plus Jakarta Sans Variable", "Inter Tight Variable", ui-sans-serif,
+     --font-display (Inter Tight) used by every product screen. Fraunces is
+     a "soft" variable serif with real character for headline impact;
+     Plus Jakarta Sans stays as the tracked-caps label face (eyebrows,
+     numbered-feature digits). */
+  --font-landing-heading: "Fraunces Variable", "Plus Jakarta Sans Variable", ui-serif, Georgia,
+    serif;
+  --font-landing-label: "Plus Jakarta Sans Variable", "Inter Tight Variable", ui-sans-serif,
     system-ui, sans-serif;
 
   /* Tailwind v4 theme namespaces: --duration-* -> duration-* utilities,

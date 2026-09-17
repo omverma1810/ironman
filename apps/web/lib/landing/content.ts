@@ -4,6 +4,7 @@
 export const NAV_LINKS = [
   { label: "Home", href: "#home" },
   { label: "Services", href: "#services" },
+  { label: "Process", href: "#process" },
   { label: "Pricing", href: "#pricing" },
   { label: "FAQ", href: "#faq" },
   { label: "Contact", href: "#contact" },
@@ -19,6 +20,7 @@ export type Service = {
   slug: string;
   title: string;
   description: string;
+  bullets: [string, string];
 };
 
 export const SERVICES: Service[] = [
@@ -26,31 +28,37 @@ export const SERVICES: Service[] = [
     slug: "dry-cleaning",
     title: "Premium Dry Cleaning",
     description: "Gentle solvent care for suits, silks and delicate fabrics.",
+    bullets: ["Fabric-tested solvent process", "Pressed and hung ready to wear"],
   },
   {
     slug: "wash-fold",
     title: "Wash & Fold",
     description: "Everyday laundry, sorted, washed, folded and packed fresh.",
+    bullets: ["Sorted by colour and fabric", "Folded and packed in labelled bags"],
   },
   {
     slug: "designer-garment",
     title: "Designer Garment Care",
     description: "Specialist handling for luxury labels and occasion wear.",
+    bullets: ["Hand-finished, label-safe pressing", "Priority handling for occasion wear"],
   },
   {
     slug: "shoe-sneaker",
     title: "Shoe & Sneaker Care",
     description: "Deep cleaning and restoration for sneakers and leather.",
+    bullets: ["Sole, upper and lace deep-clean", "Leather conditioning on request"],
   },
   {
     slug: "saree-drapery",
     title: "Saree & Drapery Care",
     description: "Pressed, polished and packed with heritage-grade care.",
+    bullets: ["Zari and border-safe pressing", "Folded flat, never creased in transit"],
   },
   {
     slug: "express",
     title: "Express Same-Day",
     description: "In by morning, back by evening. When you need it fast.",
+    bullets: ["Morning cut-off, evening delivery", "Priority queue at the hub"],
   },
 ];
 
@@ -58,6 +66,7 @@ export type NumberedFeature = {
   number: string;
   title: string;
   description: string;
+  icon: "truck" | "shield" | "receipt" | "zap" | "map-pin" | "message-circle";
 };
 
 export const NUMBERED_FEATURES: NumberedFeature[] = [
@@ -65,34 +74,117 @@ export const NUMBERED_FEATURES: NumberedFeature[] = [
     number: "01",
     title: "Free Doorstep Pickup",
     description: "Schedule in 30 seconds. We collect from your home or office at a slot you choose.",
+    icon: "truck",
   },
   {
     number: "02",
     title: "Trained Garment Specialists",
     description:
       "Fabric-first assessment on intake; every item tagged and tracked through our system.",
+    icon: "shield",
   },
   {
     number: "03",
     title: "Transparent Billing",
     description: "Itemized digital invoice from our in-house software. No surprises, ever.",
+    icon: "receipt",
   },
   {
     number: "04",
     title: "Same-Day Express",
     description: "Cut-off aware routing so urgent orders return the same evening.",
+    icon: "zap",
+  },
+  {
+    number: "05",
+    title: "Real-Time Order Tracking",
+    description: "A live tracking link follows your order from pickup to delivery — no app required.",
+    icon: "map-pin",
+  },
+  {
+    number: "06",
+    title: "Book On Web Or WhatsApp",
+    description: "Schedule from a browser or straight from a WhatsApp chat — whichever is faster for you.",
+    icon: "message-circle",
   },
 ];
 
-export type Step = {
+export type ProcessStep = {
   title: string;
   description: string;
+  icon: "calendar" | "clipboard-check" | "sparkles" | "receipt" | "package-check";
 };
 
-export const HOW_IT_WORKS: Step[] = [
-  { title: "Schedule Pickup", description: "Book a slot on the web or WhatsApp in under a minute." },
-  { title: "We Clean & Press", description: "Tracked from intake through pressing and quality check." },
-  { title: "Delivered Fresh", description: "Back at your door, pay by cash or UPI on delivery." },
+export const PROCESS_STEPS: ProcessStep[] = [
+  {
+    title: "Schedule Pickup",
+    description:
+      "Book a slot on the web or WhatsApp in under a minute. Pick a window that suits your day — we work around you.",
+    icon: "calendar",
+  },
+  {
+    title: "We Collect & Tag",
+    description:
+      "Every item is counted with you at the door, tagged and logged into our system before it ever leaves your hands.",
+    icon: "clipboard-check",
+  },
+  {
+    title: "Wash, Press & Quality Check",
+    description:
+      "Fabric-first handling through wash, press and a final quality check — tracked stage by stage, not left to guesswork.",
+    icon: "sparkles",
+  },
+  {
+    title: "Packed & Invoiced",
+    description:
+      "An itemized digital invoice is generated before we pack — you see exactly what you're paying for, before delivery day.",
+    icon: "receipt",
+  },
+  {
+    title: "Delivered Fresh",
+    description:
+      "Back at your door on schedule. Pay by cash or UPI, or draw down your IronMan store credit if you have a balance.",
+    icon: "package-check",
+  },
+];
+
+export type ImpactStat = {
+  value: number;
+  decimals?: number;
+  prefix?: string;
+  suffix?: string;
+  label: string;
+};
+
+export const IMPACT_STATS: ImpactStat[] = [
+  { value: 10000, suffix: "+", label: "Garments cared for" },
+  { value: 4.9, decimals: 1, suffix: "/5", label: "Average customer rating" },
+  { value: 48, suffix: "hr", label: "Standard turnaround" },
+  { value: 30, suffix: "sec", label: "Average booking time" },
+];
+
+export type Value = {
+  title: string;
+  description: string;
+  icon: "heart-handshake" | "eye" | "badge-check";
+};
+
+export const ABOUT_VALUES: Value[] = [
+  {
+    title: "Care first",
+    description: "Every garment gets a fabric-first assessment before it touches a machine.",
+    icon: "heart-handshake",
+  },
+  {
+    title: "Radical transparency",
+    description: "You see the same itemized invoice and order timeline our own team works from.",
+    icon: "eye",
+  },
+  {
+    title: "Built to be trusted",
+    description: "Counted at intake, tracked at every stage, confirmed with you before anything changes.",
+    icon: "badge-check",
+  },
 ];
 
 export type Testimonial = {
@@ -119,6 +211,24 @@ export const TESTIMONIALS: Testimonial[] = [
       "My sarees came back pressed and packed better than the store I used for ten years. Same-day express saved a wedding morning.",
     name: "Meera Iyer",
     locality: "HSR Layout",
+  },
+  {
+    quote:
+      "My sneakers looked showroom-fresh after their deep clean. Didn't expect that level of care from a laundry pickup service.",
+    name: "Rohan Kapoor",
+    locality: "Whitefield",
+  },
+  {
+    quote:
+      "The tracking link is what sold me — I could see exactly which stage my order was at without calling anyone.",
+    name: "Priya Menon",
+    locality: "Jayanagar",
+  },
+  {
+    quote:
+      "Switched from a local dhobi after one bad stain job elsewhere. IronMan's quality check step actually caught an issue before delivery.",
+    name: "Arjun Nair",
+    locality: "Koramangala",
   },
 ];
 
@@ -184,5 +294,15 @@ export const FAQS: Faq[] = [
     question: "What's the cut-off for same-day express?",
     answer:
       "Pickups completed before 9:00 AM qualify for same-evening express delivery, subject to that day's slots. We'll confirm express eligibility when you book.",
+  },
+  {
+    question: "Do you offer any subscription or monthly plans?",
+    answer:
+      "Not yet — every order today is billed individually against our live rate card, with no recurring commitment. We're evaluating monthly plans for regular households as we grow.",
+  },
+  {
+    question: "What happens if an item is lost or damaged?",
+    answer:
+      "Every garment is counted and tagged at intake, so a discrepancy is caught early rather than at delivery. If something does go wrong, tell us on the order's tracking page or by phone and our team will work through it with you directly.",
   },
 ];

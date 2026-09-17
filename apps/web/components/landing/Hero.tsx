@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
 import { Star, Truck } from "lucide-react";
 import { EASE_BRAND } from "@/lib/landing/animations";
+import { useScrollParallax } from "@/lib/landing/parallax";
 
 const container = {
   hidden: {},
@@ -42,6 +43,7 @@ function GarmentIllustration() {
 
 export function Hero() {
   const reduce = useReducedMotion();
+  const { ref: parallaxRef, y: parallaxY } = useScrollParallax<HTMLDivElement>(16);
 
   return (
     <section id="home" className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-16 px-6 py-20 lg:grid-cols-2 lg:py-28">
@@ -121,14 +123,18 @@ export function Hero() {
       </motion.div>
 
       <motion.div
+        ref={parallaxRef}
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: EASE_BRAND, delay: 0.2 }}
         className="relative"
       >
-        <div className="aspect-square overflow-hidden rounded-2xl bg-landing-paper">
+        <motion.div
+          style={reduce ? undefined : { y: parallaxY }}
+          className="aspect-square overflow-hidden rounded-2xl bg-landing-paper"
+        >
           <GarmentIllustration />
-        </div>
+        </motion.div>
         <motion.div
           animate={reduce ? undefined : { y: [0, -8, 0] }}
           transition={reduce ? undefined : { duration: 4, repeat: Infinity, ease: "easeInOut" }}
