@@ -23,6 +23,8 @@ import type {
   Customer,
   CustomerCredit,
   CustomerDetail,
+  Feedback,
+  FeedbackInput,
   GarmentLine,
   GarmentStage,
   GarmentType,
@@ -288,6 +290,14 @@ export const requotesApi = {
       body: { approved },
       accessToken,
     }),
+};
+
+// docs/04 §3.9: POST is `[C]` (a customer rates their own delivered
+// order); GET/PATCH are `[A][B]` staff moderation, not exposed here — the
+// account UI checks `OrderListItem.has_feedback` instead of listing.
+export const growthApi = {
+  submitFeedback: (input: FeedbackInput, accessToken?: string) =>
+    apiFetch<Feedback>("/growth/feedback/", { method: "POST", body: input, accessToken }),
 };
 
 export type ExceptionListParams = {

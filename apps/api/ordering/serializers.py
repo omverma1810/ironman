@@ -1,3 +1,4 @@
+from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 
 from ordering.models import Channel, Order, OrderEvent, OrderException, OrderLine, ReQuote
@@ -27,6 +28,19 @@ class OrderListSerializer(serializers.ModelSerializer):
     apartment_name = serializers.CharField(source="apartment.name", read_only=True)
     service_name = serializers.CharField(source="service.name", read_only=True)
     is_late_pickup = serializers.BooleanField(read_only=True)
+    # Reverse `growth.Feedback` O2O — a plain field would need `ordering`
+    # to import `growth.models`, which the boundary contracts forbid,
+    # so this reads the relation itself instead (docs/04: GET
+    # /growth/feedback is staff-only, but a customer still needs to know
+    # whether they've already rated their own order).
+    has_feedback = serializers.SerializerMethodField()
+
+    def get_has_feedback(self, obj: Order) -> bool:
+        try:
+            obj.feedback
+        except ObjectDoesNotExist:
+            return False
+        return True
 
     class Meta:
         model = Order
@@ -52,6 +66,7 @@ class OrderListSerializer(serializers.ModelSerializer):
             "total_minor",
             "created_at",
             "is_late_pickup",
+            "has_feedback",
         ]
 
 

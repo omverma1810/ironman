@@ -312,6 +312,7 @@ export type OrderListItem = {
   total_minor: number;
   created_at: string;
   is_late_pickup: boolean;
+  has_feedback: boolean;
 };
 
 export type OrderDetail = OrderListItem & {
@@ -936,4 +937,26 @@ export type NotificationRequestRow = {
   skipped_reason: string;
   created_at: string;
   deliveries: NotificationDelivery[];
+};
+
+// ── Growth / customer feedback (batch 4.6, docs/02 §3.10) ────────────────
+export type Feedback = {
+  id: string;
+  order: string;
+  order_ref: string;
+  customer_name: string;
+  rating: number;
+  comment: string;
+  tags: string[];
+  is_public: boolean;
+  responded_by: string | null;
+  responded_at: string | null;
+  created_at: string;
+};
+
+export type FeedbackInput = {
+  order: string;
+  rating: number;
+  comment?: string;
+  tags?: string[];
 };
