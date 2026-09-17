@@ -70,6 +70,20 @@
   --motion-base: 180ms;
   --motion-slow: 260ms;
   --motion-easing: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* ---- marketing landing page only (docs/08 batch 4.7 follow-up) ----
+     A deliberately separate palette from the brand tokens above: the
+     console/account/book/track/field surfaces keep --brand-yellow and
+     --surface-*, untouched. Scoped under its own "landing-" prefix so
+     the two never collide and nothing here leaks into the product UI. */
+  --landing-ink: #1c1917;
+  --landing-paper: #faf9f6;
+  --landing-card: #ffffff;
+  --landing-gold: #e8a33d;
+  --landing-gold-deep: #c9832a;
+  --landing-muted: #57534e;
+  --landing-shadow-lift: 0 20px 40px -12px rgba(28, 25, 23, 0.15);
+  --landing-radius-blob: 2.5rem;
 }
 
 .dark {
@@ -153,6 +167,15 @@
   --color-stage-failed: var(--stage-failed);
   --color-stage-hold: var(--stage-hold);
 
+  --color-landing-ink: var(--landing-ink);
+  --color-landing-paper: var(--landing-paper);
+  --color-landing-card: var(--landing-card);
+  --color-landing-gold: var(--landing-gold);
+  --color-landing-gold-deep: var(--landing-gold-deep);
+  --color-landing-muted: var(--landing-muted);
+  --shadow-landing-lift: var(--landing-shadow-lift);
+  --radius-landing-blob: var(--landing-radius-blob);
+
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
   --radius-lg: var(--radius-lg);
@@ -170,6 +193,10 @@
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Inter Tight Variable", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  /* Marketing landing page only — its own heading face, separate from
+     --font-display (Inter Tight) used by every product screen. */
+  --font-landing-heading: "Plus Jakarta Sans Variable", "Inter Tight Variable", ui-sans-serif,
+    system-ui, sans-serif;
 
   /* Tailwind v4 theme namespaces: --duration-* -> duration-* utilities,
      --ease-* -> ease-* utilities (docs/05 §2.2 motion tokens). */
