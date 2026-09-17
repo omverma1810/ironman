@@ -3785,6 +3785,148 @@ paths:
                 items:
                   $ref: '#/components/schemas/OfflineOpResult'
           description: ''
+  /api/v1/growth/feedback/:
+    get:
+      operationId: growth_feedback_list
+      description: |-
+        `[C]` a customer submits feedback for their own delivered order;
+        `[A][B]` admin/founder see and moderate all of it (docs/04 — growth).
+        No hub scoping for staff: a founder's "are customers happy" view is
+        explicitly cross-hub (docs/07 §"Customer Feedback").
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: is_public
+        schema:
+          type: boolean
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: order
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: rating
+        schema:
+          type: integer
+      tags:
+      - growth
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedFeedbackList'
+          description: ''
+    post:
+      operationId: growth_feedback_create
+      description: |-
+        `[C]` a customer submits feedback for their own delivered order;
+        `[A][B]` admin/founder see and moderate all of it (docs/04 — growth).
+        No hub scoping for staff: a founder's "are customers happy" view is
+        explicitly cross-hub (docs/07 §"Customer Feedback").
+      tags:
+      - growth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeedbackRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/FeedbackRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FeedbackRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Feedback'
+          description: ''
+  /api/v1/growth/feedback/{id}/:
+    get:
+      operationId: growth_feedback_retrieve
+      description: |-
+        `[C]` a customer submits feedback for their own delivered order;
+        `[A][B]` admin/founder see and moderate all of it (docs/04 — growth).
+        No hub scoping for staff: a founder's "are customers happy" view is
+        explicitly cross-hub (docs/07 §"Customer Feedback").
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this feedback.
+        required: true
+      tags:
+      - growth
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Feedback'
+          description: ''
+    patch:
+      operationId: growth_feedback_partial_update
+      description: |-
+        `[C]` a customer submits feedback for their own delivered order;
+        `[A][B]` admin/founder see and moderate all of it (docs/04 — growth).
+        No hub scoping for staff: a founder's "are customers happy" view is
+        explicitly cross-hub (docs/07 §"Customer Feedback").
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this feedback.
+        required: true
+      tags:
+      - growth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedFeedbackRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedFeedbackRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedFeedbackRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Feedback'
+          description: ''
   /api/v1/healthz:
     get:
       operationId: healthz_retrieve
@@ -7616,6 +7758,63 @@ components:
           minLength: 1
       required:
       - token
+    Feedback:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        order:
+          type: string
+          format: uuid
+          readOnly: true
+        order_ref:
+          type: string
+          readOnly: true
+        customer_name:
+          type: string
+          readOnly: true
+        rating:
+          type: integer
+          readOnly: true
+        comment:
+          type: string
+          readOnly: true
+        tags:
+          readOnly: true
+        is_public:
+          type: boolean
+        responded_by:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        responded_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - comment
+      - created_at
+      - customer_name
+      - id
+      - order
+      - order_ref
+      - rating
+      - responded_at
+      - responded_by
+      - tags
+    FeedbackRequest:
+      type: object
+      properties:
+        is_public:
+          type: boolean
     GarmentLine:
       type: object
       properties:
@@ -8856,6 +9055,9 @@ components:
         is_late_pickup:
           type: boolean
           readOnly: true
+        has_feedback:
+          type: boolean
+          readOnly: true
         hub:
           type: string
           format: uuid
@@ -8924,6 +9126,7 @@ components:
       - customer
       - customer_name
       - customer_phone
+      - has_feedback
       - hub
       - id
       - is_late_pickup
@@ -9179,12 +9382,16 @@ components:
         is_late_pickup:
           type: boolean
           readOnly: true
+        has_feedback:
+          type: boolean
+          readOnly: true
       required:
       - apartment_name
       - created_at
       - customer
       - customer_name
       - customer_phone
+      - has_feedback
       - id
       - is_late_pickup
       - ref
@@ -9590,6 +9797,25 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CustomerNote'
+    PaginatedFeedbackList:
+      type: object
+      required:
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Feedback'
     PaginatedGarmentLineList:
       type: object
       required:
@@ -10090,6 +10316,11 @@ components:
           type: string
           minLength: 1
         is_internal:
+          type: boolean
+    PatchedFeedbackRequest:
+      type: object
+      properties:
+        is_public:
           type: boolean
     PatchedGarmentTypeRequest:
       type: object

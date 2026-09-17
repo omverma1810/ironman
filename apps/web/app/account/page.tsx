@@ -11,7 +11,21 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { addressesApi, authApi, billingApi, ordersApi, requotesApi } from "@/lib/api/endpoints";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  addressesApi,
+  authApi,
+  billingApi,
+  growthApi,
+  ordersApi,
+  requotesApi,
+} from "@/lib/api/endpoints";
 import { resolveMediaUrl } from "@/lib/api/client";
 import { formatDate, formatMoneyMinor } from "@/lib/format";
 import { useCustomerAuth } from "@/lib/customer-auth";
@@ -344,6 +358,7 @@ function OrdersTab({ accessToken }: { accessToken: string }) {
     onError: () => toast.error("Couldn't record your decision."),
   });
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [ratingOrder, setRatingOrder] = useState<OrderListItem | null>(null);
 
   async function handleTrack(order: OrderListItem) {
     setBusyId(order.id);
@@ -494,12 +509,113 @@ function OrdersTab({ accessToken }: { accessToken: string }) {
                 >
                   Reorder
                 </Button>
+                {order.status === "DELIVERED" &&
+                  (order.has_feedback ? (
+                    <span className="inline-flex items-center gap-1 text-sm text-text-muted">
+                      <Icon name="star" className="size-4 fill-current text-brand-yellow" />
+                      Rated
+                    </span>
+                  ) : (
+                    <Button variant="outline" size="sm" onClick={() => setRatingOrder(order)}>
+                      Rate order
+                    </Button>
+                  ))}
               </div>
             </div>
           </div>
         ))}
         </CardContent>
       </Card>
+
+      <RateOrderDialog
+        order={ratingOrder}
+        accessToken={accessToken}
+        onClose={() => setRatingOrder(null)}
+        onSubmitted={() => queryClient.invalidateQueries({ queryKey: ["my-orders"] })}
+      />
     </div>
+  );
+}
+
+function RateOrderDialog({
+  order,
+  accessToken,
+  onClose,
+  onSubmitted,
+}: {
+  order: OrderListItem | null;
+  accessToken: string;
+  onClose: () => void;
+  onSubmitted: () => void;
+}) {
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState("");
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      growthApi.submitFeedback(
+        { order: order!.id, rating, comment: comment || undefined },
+        accessToken
+      ),
+    onSuccess: () => {
+      toast.success("Thanks for the feedback!");
+      onSubmitted();
+      handleClose();
+    },
+    onError: () => toast.error("Couldn't submit your rating."),
+  });
+
+  function handleClose() {
+    setRating(0);
+    setComment("");
+    onClose();
+  }
+
+  return (
+    <Dialog open={!!order} onOpenChange={(open) => !open && handleClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Rate {order?.ref}</DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col gap-4">
+          <div className="flex gap-1" role="radiogroup" aria-label="Rating">
+            {[1, 2, 3, 4, 5].map((value) => (
+              <button
+                key={value}
+                type="button"
+                role="radio"
+                aria-checked={rating === value}
+                aria-label={`${value} star${value > 1 ? "s" : ""}`}
+                onClick={() => setRating(value)}
+                className="p-0.5"
+              >
+                <Icon
+                  name="star"
+                  className={
+                    value <= rating
+                      ? "size-8 fill-current text-brand-yellow"
+                      : "size-8 text-border-default"
+                  }
+                />
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="feedback_comment">Comment (optional)</Label>
+            <Input
+              id="feedback_comment"
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder="Tell us how it went"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button disabled={rating === 0 || mutation.isPending} onClick={() => mutation.mutate()}>
+            Submit rating
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

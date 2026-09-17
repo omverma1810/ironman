@@ -39,7 +39,9 @@ class OrderViewSet(ScopedQuerysetMixin, viewsets.ModelViewSet):
 
     queryset = (
         Order.objects.filter(deleted_at__isnull=True)
-        .select_related("customer", "apartment", "service", "hub", "address", "address__apartment")
+        .select_related(
+            "customer", "apartment", "service", "hub", "address", "address__apartment", "feedback"
+        )
         .prefetch_related("lines")
     )
     permission_classes = [IsAuthenticated]
@@ -53,7 +55,13 @@ class OrderViewSet(ScopedQuerysetMixin, viewsets.ModelViewSet):
         qs = (
             Order.objects.filter(deleted_at__isnull=True)
             .select_related(
-                "customer", "apartment", "service", "hub", "address", "address__apartment"
+                "customer",
+                "apartment",
+                "service",
+                "hub",
+                "address",
+                "address__apartment",
+                "feedback",
             )
             .prefetch_related("lines")
         )
