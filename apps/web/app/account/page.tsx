@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { addressesApi, authApi, billingApi, ordersApi } from "@/lib/api/endpoints";
+import { addressesApi, authApi, billingApi, ordersApi, requotesApi } from "@/lib/api/endpoints";
 import { resolveMediaUrl } from "@/lib/api/client";
 import { formatDate, formatMoneyMinor } from "@/lib/format";
 import { useCustomerAuth } from "@/lib/customer-auth";
@@ -318,6 +318,7 @@ function AddressesTab({ accessToken }: { accessToken: string }) {
 }
 
 function OrdersTab({ accessToken }: { accessToken: string }) {
+  const queryClient = useQueryClient();
   const orders = useQuery({
     queryKey: ["my-orders"],
     queryFn: () => ordersApi.list(undefined, accessToken),
@@ -325,6 +326,22 @@ function OrdersTab({ accessToken }: { accessToken: string }) {
   const addresses = useQuery({
     queryKey: ["my-addresses"],
     queryFn: () => addressesApi.mine(accessToken),
+  });
+  const pendingRequotes = useQuery({
+    queryKey: ["my-requotes"],
+    queryFn: () => requotesApi.list({ decision: "PENDING" }, accessToken),
+  });
+  const respondMutation = useMutation({
+    mutationFn: ({ id, approved }: { id: string; approved: boolean }) =>
+      requotesApi.respond(id, approved, accessToken),
+    onSuccess: (order, { approved }) => {
+      toast.success(
+        approved ? `${order.ref} approved at the new total` : `${order.ref} cancelled`
+      );
+      queryClient.invalidateQueries({ queryKey: ["my-requotes"] });
+      queryClient.invalidateQueries({ queryKey: ["my-orders"] });
+    },
+    onError: () => toast.error("Couldn't record your decision."),
   });
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -391,12 +408,54 @@ function OrdersTab({ accessToken }: { accessToken: string }) {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Order history</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3">
-        {orders.isPending && <Skeleton className="h-32 w-full" />}
+    <div className="flex flex-col gap-4">
+      {!!pendingRequotes.data?.results.length && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Needs your approval</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            {pendingRequotes.data.results.map((requote, i) => (
+              <div key={requote.id} className="flex flex-col gap-2">
+                {i > 0 && <Separator />}
+                <p className="text-sm text-text-primary">
+                  <span className="font-medium">{requote.order_ref}</span>: {requote.reason}
+                </p>
+                <p className="text-sm text-text-muted">
+                  {formatMoneyMinor(requote.old_total_minor)} →{" "}
+                  <span className="font-medium text-text-primary">
+                    {formatMoneyMinor(requote.new_total_minor)}
+                  </span>
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    disabled={respondMutation.isPending}
+                    onClick={() => respondMutation.mutate({ id: requote.id, approved: true })}
+                  >
+                    Approve new total
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={respondMutation.isPending}
+                    onClick={() => respondMutation.mutate({ id: requote.id, approved: false })}
+                  >
+                    Reject &amp; cancel order
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Order history</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          {orders.isPending && <Skeleton className="h-32 w-full" />}
         {orders.data?.results.length === 0 && (
           <p className="text-sm text-text-muted">No orders yet.</p>
         )}
@@ -439,7 +498,8 @@ function OrdersTab({ accessToken }: { accessToken: string }) {
             </div>
           </div>
         ))}
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

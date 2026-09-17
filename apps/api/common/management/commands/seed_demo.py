@@ -155,6 +155,7 @@ class Command(BaseCommand):
             "order.scheduled": "Hi {customer_name}, your {service_name} pickup for {order_ref} is scheduled for {pickup_time}. — IronMan",
             "order.out_for_delivery": "Hi {customer_name}, {order_ref} is out for delivery, expected {delivery_time}. Total: {total}. — IronMan",
             "order.delivered": "Hi {customer_name}, {order_ref} has been delivered. Thanks for choosing IronMan!",
+            "order.requote_raised": "Hi {customer_name}, the item count for {order_ref} differed from your booking — new total is {total}. Please review and approve in your IronMan account.",
         }
         for code, body in sms_templates.items():
             NotificationTemplate.objects.update_or_create(

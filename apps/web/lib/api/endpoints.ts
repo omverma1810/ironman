@@ -280,10 +280,14 @@ export const trackingApi = {
 };
 
 export const requotesApi = {
-  list: (params?: { order?: string; decision?: string }) =>
-    apiFetch<Paginated<ReQuote>>("/requotes/", { params }),
-  respond: (id: string, approved: boolean) =>
-    apiFetch<OrderDetail>(`/requotes/${id}/respond/`, { method: "POST", body: { approved } }),
+  list: (params?: { order?: string; decision?: string }, accessToken?: string) =>
+    apiFetch<Paginated<ReQuote>>("/requotes/", { params, accessToken }),
+  respond: (id: string, approved: boolean, accessToken?: string) =>
+    apiFetch<OrderDetail>(`/requotes/${id}/respond/`, {
+      method: "POST",
+      body: { approved },
+      accessToken,
+    }),
 };
 
 export type ExceptionListParams = {
