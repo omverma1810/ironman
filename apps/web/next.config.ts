@@ -1,6 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Not used yet — the landing page ships with hand-drawn SVG illustration
+  // instead of hotlinked stock photography (this sandbox's network policy
+  // blocks images.unsplash.com outright, so no photo URL here could be
+  // verified before shipping). Left configured so swapping in real photos
+  // later is a one-line change, not a new deploy step.
+  images: {
+    remotePatterns: [{ protocol: "https", hostname: "images.unsplash.com" }],
+  },
   // DRF's DefaultRouter requires the trailing slash on every collection
   // endpoint (/api/v1/orders/, not /orders) — Next's own trailing-slash
   // normalization runs *before* rewrites and would 308 that off before the
