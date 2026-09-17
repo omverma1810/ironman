@@ -225,6 +225,7 @@ export type CustomerDetail = Customer & {
 
 export type Address = {
   id: string;
+  customer: string;
   apartment: string | null;
   apartment_name: string;
   flat_no: string;
@@ -233,6 +234,16 @@ export type Address = {
   free_text_address: string;
   label: string;
   is_default: boolean;
+};
+
+export type AddressInput = {
+  apartment?: string;
+  flat_no?: string;
+  block?: string;
+  landmark?: string;
+  free_text_address?: string;
+  label?: string;
+  is_default?: boolean;
 };
 
 export type CustomerNote = {

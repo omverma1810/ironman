@@ -65,7 +65,7 @@ function errorToast(err: unknown, fallback = "Something went wrong.") {
 export function useMe() {
   return useQuery({
     queryKey: ["me"],
-    queryFn: authApi.me,
+    queryFn: () => authApi.me(),
     retry: false,
     staleTime: 60_000,
   });

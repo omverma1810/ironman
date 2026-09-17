@@ -5,11 +5,18 @@ from customers.models import Address, ConsentRecord, Customer, CustomerNote
 
 class AddressSerializer(serializers.ModelSerializer):
     apartment_name = serializers.CharField(source="apartment.name", read_only=True)
+    # Required for a staff caller creating an address on a customer's
+    # behalf; never trusted from a customer-role caller, whose own address
+    # always comes from `request.user.customer_profile` instead
+    # (AddressViewSet.perform_create — the same ownership reasoning as
+    # `ordering.views._is_customer_only`).
+    customer = serializers.PrimaryKeyRelatedField(queryset=Customer.objects.all(), required=False)
 
     class Meta:
         model = Address
         fields = [
             "id",
+            "customer",
             "apartment",
             "apartment_name",
             "flat_no",

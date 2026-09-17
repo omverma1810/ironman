@@ -56,6 +56,16 @@ class IsStaff(HasRole):
     allowed_roles = frozenset({"FIELD", "OPERATOR", "ADMIN", "FOUNDER", "VIEWER"})
 
 
+def is_customer_only(user) -> bool:
+    """A caller with *only* the customer role — never staff, even a staff
+    member who also happens to be a customer. Used wherever a view must
+    derive identity (customer/address) from `request.user` rather than the
+    request body for this caller, but still trust a staff caller's
+    explicit input (`ordering.views.OrderViewSet.create`,
+    `customers.views.AddressViewSet`)."""
+    return "CUSTOMER" in user.role_codes and not (user.role_codes - {"CUSTOMER"})
+
+
 class ScopedQuerysetMixin:
     """docs/06 §3.2 object scoping, applied uniformly rather than
     per-viewset. A viewset sets `hub_field` (default "hub") to the
