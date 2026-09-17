@@ -108,7 +108,14 @@ class OrderDetailSerializer(OrderListSerializer):
 
 class OrderCreateSerializer(serializers.Serializer):
     hub = serializers.UUIDField()
-    customer = serializers.UUIDField()
+    # Required for a staff caller (who is booking on someone else's
+    # behalf), but never trusted from a customer caller — the view
+    # derives their own identity from `request.user` instead, since
+    # nothing here is proof they own this id (see
+    # `customers.services.get_or_create_customer_for_user`). Optional at
+    # the serializer level so a customer's own first booking, which has
+    # no customer id yet, validates at all.
+    customer = serializers.UUIDField(required=False, allow_null=True)
     service = serializers.UUIDField()
     address = serializers.UUIDField(required=False, allow_null=True)
     apartment = serializers.UUIDField(required=False, allow_null=True)

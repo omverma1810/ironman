@@ -32,6 +32,10 @@ from ordering.state_machine import cancel as cancel_order
 from ordering.state_machine import transition
 
 
+def _is_customer_only(user) -> bool:
+    return "CUSTOMER" in user.role_codes and not (user.role_codes - {"CUSTOMER"})
+
+
 class OrderViewSet(ScopedQuerysetMixin, viewsets.ModelViewSet):
     """docs/04 §3.4. Customers see only their own orders; staff see their
     hub scope (docs/06 §3.2, enforced by ScopedQuerysetMixin)."""
@@ -56,7 +60,7 @@ class OrderViewSet(ScopedQuerysetMixin, viewsets.ModelViewSet):
             )
             .prefetch_related("lines")
         )
-        if "CUSTOMER" in user.role_codes and not (user.role_codes - {"CUSTOMER"}):
+        if _is_customer_only(user):
             return qs.filter(customer__user=user)
         self.queryset = qs
         return self.scope_to_hub(qs)
@@ -70,10 +74,25 @@ class OrderViewSet(ScopedQuerysetMixin, viewsets.ModelViewSet):
         data = serializer.validated_data
 
         hub = territory_services.get_hub(data["hub"])
-        customer = customers_services.get_customer(data["customer"])
+        apartment = territory_services.get_apartment(data.get("apartment"))
+
+        if _is_customer_only(request.user):
+            # Never the body's `customer` id — a customer proves who they
+            # are via their session, not by naming an id, or any customer
+            # could create an order under anyone else's identity. Covers
+            # a first-time booker too: they have no Customer row yet.
+            customer = customers_services.get_or_create_customer_for_user(
+                request.user, hub=hub, channel=data["channel"], apartment=apartment
+            )
+        elif data.get("customer"):
+            customer = customers_services.get_customer(data["customer"])
+        else:
+            from common.errors import ApiError
+
+            raise ApiError("customer is required.", code="validation_error", status_code=400)
+
         service = catalog_services.get_service(data["service"])
         address = customers_services.get_address(data.get("address"))
-        apartment = territory_services.get_apartment(data.get("apartment"))
         pickup_capacity = territory_services.get_capacity(data.get("pickup_capacity"))
 
         order = services.create_order(

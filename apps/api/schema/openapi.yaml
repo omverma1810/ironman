@@ -8679,6 +8679,7 @@ components:
         customer:
           type: string
           format: uuid
+          nullable: true
         service:
           type: string
           format: uuid
@@ -8709,7 +8710,6 @@ components:
           type: string
       required:
       - channel
-      - customer
       - hub
       - lines
       - service

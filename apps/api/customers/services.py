@@ -71,3 +71,29 @@ def get_address(address_id):
 
 def get_customer(customer_id):
     return Customer.objects.get(pk=customer_id)
+
+
+def get_or_create_customer_for_user(user, *, hub, channel: str = "", apartment=None) -> Customer:
+    """The self-service booking path (docs/04 §3.4 `POST /orders` `[C]`):
+    a JWT-authenticated customer's `id` claim is a User, not a Customer —
+    `identity.OtpVerifyView` only ever creates the User + CUSTOMER role
+    (docs/04 §3.1), never a Customer row, so a first-time booker
+    genuinely has none yet. Trusting a client-supplied `customer` id here
+    instead would let any authenticated customer create an order under
+    someone else's identity — this is the one and only place that id may
+    come from for a customer-role caller.
+
+    `acquisition_channel`/`acquisition_apartment` are write-once at first
+    order (docs/02 §3.4) — set here, on the row's only creation, and
+    never touched again."""
+    existing = getattr(user, "customer_profile", None)
+    if existing:
+        return existing
+    return Customer.objects.create(
+        hub=hub,
+        user=user,
+        phone=user.phone,
+        name=user.full_name,
+        acquisition_channel=channel,
+        acquisition_apartment=apartment,
+    )
