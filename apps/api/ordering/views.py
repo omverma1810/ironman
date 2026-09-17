@@ -233,10 +233,21 @@ class CounterOrderView(APIView):
 
 
 class ReQuoteViewSet(viewsets.ReadOnlyModelViewSet):
+    """`[C]` a customer sees and responds only to their own order's
+    re-quotes (docs/04 §3.4) — `get_queryset` is what makes another
+    customer's re-quote 404 instead of visible/approvable, the same
+    ownership scoping as `OrderViewSet`/`InvoiceViewSet`/`AddressViewSet`."""
+
     queryset = ReQuote.objects.filter(deleted_at__isnull=True).select_related("order")
     serializer_class = ReQuoteSerializer
     permission_classes = [IsAuthenticated]
     filterset_fields = ["order", "decision"]
+
+    def get_queryset(self):
+        qs = ReQuote.objects.filter(deleted_at__isnull=True).select_related("order")
+        if _is_customer_only(self.request.user):
+            return qs.filter(order__customer__user=self.request.user)
+        return qs
 
     @action(detail=True, methods=["post"])
     def respond(self, request, pk=None):

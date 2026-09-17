@@ -255,13 +255,19 @@ def record_intake(
             old_total_minor=old_total,
             new_total_minor=new_total,
         )
-        return transition(
+        order = transition(
             order,
             OrderStatus.ON_HOLD,
             actor=actor,
             event_type="order.requote_raised",
             payload={"old_total_minor": old_total, "new_total_minor": new_total},
         )
+        # Every other order-lifecycle transition notifies the customer
+        # (create_order, mark_out_for_delivery, mark_delivered) — an order
+        # parked ON_HOLD awaiting their approval is the one that most
+        # needs to reach them, or it just sits there.
+        notifications_services.notify("order.requote_raised", order)
+        return order
 
     order.save(
         update_fields=[

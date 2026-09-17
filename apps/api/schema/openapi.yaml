@@ -4800,6 +4800,11 @@ paths:
   /api/v1/requotes/:
     get:
       operationId: requotes_list
+      description: |-
+        `[C]` a customer sees and responds only to their own order's
+        re-quotes (docs/04 §3.4) — `get_queryset` is what makes another
+        customer's re-quote 404 instead of visible/approvable, the same
+        ownership scoping as `OrderViewSet`/`InvoiceViewSet`/`AddressViewSet`.
       parameters:
       - name: cursor
         required: false
@@ -4845,6 +4850,11 @@ paths:
   /api/v1/requotes/{id}/:
     get:
       operationId: requotes_retrieve
+      description: |-
+        `[C]` a customer sees and responds only to their own order's
+        re-quotes (docs/04 §3.4) — `get_queryset` is what makes another
+        customer's re-quote 404 instead of visible/approvable, the same
+        ownership scoping as `OrderViewSet`/`InvoiceViewSet`/`AddressViewSet`.
       parameters:
       - in: path
         name: id
@@ -4868,6 +4878,11 @@ paths:
   /api/v1/requotes/{id}/respond/:
     post:
       operationId: requotes_respond_create
+      description: |-
+        `[C]` a customer sees and responds only to their own order's
+        re-quotes (docs/04 §3.4) — `get_queryset` is what makes another
+        customer's re-quote 404 instead of visible/approvable, the same
+        ownership scoping as `OrderViewSet`/`InvoiceViewSet`/`AddressViewSet`.
       parameters:
       - in: path
         name: id
