@@ -21,13 +21,22 @@ import {
   useServices,
   useVerifyOtp,
 } from "@/lib/api/hooks";
-import type { OrderDetail, PublicApartment } from "@/lib/api/types";
+import type { Channel, OrderDetail, PublicApartment } from "@/lib/api/types";
 
 const STEPS = ["Location", "Address", "Service", "Items", "Slot", "Verify", "Confirm"] as const;
 
 export default function BookPage() {
   const [step, setStep] = useState(0);
   const [order, setOrder] = useState<OrderDetail | null>(null);
+  // `?src=whatsapp` (docs/08 batch 4.8): a customer who tapped a WhatsApp
+  // template's deep link back to this page still books through the same
+  // wizard — only the recorded channel differs, for attribution.
+  const [channel] = useState<Channel>(() =>
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("src") === "whatsapp"
+      ? "WHATSAPP"
+      : "WEB"
+  );
 
   // ── Step 0: pincode / serviceability ──────────────────────────────────
   const [pincode, setPincode] = useState("");
@@ -132,7 +141,7 @@ export default function BookPage() {
       input: {
         hub: hub.id,
         service: serviceId,
-        channel: "WEB",
+        channel,
         apartment: apartment?.id,
         ...(addressMode === "apartment"
           ? { flat_no: flatNo, block }
