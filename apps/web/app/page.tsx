@@ -40,7 +40,23 @@ const TRUST_POINTS: { icon: IconName; label: string }[] = [
   { icon: "star", label: "Rated by customers after every delivery" },
 ];
 
+/** docs/08 batch 4.8: the "template → deep link" entry point — a wa.me
+ * link carrying a canned message (the template) that itself links back
+ * to `/book?src=whatsapp` (the deep link), so the resulting order is
+ * attributed to the WhatsApp channel. `NEXT_PUBLIC_WHATSAPP_NUMBER` is
+ * unset until the WhatsApp Business number clears Meta's onboarding
+ * (docs/08 §0.5) — no CTA is rendered until it is, rather than linking
+ * to a number that doesn't exist. */
+function whatsappBookingHref(): string | null {
+  const number = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER;
+  if (!number) return null;
+  const bookingLink = `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/book?src=whatsapp`;
+  const message = `Hi! I'd like to book an IronMan pickup: ${bookingLink}`;
+  return `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
+}
+
 export default function Home() {
+  const whatsappHref = whatsappBookingHref();
   return (
     <div className="flex min-h-dvh flex-col bg-surface-sunken">
       <header className="flex items-center justify-between px-6 py-5 sm:px-10">
@@ -78,6 +94,14 @@ export default function Home() {
             <Button asChild size="lg">
               <Link href="/book">Book a pickup</Link>
             </Button>
+            {whatsappHref && (
+              <Button asChild variant="secondary" size="lg">
+                <a href={whatsappHref} target="_blank" rel="noreferrer">
+                  <Icon name="chat" />
+                  Book on WhatsApp
+                </a>
+              </Button>
+            )}
             <Button asChild variant="outline" size="lg">
               <Link href="/account">Track my orders</Link>
             </Button>

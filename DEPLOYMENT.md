@@ -225,6 +225,16 @@ If the Vercel URL Vercel actually assigns differs from the
 `CORS_ALLOWED_ORIGINS`, update that GitHub secret to match and re-run the
 deploy workflow.
 
+**Optional, once you have a WhatsApp Business number (docs/08 batch
+4.8):** add two more Environment Variables the same way —
+`NEXT_PUBLIC_WHATSAPP_NUMBER` (the number in E.164 with no leading `+`,
+e.g. `919876543210`) and `NEXT_PUBLIC_SITE_URL` (this Vercel deployment's
+own URL, e.g. `https://ironman-console.vercel.app`). Until
+`NEXT_PUBLIC_WHATSAPP_NUMBER` is set, the landing page's "Book on
+WhatsApp" button simply doesn't render — Meta's WhatsApp Business
+onboarding takes 1–3 weeks (docs/08 §0.5), so this is expected to stay
+unset for a while after the rest of the site is live.
+
 **Why the browser never talks to Cloud Run directly:** console and API sit
 on different registrable domains, so a direct browser fetch is cross-site
 — the session/CSRF cookie needs `SameSite=None`, which mobile Safari (and
