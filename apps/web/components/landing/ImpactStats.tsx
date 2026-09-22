@@ -32,7 +32,7 @@ function StatCounter({ stat, active }: { stat: ImpactStat; active: boolean }) {
 
   return (
     <div className="flex flex-col items-center gap-2 text-center">
-      <p className="font-landing-heading text-5xl font-bold text-landing-ink tabular-nums sm:text-6xl">
+      <p className="font-landing-heading text-5xl font-bold text-landing-gold tabular-nums sm:text-6xl">
         {stat.prefix}
         {value.toFixed(stat.decimals ?? 0)}
         {stat.suffix}

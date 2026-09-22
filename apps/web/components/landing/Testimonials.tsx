@@ -13,13 +13,13 @@ export function Testimonials() {
         whileInView="show"
         viewport={{ once: true, amount: 0.2 }}
         variants={fadeUp}
-        className="rounded-landing-blob bg-landing-ink px-6 py-16 sm:px-12"
+        className="rounded-landing-blob bg-landing-card px-6 py-16 shadow-landing-lift sm:px-12"
       >
         <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
           <span className="text-sm font-semibold tracking-widest text-landing-gold uppercase">
             Customer Love
           </span>
-          <h2 className="font-landing-heading text-4xl font-bold text-balance text-white">
+          <h2 className="font-landing-heading text-4xl font-bold text-balance text-landing-gold">
             Trusted with the clothes people actually care about.
           </h2>
         </div>
@@ -33,14 +33,14 @@ export function Testimonials() {
             return (
               <div
                 key={testimonial.name}
-                className="flex w-80 shrink-0 snap-start flex-col gap-4 rounded-2xl border border-white/10 p-6"
+                className="flex w-80 shrink-0 snap-start flex-col gap-4 rounded-2xl border border-landing-gold/15 p-6"
               >
                 <div className="flex gap-1" aria-hidden="true">
                   {Array.from({ length: 5 }).map((_, i) => (
                     <Star key={i} className="size-4 fill-landing-gold text-landing-gold" />
                   ))}
                 </div>
-                <p className="text-sm text-white/80">&ldquo;{testimonial.quote}&rdquo;</p>
+                <p className="text-sm text-landing-muted">&ldquo;{testimonial.quote}&rdquo;</p>
                 <div className="mt-auto flex items-center gap-3">
                   <span
                     className="flex size-9 shrink-0 items-center justify-center rounded-full bg-landing-gold/15 font-landing-heading text-xs font-bold text-landing-gold"
@@ -49,8 +49,8 @@ export function Testimonials() {
                     {initials}
                   </span>
                   <div>
-                    <p className="text-sm font-semibold text-white">{testimonial.name}</p>
-                    <p className="text-xs text-white/50">{testimonial.locality}</p>
+                    <p className="text-sm font-semibold text-landing-gold">{testimonial.name}</p>
+                    <p className="text-xs text-landing-muted">{testimonial.locality}</p>
                   </div>
                 </div>
               </div>

@@ -75,14 +75,18 @@
      A deliberately separate palette from the brand tokens above: the
      console/account/book/track/field surfaces keep --brand-yellow and
      --surface-*, untouched. Scoped under its own "landing-" prefix so
-     the two never collide and nothing here leaks into the product UI. */
-  --landing-ink: #1c1917;
-  --landing-paper: #faf9f6;
-  --landing-card: #ffffff;
+     the two never collide and nothing here leaks into the product UI.
+     Black-and-yellow per the real IronMan shop logo: black ground,
+     gold-yellow text and accents, near-black used only where text sits
+     directly on a solid gold fill (buttons, badges, the marquee strip). */
+  --landing-ink: #120f0c;
+  --landing-paper: #000000;
+  --landing-card: #1b1712;
   --landing-gold: #e8a33d;
   --landing-gold-deep: #c9832a;
-  --landing-muted: #57534e;
-  --landing-shadow-lift: 0 20px 40px -12px rgba(28, 25, 23, 0.15);
+  --landing-muted: #a9853c;
+  --landing-shadow-lift:
+    0 0 0 1px rgba(232, 163, 61, 0.12), 0 20px 40px -12px rgba(0, 0, 0, 0.6);
   --landing-radius-blob: 2.5rem;
 }
 

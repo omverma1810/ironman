@@ -30,7 +30,7 @@ export function CTABanner() {
         </div>
 
         <div className="relative flex flex-col items-center gap-4">
-          <h2 className="font-landing-heading text-4xl font-bold text-balance text-landing-ink">
+          <h2 className="font-landing-heading text-4xl font-bold text-balance text-landing-gold">
             Ready for fresher clothes?
           </h2>
           <p className="max-w-md text-landing-ink/70">

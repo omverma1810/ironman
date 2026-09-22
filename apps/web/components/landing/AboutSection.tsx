@@ -25,7 +25,7 @@ export function AboutSection() {
           <span className="text-sm font-semibold tracking-widest text-landing-gold uppercase">
             About IronMan
           </span>
-          <h2 className="font-landing-heading text-4xl font-bold text-balance text-landing-ink">
+          <h2 className="font-landing-heading text-4xl font-bold text-balance text-landing-gold">
             Built because guesswork has no place in laundry.
           </h2>
           <p className="text-landing-muted">
@@ -60,7 +60,7 @@ export function AboutSection() {
                   <Icon className="size-5" aria-hidden="true" />
                 </span>
                 <div>
-                  <h3 className="font-landing-heading font-bold text-landing-ink">{value.title}</h3>
+                  <h3 className="font-landing-heading font-bold text-landing-gold">{value.title}</h3>
                   <p className="text-sm text-landing-muted">{value.description}</p>
                 </div>
               </motion.div>

@@ -25,18 +25,18 @@ function GarmentIllustration() {
   return (
     <svg viewBox="0 0 400 400" className="size-full" role="img" aria-label="A pressed shirt on a hanger">
       <rect width="400" height="400" rx="24" fill="var(--landing-gold)" opacity="0.12" />
-      <line x1="200" y1="52" x2="200" y2="76" stroke="var(--landing-ink)" strokeWidth="4" strokeLinecap="round" />
+      <line x1="200" y1="52" x2="200" y2="76" stroke="var(--landing-gold)" strokeWidth="4" strokeLinecap="round" />
       <path
         d="M200 52 L172 76 L128 96 L104 148 L136 168 L152 148 L152 320 Q152 336 168 336 L232 336 Q248 336 248 320 L248 148 L264 168 L296 148 L272 96 L228 76 Z"
-        fill="var(--landing-card)"
+        fill="var(--landing-gold)"
         stroke="var(--landing-ink)"
         strokeWidth="4"
         strokeLinejoin="round"
       />
-      <path d="M180 96 Q200 116 220 96" fill="none" stroke="var(--landing-gold-deep)" strokeWidth="4" strokeLinecap="round" />
-      <line x1="176" y1="176" x2="176" y2="312" stroke="var(--landing-gold)" strokeWidth="3" strokeLinecap="round" opacity="0.6" />
-      <line x1="200" y1="184" x2="200" y2="320" stroke="var(--landing-gold)" strokeWidth="3" strokeLinecap="round" opacity="0.6" />
-      <line x1="224" y1="176" x2="224" y2="312" stroke="var(--landing-gold)" strokeWidth="3" strokeLinecap="round" opacity="0.6" />
+      <path d="M180 96 Q200 116 220 96" fill="none" stroke="var(--landing-ink)" strokeWidth="4" strokeLinecap="round" />
+      <line x1="176" y1="176" x2="176" y2="312" stroke="var(--landing-ink)" strokeWidth="3" strokeLinecap="round" opacity="0.5" />
+      <line x1="200" y1="184" x2="200" y2="320" stroke="var(--landing-ink)" strokeWidth="3" strokeLinecap="round" opacity="0.5" />
+      <line x1="224" y1="176" x2="224" y2="312" stroke="var(--landing-ink)" strokeWidth="3" strokeLinecap="round" opacity="0.5" />
     </svg>
   );
 }
@@ -62,7 +62,7 @@ export function Hero() {
 
         <motion.h1
           variants={item}
-          className="font-landing-heading text-4xl font-extrabold tracking-tight text-balance text-landing-ink sm:text-5xl lg:text-6xl"
+          className="font-landing-heading text-4xl font-extrabold tracking-tight text-balance text-landing-gold sm:text-5xl lg:text-6xl"
         >
           Expert Care for{" "}
           {/* The hand-drawn underline assumes a single text line, which
@@ -103,7 +103,7 @@ export function Hero() {
           </Link>
           <a
             href="#pricing"
-            className="rounded-full border border-landing-ink/15 px-6 py-3 text-sm font-semibold text-landing-ink transition-colors hover:border-landing-gold hover:text-landing-gold"
+            className="rounded-full border border-landing-gold/15 px-6 py-3 text-sm font-semibold text-landing-gold transition-colors hover:border-landing-gold hover:text-landing-gold"
           >
             View Pricing
           </a>
@@ -144,7 +144,7 @@ export function Hero() {
             <Truck className="size-5" aria-hidden="true" />
           </span>
           <div>
-            <p className="text-sm font-semibold text-landing-ink">Free Pickup &amp; Delivery</p>
+            <p className="text-sm font-semibold text-landing-gold">Free Pickup &amp; Delivery</p>
             <p className="text-xs text-landing-muted">Every order, every time</p>
           </div>
         </motion.div>

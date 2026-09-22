@@ -14,7 +14,7 @@ export function FAQ() {
         <span className="text-sm font-semibold tracking-widest text-landing-gold uppercase">
           Questions
         </span>
-        <h2 className="font-landing-heading text-4xl font-bold text-balance text-landing-ink">
+        <h2 className="font-landing-heading text-4xl font-bold text-balance text-landing-gold">
           Frequently asked questions.
         </h2>
       </div>
@@ -23,14 +23,14 @@ export function FAQ() {
         {FAQS.map((faq, i) => {
           const isOpen = openIndex === i;
           return (
-            <div key={faq.question} className="border-b border-landing-ink/10">
+            <div key={faq.question} className="border-b border-landing-gold/10">
               <button
                 type="button"
                 aria-expanded={isOpen}
                 onClick={() => setOpenIndex(isOpen ? null : i)}
                 className="flex w-full items-center justify-between gap-4 py-5 text-left"
               >
-                <span className="font-landing-heading font-semibold text-landing-ink">
+                <span className="font-landing-heading font-semibold text-landing-gold">
                   {faq.question}
                 </span>
                 <motion.span

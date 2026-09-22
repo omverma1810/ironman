@@ -13,7 +13,7 @@ export function PricingTeaser() {
         <span className="text-sm font-semibold tracking-widest text-landing-gold uppercase">
           Simple Pricing
         </span>
-        <h2 className="font-landing-heading text-4xl font-bold text-balance text-landing-ink">
+        <h2 className="font-landing-heading text-4xl font-bold text-balance text-landing-gold">
           No hidden charges, ever.
         </h2>
       </div>
@@ -39,10 +39,10 @@ export function PricingTeaser() {
               </span>
             )}
             <div>
-              <h3 className="font-landing-heading text-lg font-bold text-landing-ink">
+              <h3 className="font-landing-heading text-lg font-bold text-landing-gold">
                 {plan.name}
               </h3>
-              <p className="mt-2 text-3xl font-extrabold text-landing-ink">
+              <p className="mt-2 text-3xl font-extrabold text-landing-gold">
                 {plan.startingAt}
                 <span className="text-sm font-medium text-landing-muted"> {plan.unit}</span>
               </p>
