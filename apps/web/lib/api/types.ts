@@ -960,3 +960,57 @@ export type FeedbackInput = {
   comment?: string;
   tags?: string[];
 };
+
+// ── Growth / referral partners & codes (batch 5.1, docs/02 §3.10) ────────
+export type PartnerKind = "WATCHMAN" | "INFLUENCER" | "OTHER";
+
+export type PartnerStatus = "ACTIVE" | "INACTIVE";
+
+export type ReferralPartner = {
+  id: string;
+  hub: string;
+  kind: PartnerKind;
+  name: string;
+  phone: string;
+  apartment: string | null;
+  apartment_name: string;
+  upi_id: string;
+  status: PartnerStatus;
+  onboarded_by: string | null;
+  onboarded_by_name: string;
+  notes: string;
+  created_at: string;
+};
+
+export type ReferralPartnerInput = {
+  hub: string;
+  kind: PartnerKind;
+  name: string;
+  phone: string;
+  apartment?: string | null;
+  upi_id?: string;
+  notes?: string;
+};
+
+export type ReferralCode = {
+  id: string;
+  hub: string;
+  code: string;
+  owner_partner: string | null;
+  owner_partner_name: string;
+  owner_customer: string | null;
+  owner_customer_name: string;
+  apartment: string | null;
+  apartment_name: string;
+  is_active: boolean;
+  uses_count: number;
+  created_at: string;
+};
+
+export type ReferralCodeInput = {
+  hub: string;
+  owner_partner?: string | null;
+  owner_customer?: string | null;
+  apartment?: string | null;
+  code?: string;
+};

@@ -61,6 +61,10 @@ import type {
   ProofMeta,
   Quote,
   RecordPaymentInput,
+  ReferralCode,
+  ReferralCodeInput,
+  ReferralPartner,
+  ReferralPartnerInput,
   ReQuote,
   Role,
   RouteDay,
@@ -298,6 +302,41 @@ export const requotesApi = {
 export const growthApi = {
   submitFeedback: (input: FeedbackInput, accessToken?: string) =>
     apiFetch<Feedback>("/growth/feedback/", { method: "POST", body: input, accessToken }),
+};
+
+// ── Growth: referral partners & codes (docs/08 batch 5.1) ────────────────
+export const partnersApi = {
+  list: (params?: { kind?: string; status?: string; apartment?: string }) =>
+    apiFetch<Paginated<ReferralPartner>>("/growth/partners/", { params }),
+  create: (input: ReferralPartnerInput) =>
+    apiFetch<ReferralPartner>("/growth/partners/", { method: "POST", body: input }),
+  update: (id: string, patch: Partial<ReferralPartnerInput>) =>
+    apiFetch<ReferralPartner>(`/growth/partners/${id}/`, { method: "PATCH", body: patch }),
+  setStatus: (id: string, status: "ACTIVE" | "INACTIVE") =>
+    apiFetch<ReferralPartner>(`/growth/partners/${id}/status/`, {
+      method: "POST",
+      body: { status },
+    }),
+};
+
+export const referralCodesApi = {
+  list: (params?: { owner_partner?: string; owner_customer?: string; is_active?: boolean }) =>
+    apiFetch<Paginated<ReferralCode>>("/growth/referral-codes/", { params }),
+  create: (input: ReferralCodeInput) =>
+    apiFetch<ReferralCode>("/growth/referral-codes/", { method: "POST", body: input }),
+  setActive: (id: string, is_active: boolean) =>
+    apiFetch<ReferralCode>(`/growth/referral-codes/${id}/`, {
+      method: "PATCH",
+      body: { is_active },
+    }),
+  validate: (code: string) =>
+    apiFetch<{
+      code: string;
+      is_active: boolean;
+      owner_partner: string | null;
+      owner_customer: string | null;
+      apartment: string | null;
+    }>("/growth/referral-codes/validate", { method: "POST", body: { code } }),
 };
 
 export type ExceptionListParams = {

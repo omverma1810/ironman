@@ -13,6 +13,8 @@ import {
   identityApi,
   notificationsApi,
   ordersApi,
+  partnersApi,
+  referralCodesApi,
   requotesApi,
   suppliesApi,
   territoryApi,
@@ -46,6 +48,8 @@ import type {
   PriceListStatus,
   ProofKind,
   RecordPaymentInput,
+  ReferralCodeInput,
+  ReferralPartnerInput,
   SetPriceLinesInput,
   StockAdjustmentInput,
   StockItemInput,
@@ -1350,5 +1354,85 @@ export function useGrantCredit() {
       toast.success("Credit granted");
     },
     onError: (err) => errorToast(err, "Couldn't grant credit."),
+  });
+}
+
+// ── Growth: referral partners & codes (docs/08 batch 5.1) ────────────────
+export function usePartners(params?: { kind?: string; status?: string; apartment?: string }) {
+  return useQuery({
+    queryKey: ["referral-partners", params],
+    queryFn: () => partnersApi.list(params),
+    staleTime: 30_000,
+  });
+}
+
+export function useCreatePartner() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ReferralPartnerInput) => partnersApi.create(input),
+    onSuccess: (partner) => {
+      queryClient.invalidateQueries({ queryKey: ["referral-partners"] });
+      toast.success(`${partner.name} onboarded`);
+    },
+    onError: (err) => errorToast(err, "Couldn't onboard the partner."),
+  });
+}
+
+export function useUpdatePartner() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: Partial<ReferralPartnerInput> }) =>
+      partnersApi.update(id, patch),
+    onSuccess: (partner) => {
+      queryClient.invalidateQueries({ queryKey: ["referral-partners"] });
+      toast.success(`${partner.name} updated`);
+    },
+    onError: (err) => errorToast(err, "Couldn't update the partner."),
+  });
+}
+
+export function useSetPartnerStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: "ACTIVE" | "INACTIVE" }) =>
+      partnersApi.setStatus(id, status),
+    onSuccess: (partner) => {
+      queryClient.invalidateQueries({ queryKey: ["referral-partners"] });
+      toast.success(`${partner.name} is now ${partner.status.toLowerCase()}`);
+    },
+    onError: (err) => errorToast(err, "Couldn't update the partner's status."),
+  });
+}
+
+export function useReferralCodes(params?: { owner_partner?: string; is_active?: boolean }) {
+  return useQuery({
+    queryKey: ["referral-codes", params],
+    queryFn: () => referralCodesApi.list(params),
+    staleTime: 30_000,
+  });
+}
+
+export function useCreateReferralCode() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ReferralCodeInput) => referralCodesApi.create(input),
+    onSuccess: (code) => {
+      queryClient.invalidateQueries({ queryKey: ["referral-codes"] });
+      toast.success(`Code ${code.code} issued`);
+    },
+    onError: (err) => errorToast(err, "Couldn't issue a referral code."),
+  });
+}
+
+export function useSetReferralCodeActive() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+      referralCodesApi.setActive(id, isActive),
+    onSuccess: (code) => {
+      queryClient.invalidateQueries({ queryKey: ["referral-codes"] });
+      toast.success(`${code.code} ${code.is_active ? "activated" : "deactivated"}`);
+    },
+    onError: (err) => errorToast(err, "Couldn't update the referral code."),
   });
 }
