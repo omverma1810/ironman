@@ -38,7 +38,10 @@ X_FRAME_OPTIONS = "DENY"
 
 # Cloud Run's own *.run.app domain plus whatever custom domain is fronting
 # it (docs/03 §5) — both come from env so a domain change is a redeploy,
-# not a code change.
+# not a code change. As of the ironmanindia.co rollout, CORS_ALLOWED_ORIGINS
+# (below) carries https://ironmanindia.co and https://console.ironmanindia.co
+# alongside the Vercel preview origin, so this list picks up both hostnames
+# automatically.
 ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=[".run.app"])  # noqa: F405
 
 # next.config.ts proxies /api/v1/* to this service so the browser only ever
