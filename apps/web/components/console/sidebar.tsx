@@ -9,6 +9,7 @@ import type { Role } from "@/lib/api/types";
 import {
   canEditPricing,
   canManageCashCustody,
+  canManageGrowthPartners,
   canManageStaff,
   canManageSupplies,
   canPlanRouteDays,
@@ -55,6 +56,12 @@ const NAV: NavItem[] = [
     label: "Pricing",
     icon: "percent",
     show: (roles) => canEditPricing(roles),
+  },
+  {
+    href: "/console/partners",
+    label: "Partners",
+    icon: "watchman",
+    show: (roles) => canManageGrowthPartners(roles),
   },
   {
     href: "/console/analytics",
