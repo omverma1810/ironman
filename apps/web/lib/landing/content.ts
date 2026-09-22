@@ -232,6 +232,24 @@ export const TESTIMONIALS: Testimonial[] = [
     name: "Arjun Nair",
     locality: "Narayanguda",
   },
+  {
+    quote:
+      "My sneakers looked showroom-fresh after their deep clean. Didn't expect that level of care from a laundry pickup service.",
+    name: "Rohan Kapoor",
+    locality: "Whitefield",
+  },
+  {
+    quote:
+      "The tracking link is what sold me — I could see exactly which stage my order was at without calling anyone.",
+    name: "Priya Menon",
+    locality: "Jayanagar",
+  },
+  {
+    quote:
+      "Switched from a local dhobi after one bad stain job elsewhere. IronMan's quality check step actually caught an issue before delivery.",
+    name: "Arjun Nair",
+    locality: "Koramangala",
+  },
 ];
 
 export type PricingPlan = {
