@@ -36,14 +36,14 @@ export function NumberedFeatures() {
         <span className="text-sm font-semibold tracking-widest text-landing-gold uppercase">
           Why IronMan
         </span>
-        <h2 className="font-landing-heading text-4xl font-bold text-balance text-landing-ink">
+        <h2 className="font-landing-heading text-4xl font-bold text-balance text-landing-gold">
           Run like a system, not a favour.
         </h2>
       </div>
 
       <div className="mt-16 grid grid-cols-1 gap-12 lg:grid-cols-2 lg:gap-16">
         <div className="hidden lg:block">
-          <div className="sticky top-32 flex h-105 items-center justify-center rounded-landing-blob bg-landing-ink">
+          <div className="sticky top-32 flex h-105 items-center justify-center rounded-landing-blob bg-landing-card shadow-landing-lift">
             <AnimatePresence mode="wait">
               <motion.div
                 key={active}
@@ -56,7 +56,7 @@ export function NumberedFeatures() {
                 <span className="flex size-24 items-center justify-center rounded-full bg-landing-gold/15 text-landing-gold">
                   <ActiveIcon className="size-12" aria-hidden="true" />
                 </span>
-                <span className="font-landing-heading text-2xl font-bold text-white">
+                <span className="font-landing-heading text-2xl font-bold text-landing-gold">
                   {NUMBERED_FEATURES[active].title}
                 </span>
               </motion.div>
@@ -86,7 +86,7 @@ export function NumberedFeatures() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, amount: 0.3 }}
                   transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                  className={`flex flex-col items-start gap-4 border-t border-landing-ink/10 py-8 transition-opacity sm:flex-row sm:items-center sm:gap-6 ${
+                  className={`flex flex-col items-start gap-4 border-t border-landing-gold/10 py-8 transition-opacity sm:flex-row sm:items-center sm:gap-6 ${
                     i === NUMBERED_FEATURES.length - 1 ? "border-b" : ""
                   } ${!isActive ? "lg:opacity-50" : ""}`}
                 >
@@ -98,7 +98,7 @@ export function NumberedFeatures() {
                     {feature.number}
                   </span>
                   <div className="flex flex-col gap-2">
-                    <h3 className="flex items-center gap-2 font-landing-heading text-xl font-bold text-landing-ink sm:text-2xl">
+                    <h3 className="flex items-center gap-2 font-landing-heading text-xl font-bold text-landing-gold sm:text-2xl">
                       <Icon className="size-5 text-landing-gold lg:hidden" aria-hidden="true" />
                       {feature.title}
                     </h3>

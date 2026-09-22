@@ -12,7 +12,7 @@ export function SectionHeading({
       <span className="text-sm font-semibold tracking-widest text-landing-gold uppercase">
         {eyebrow}
       </span>
-      <h2 className="font-landing-heading text-4xl font-bold text-balance text-landing-ink">
+      <h2 className="font-landing-heading text-4xl font-bold text-balance text-landing-gold">
         {title}
       </h2>
       {description && <p className="text-landing-muted">{description}</p>}

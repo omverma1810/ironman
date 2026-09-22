@@ -14,7 +14,7 @@ export function ServicesGrid() {
         <span className="text-sm font-semibold tracking-widest text-landing-gold uppercase">
           Our Services
         </span>
-        <h2 className="font-landing-heading text-4xl font-bold text-balance text-landing-ink">
+        <h2 className="font-landing-heading text-4xl font-bold text-balance text-landing-gold">
           Every garment, the right kind of care.
         </h2>
         <p className="text-landing-muted">
@@ -49,7 +49,7 @@ export function ServicesGrid() {
                   </motion.div>
                 </div>
                 <div className="relative z-10 mx-5 -mt-8 flex flex-col gap-3 rounded-2xl bg-landing-card p-6 text-left shadow-landing-lift">
-                  <h3 className="font-landing-heading text-lg font-bold text-landing-ink">
+                  <h3 className="font-landing-heading text-lg font-bold text-landing-gold">
                     {service.title}
                   </h3>
                   <p className="text-sm text-landing-muted">{service.description}</p>

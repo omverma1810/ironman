@@ -53,7 +53,7 @@ export function ProcessSection() {
         <span className="text-sm font-semibold tracking-widest text-landing-gold uppercase">
           Our Process
         </span>
-        <h2 className="font-landing-heading text-4xl font-bold text-balance text-landing-ink">
+        <h2 className="font-landing-heading text-4xl font-bold text-balance text-landing-gold">
           From pickup to your door, tracked at every step.
         </h2>
         <p className="text-landing-muted">
@@ -81,7 +81,7 @@ export function ProcessSection() {
               <span className="text-sm font-semibold tracking-widest text-landing-gold uppercase">
                 Step {String(i + 1).padStart(2, "0")}
               </span>
-              <h3 className="font-landing-heading text-2xl font-bold text-landing-ink sm:text-3xl">
+              <h3 className="font-landing-heading text-2xl font-bold text-landing-gold sm:text-3xl">
                 {step.title}
               </h3>
               <p className="max-w-md text-landing-muted">{step.description}</p>
