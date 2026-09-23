@@ -76,27 +76,13 @@
      console/account/book/track/field surfaces keep --brand-yellow and
      --surface-*, untouched. Scoped under its own "landing-" prefix so
      the two never collide and nothing here leaks into the product UI.
-     Gold stays the one constant brand accent in both modes, matching
-     the real IronMan shop logo; only the ground and ink flip between
-     the dark (default) and light variant below. */
-  --landing-ink: #1c1917;
-  --landing-paper: #faf7f2;
-  --landing-card: #ffffff;
-  --landing-gold: #a57e09;
-  --landing-gold-deep: #7e6007;
-  --landing-muted: #6b6259;
-  --landing-shadow-lift:
-    0 1px 2px rgba(28, 25, 23, 0.05), 0 20px 45px -18px rgba(28, 25, 23, 0.16);
-  --landing-radius-blob: 2.5rem;
-}
-
-.dark {
-  /* Black ground, gold-yellow text and accents, near-black used only
-     where text sits directly on a solid gold fill (buttons, badges, the
-     marquee strip) — the primary brand look. #fdbf0a is the exact gold
-     pulled from the real IronMan logo file (docs/08 follow-up); deep/muted
-     are darker and desaturated shades of that same hue, not a different
-     gold, so hover states and secondary text still read as one accent. */
+     Always black ground / gold text — no light variant. #fdbf0a is the
+     exact gold pulled from the real IronMan logo file; deep/muted are
+     darker and desaturated shades of that same hue, not a different
+     gold, so hover states and secondary text still read as one accent.
+     A lighter ground made #fdbf0a-as-text nearly unreadable (~1.7:1
+     contrast), so the page no longer offers a light theme at all —
+     it stays on-brand and legible by only ever being this one look. */
   --landing-ink: #120f0c;
   --landing-paper: #000000;
   --landing-card: #1b1712;
@@ -105,7 +91,10 @@
   --landing-muted: #a68d3f;
   --landing-shadow-lift:
     0 0 0 1px rgba(253, 191, 10, 0.12), 0 20px 40px -12px rgba(0, 0, 0, 0.6);
+  --landing-radius-blob: 2.5rem;
+}
 
+.dark {
   --surface-base: #111114;
   --surface-raised: #1a1a20;
   --surface-sunken: #0c0c0f;
