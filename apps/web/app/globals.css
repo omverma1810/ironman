@@ -76,15 +76,15 @@
      console/account/book/track/field surfaces keep --brand-yellow and
      --surface-*, untouched. Scoped under its own "landing-" prefix so
      the two never collide and nothing here leaks into the product UI.
-     Always black ground / gold text — no light variant. #fdbf0a is the
-     exact gold pulled from the real IronMan logo file; deep/muted are
-     darker and desaturated shades of that same hue, not a different
+     Always a dull-black ground / gold text — no light variant. #fdbf0a
+     is the exact gold pulled from the real IronMan logo file; deep/muted
+     are darker and desaturated shades of that same hue, not a different
      gold, so hover states and secondary text still read as one accent.
      A lighter ground made #fdbf0a-as-text nearly unreadable (~1.7:1
      contrast), so the page no longer offers a light theme at all —
      it stays on-brand and legible by only ever being this one look. */
   --landing-ink: #120f0c;
-  --landing-paper: #000000;
+  --landing-paper: #161616;
   --landing-card: #1b1712;
   --landing-gold: #fdbf0a;
   --landing-gold-deep: #d9a400;
