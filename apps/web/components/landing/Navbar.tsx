@@ -6,7 +6,6 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Menu, Phone, X } from "lucide-react";
 import { CONTACT_PHONE, CONTACT_PHONE_TEL, NAV_LINKS } from "@/lib/landing/content";
-import { ThemeToggle } from "./ThemeToggle";
 
 export function Logo({ wordmarkClassName = "text-landing-gold" }: { wordmarkClassName?: string }) {
   return (
@@ -65,7 +64,6 @@ export function Navbar() {
             <Phone className="size-4 text-landing-gold" aria-hidden="true" />
             {CONTACT_PHONE}
           </a>
-          <ThemeToggle />
           <Link
             href="/book"
             className="duration-fast rounded-full bg-landing-gold px-6 py-2.5 text-sm font-semibold text-landing-ink transition hover:scale-103 hover:bg-landing-gold-deep"
@@ -74,18 +72,15 @@ export function Navbar() {
           </Link>
         </div>
 
-        <div className="flex items-center gap-1 lg:hidden">
-          <ThemeToggle />
-          <button
-            type="button"
-            aria-label={open ? "Close menu" : "Open menu"}
-            aria-expanded={open}
-            onClick={() => setOpen((v) => !v)}
-            className="flex size-10 items-center justify-center rounded-full text-landing-gold"
-          >
-            {open ? <X className="size-5" /> : <Menu className="size-5" />}
-          </button>
-        </div>
+        <button
+          type="button"
+          aria-label={open ? "Close menu" : "Open menu"}
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+          className="flex size-10 items-center justify-center rounded-full text-landing-gold lg:hidden"
+        >
+          {open ? <X className="size-5" /> : <Menu className="size-5" />}
+        </button>
       </div>
 
       <AnimatePresence>
