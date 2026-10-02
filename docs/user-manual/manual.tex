@@ -1,0 +1,321 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[a4paper,margin=2cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[scaled=0.95]{helvet}
+\usepackage{courier}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{xcolor}
+\usepackage{amssymb}
+\usepackage{fancyhdr}
+\usepackage[hidelinks]{hyperref}
+
+\definecolor{ink}{HTML}{161616}
+\definecolor{gold}{HTML}{FDBF0A}
+\definecolor{muted}{HTML}{5A5A5A}
+\definecolor{note}{HTML}{FFF6D6}
+
+\graphicspath{{img/}}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+
+\newcommand{\yes}{\textcolor{ink}{\checkmark}}
+\newcommand{\no}{\textcolor{muted}{--}}
+\newcommand{\menu}[1]{\textbf{#1}}
+\newcommand{\screen}[2][0.92]{%
+  \begin{center}\fbox{\includegraphics[width=#1\textwidth]{#2}}\end{center}}
+\newcommand{\phones}[3]{%
+  \begin{center}
+  \fbox{\includegraphics[width=0.27\textwidth]{#1}}\hfill
+  \fbox{\includegraphics[width=0.27\textwidth]{#2}}\hfill
+  \fbox{\includegraphics[width=0.27\textwidth]{#3}}
+  \end{center}}
+\newcommand{\callout}[1]{%
+  \par\noindent\colorbox{note}{\parbox{\dimexpr\textwidth-2\fboxsep}{\raggedright\small #1}}\par}
+
+
+% Start a (sub)section on a new page unless #1 of space is left, so a
+% heading is never stranded at the bottom away from its screenshot.
+\makeatletter
+\newcommand{\needspace}[1]{\par\begingroup\setlength{\dimen@}{#1}%
+  \dimen@ii\pagegoal\advance\dimen@ii-\pagetotal
+  \ifdim\dimen@>\dimen@ii\ifdim\dimen@ii>\z@\vfil\fi\break\fi\endgroup}
+\makeatother
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{gold}\leaders\hrule height \headrulewidth\hfill}}
+\lhead{\small\textbf{IronMan} User Guide}
+\rhead{\small Pilot build $\cdot$ October 2026}
+\cfoot{\small\thepage}
+
+\begin{document}
+
+% ── Title ───────────────────────────────────────────────────────────────
+\begin{titlepage}
+\vspace*{3cm}
+{\color{gold}\rule{3cm}{4pt}}\par\vspace{0.6cm}
+{\Huge\bfseries IronMan}\par\vspace{0.3cm}
+{\LARGE User Guide}\par\vspace{0.8cm}
+{\large Operations console, field app and customer booking}\par
+\vfill
+{\small\color{muted}
+Pilot build, October 2026.\\
+Screenshots are taken from the demo data set; names, orders and amounts are made up.}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ── 1 ───────────────────────────────────────────────────────────────────
+\section{Getting started}
+
+IronMan runs the whole ironing business in one place: customers book a
+pickup, staff track every garment through the hub, riders deliver and
+collect payment, and the office manages stock, invoices and cash.
+
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+\textbf{Who} & \textbf{Where to go} \\
+\midrule
+Office staff & \texttt{console.ironmanindia.co} \\
+Riders (field staff) & \texttt{ironmanindia.co/field} — open on a phone \\
+Customers & \texttt{ironmanindia.co} $\rightarrow$ \menu{Schedule a Pickup} \\
+\bottomrule
+\end{tabularx}
+
+\subsection{Logging in}
+Enter your email and password and press \menu{Log in}. The menu on the
+left only shows the screens your role can use.
+
+\screen[0.62]{01-login}
+
+\callout{\textbf{Demo environment logins} (all use the password
+\texttt{IronMan@2026}): \texttt{founder@ironman.test},
+\texttt{admin@ironman.test}, \texttt{operator@ironman.test},
+\texttt{field@ironman.test}. These accounts exist only where the demo data
+has been loaded. Never use this password on real accounts.}
+
+\subsection{About the demo data}
+The demo set contains one hub, six apartments, 24 customers and 44 orders
+spread across every stage, plus stock, invoices, payments and cash
+handovers. Because it is generated in one go, many timeline entries share
+the same time. You can create, edit and pay for anything freely.
+
+% ── 2 ───────────────────────────────────────────────────────────────────
+\section{Roles and what they can do}
+
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+\textbf{Role} & \textbf{Purpose} \\
+\midrule
+Founder & Everything, across all hubs. The only role that can set prices. \\
+Admin & Runs the hub: everything except pricing, plus stock ledger,
+consumption rules, write-offs, credit notes, cash reconciliation and exports. \\
+Operator & Day-to-day hub work: orders, intake, production, customers,
+stock receipts and issues, issuing invoices, recording payments. \\
+Field & Rider app only: assigned pickups and deliveries, cash in hand. \\
+Customer & Books pickups, tracks orders, views invoices. \\
+\bottomrule
+\end{tabularx}
+
+\medskip
+The table below was produced by logging in as each role and requesting
+each area from the live system, so it shows what the system actually
+allows, not what we intended.
+
+\begin{center}
+\small
+\input{matrix.tex}
+\end{center}
+{\small\color{muted}\textsuperscript{*} Field staff see only the orders,
+jobs and invoices on their own route.}
+
+% ── 3 ───────────────────────────────────────────────────────────────────
+\needspace{11cm}
+\section{Daily operations}
+
+\needspace{11cm}
+\subsection{How an order moves}
+\textit{Scheduled $\rightarrow$ Pickup assigned $\rightarrow$ Picked up $\rightarrow$ At hub $\rightarrow$ Intake verified
+$\rightarrow$ Pressing $\rightarrow$ Ready $\rightarrow$ Out for delivery $\rightarrow$ Delivered $\rightarrow$ Closed.}
+Each step is recorded with who did it and when. Problems (damage, missing
+item, failed pickup) are raised as \emph{exceptions} without stopping the
+order.
+
+\needspace{11cm}
+\subsection{Dashboard}
+Today at a glance: open orders, late pickups, deliveries and bookings.
+Click any order to open it.
+\screen{02-dashboard}
+
+\needspace{11cm}
+\subsection{Orders}
+\menu{Orders} lists every order with its stage and amount, with search
+and filters. For a customer dropping clothes at the shop, press
+\menu{New order}, pick the customer and service, set the garment counts
+and press \menu{Create order}. The estimate comes from the current price
+list and is corrected when the hub counts the garments at intake.
+\screen{03-orders}
+\screen[0.8]{05-new-order}
+
+\needspace{11cm}
+\subsection{Order details}
+Everything about one order: items, the bag and each garment's stage,
+customer, invoice and payments. Use \menu{Report an issue} to raise an
+exception, and \menu{Print tag} to label a bag.
+\screen{04-order-detail}
+
+\needspace{11cm}
+\subsection{Production}
+The hub's work in progress by stage. Click a stage tile to filter the
+list; scan a bag tag to move it forward.
+\screen{06-production}
+
+\needspace{11cm}
+\subsection{Exceptions and route days}
+\menu{Exceptions} is the queue of damaged, missing and disputed items,
+each with a severity, an owner and an SLA showing whether it is on track
+or overdue.
+\menu{Route Days} (Admin and Founder) assigns the day's pickups and
+deliveries to riders.
+\screen[0.8]{09-exceptions}
+\screen[0.8]{10-route-days}
+
+\needspace{11cm}
+\subsection{Customers}
+Search customers, open one to see their addresses, notes, store credit and
+where they came from (\emph{Acquired via}).
+
+\callout{\textbf{Lifetime orders} and \textbf{lifetime spend} count
+\emph{delivered} orders only. A new customer whose first order is still in
+progress shows 0 and the status \emph{Lead} — this is expected.}
+\screen{08-customer-detail}
+
+% ── 4 ───────────────────────────────────────────────────────────────────
+\needspace{11cm}
+\section{Supplies (inventory)}
+
+\menu{Supplies} tracks hangers, covers, bags and chemicals. A yellow
+banner lists items at or below their reorder level.
+
+\begin{itemize}
+\item \menu{Receive stock} — record a delivery from a supplier, with quantity and unit cost.
+\item \menu{Adjust stock} — record items used, wasted, returned, or a recount.
+\item \menu{New item} — add a stock item with its reorder level.
+\end{itemize}
+Stock is also taken automatically when a garment is packed, using the
+consumption rules below.
+\screen{11-supplies}
+
+Admins and Founders also see two more tabs. \menu{Movements} is the full history of every stock change, with
+who made it, and \menu{Consumption rules} sets what each garment uses
+(for example, one hanger and one cover per shirt).
+\screen{12-supplies-movements}
+\screen{13-supplies-rules}
+
+Operators see stock and can receive and adjust it, but not costs, the
+history or the rules.
+\screen{21-operator-supplies}
+
+% ── 5 ───────────────────────────────────────────────────────────────────
+\needspace{11cm}
+\section{Billing}
+
+\needspace{11cm}
+\subsection{Invoices and receivables}
+An invoice is created automatically when an order is delivered.
+\menu{Invoices} shows every invoice with what is still owed. Filter by
+customer, status or date, or tick \menu{Outstanding only} to see who owes
+money. Admins and Founders can \menu{Export CSV} for the accountant.
+
+If an invoice could not be created automatically, the order appears in a
+yellow \emph{delivered without an invoice} panel at the top. Open the
+order and press \menu{Issue invoice}.
+\screen{14-invoices}
+
+\needspace{11cm}
+\subsection{Payments, credit notes and write-offs}
+Open an invoice to download the PDF and:
+\begin{itemize}
+\item \menu{Record payment} — cash, UPI or store credit; part payments are fine.
+\item \menu{Issue credit note} (Admin, Founder) — reduce what the customer owes.
+\item \menu{Write off} (Admin, Founder) — close a balance that will not be collected.
+\end{itemize}
+If a credit note is issued after the customer has paid, the invoice shows
+\emph{Refund due}.
+\screen{15-invoice-detail}
+
+\needspace{11cm}
+\subsection{Cash}
+Riders hand collected cash to the hub; \menu{Cash} (Admin, Founder) shows
+each handover, any shortfall, and deposits to the bank.
+\screen[0.85]{16-cash}
+
+% ── 6 ───────────────────────────────────────────────────────────────────
+\needspace{11cm}
+\section{Pricing, partners and messages}
+
+\menu{Pricing} (Founder only) holds price lists per garment and offers;
+other roles see a restricted notice.
+\menu{Partners} (Admin, Founder) registers watchmen and influencers and
+issues their referral codes. A customer who books with a code is credited
+to that partner automatically.
+\menu{Notifications} shows every message the system has queued for
+customers.
+\screen[0.8]{18-pricing}
+\screen[0.8]{17-partners}
+
+% ── 7 ───────────────────────────────────────────────────────────────────
+\needspace{11cm}
+\section{Field app (riders)}
+
+Riders open \texttt{ironmanindia.co/field} on their phone and log
+in. \menu{Jobs} lists today's pickups and deliveries. A job shows the
+customer, address and a \menu{Open in Maps} button; the rider scans the bag
+and marks it done, or reports a problem. \menu{Cash} shows cash in hand
+and lets the rider \menu{Hand over cash} to a hub staff member, who
+confirms the amount received; any shortfall is recorded against the
+rider. Actions taken without signal
+are saved and sent when the phone is back online.
+\phones{24-field-jobs}{25-field-job}{26-field-cash}
+
+% ── 8 ───────────────────────────────────────────────────────────────────
+\needspace{11cm}
+\section{Customers}
+
+Customers book from \texttt{ironmanindia.co} in seven short steps:
+pincode, address, service, garment counts, pickup slot, phone check and
+confirm. They can enter a referral code or say how they heard about us.
+Every order has a tracking link that needs no login, and customers can
+sign in to see order history, addresses and invoices.
+\phones{28-book-start}{29-tracking}{30-account-signin}
+
+\callout{\textbf{Not yet live for real customers:} signing in and booking
+need a code sent to the customer's phone. Text-message sending is not
+connected yet, so these steps can only be tried in the demo environment.}
+
+% ── 9 ───────────────────────────────────────────────────────────────────
+\needspace{11cm}
+\section{Not in this build yet}
+
+\begin{itemize}
+\item \menu{Analytics} and \menu{Staff} screens show \emph{Coming soon}. Staff accounts are created by the IronMan team for now.
+\item GST tax invoices — waiting on the business's GST details.
+\item WhatsApp and SMS messages to customers, including login codes.
+\item Online payments (cash and UPI at the door are recorded today).
+\item Partner commissions and payouts, campaigns and marketing spend.
+\item iPhone and Android apps (the web works on phones today).
+\end{itemize}
+
+\needspace{11cm}
+\section{Reporting a problem}
+Send a screenshot with: the screen, your role, the time, and the order or
+invoice number if there is one. Every action in IronMan is logged with
+the person and time, so this is enough for us to trace it.
+
+\end{document}
