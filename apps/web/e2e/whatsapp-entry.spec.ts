@@ -28,12 +28,12 @@ test.describe("WhatsApp booking entry point", () => {
 
     await page.goto("/book?src=whatsapp");
 
-    await page.getByLabel("Pincode").fill("560095");
+    await page.getByLabel("Pincode").fill("500027");
     await expect(page.getByText(/we service this area from/i)).toBeVisible();
     await page.getByRole("button", { name: "Next" }).click();
 
-    await page.getByPlaceholder("Search your apartment by name…").fill("Prestige");
-    await page.getByRole("button", { name: "Prestige Lakeside Habitat" }).click();
+    await page.getByPlaceholder("Search your apartment by name…").fill("Sai Krupa");
+    await page.getByRole("button", { name: "Sai Krupa Residency" }).click();
     await page.getByLabel("Flat no.").fill("701");
     await page.getByRole("button", { name: "Next" }).click();
 

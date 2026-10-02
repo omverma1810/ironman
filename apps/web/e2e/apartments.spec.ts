@@ -13,7 +13,7 @@ test.describe("Apartments master data", () => {
     await page.goto("/console/apartments");
     await expect(page.getByRole("heading", { name: "Apartments" })).toBeVisible();
     // seed_demo always creates 6 apartments across 2 clusters.
-    await expect(page.getByText("Koramangala 4th Block").first()).toBeVisible();
+    await expect(page.getByText("Barkatpura Main Road").first()).toBeVisible();
 
     await page.getByRole("button", { name: "New apartment" }).click();
     await expect(page.getByRole("heading", { name: "New apartment" })).toBeVisible();
@@ -57,7 +57,7 @@ test.describe("Apartments master data", () => {
     await page.getByRole("button", { name: "Manage clusters" }).click();
     const dialog = page.getByRole("dialog");
     await expect(dialog.getByRole("heading", { name: "Clusters" })).toBeVisible();
-    await expect(dialog.getByText("Koramangala 4th Block")).toBeVisible();
+    await expect(dialog.getByText("Barkatpura Main Road")).toBeVisible();
 
     // A hardcoded name collides with itself on Playwright's automatic
     // retry-on-failure (playwright.config.ts): (hub, name) is unique

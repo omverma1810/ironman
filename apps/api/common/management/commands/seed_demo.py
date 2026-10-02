@@ -43,10 +43,10 @@ class Command(BaseCommand):
 
         self.stdout.write("Seeding hub, clusters, apartments...")
         hub, _ = Hub.objects.update_or_create(
-            code="BLR-KOR",
+            code="HYD-BKP",
             defaults=dict(
-                name="IronMan — Koramangala",
-                address="80 Feet Road, Koramangala, Bengaluru",
+                name="IronMan — Barkatpura",
+                address="Barkatpura, Kacheguda, Hyderabad, Telangana 500027",
                 daily_pressing_capacity=150,
                 is_active=True,
             ),
@@ -64,27 +64,31 @@ class Command(BaseCommand):
         )
 
         cluster_a, _ = Cluster.objects.update_or_create(
-            hub=hub, name="Koramangala 4th Block", defaults={"is_active": True}
+            hub=hub, name="Barkatpura Main Road", defaults={"is_active": True}
         )
         cluster_b, _ = Cluster.objects.update_or_create(
-            hub=hub, name="Koramangala 5th Block", defaults={"is_active": True}
+            hub=hub, name="Kacheguda Station Road", defaults={"is_active": True}
         )
 
         apartment_names = [
-            (cluster_a, "Prestige Lakeside Habitat", "560095"),
-            (cluster_a, "Adarsh Palm Retreat", "560095"),
-            (cluster_a, "Sobha Silicon Oasis", "560095"),
-            (cluster_b, "Purva Skywood", "560034"),
-            (cluster_b, "Brigade Meadows", "560034"),
-            (cluster_b, "Salarpuria Sattva Greenage", "560034"),
+            # Fictional buildings in the real service area around the
+            # Barkatpura/Kacheguda store (apps/web/lib/landing/content.ts).
+            (cluster_a, "Sai Krupa Residency", "500027", "Barkatpura"),
+            (cluster_a, "Lakshmi Nilayam Apartments", "500027", "Barkatpura"),
+            (cluster_a, "Sri Sai Towers", "500027", "Barkatpura"),
+            (cluster_b, "Venkateshwara Enclave", "500027", "Kacheguda"),
+            (cluster_b, "Tulsi Heights", "500027", "Kacheguda"),
+            (cluster_b, "Narayanguda Residency", "500029", "Narayanguda"),
         ]
         apartments = []
-        for i, (cluster, name, pincode) in enumerate(apartment_names):
+        for i, (cluster, name, pincode, locality) in enumerate(apartment_names):
             apt, _ = Apartment.objects.update_or_create(
                 cluster=cluster,
                 name=name,
                 defaults=dict(
-                    address=f"{name}, Koramangala",
+                    # Street-level address only — screens already show the
+                    # building name next to it.
+                    address=f"{locality}, Hyderabad {pincode}",
                     pincode=pincode,
                     is_active=True,
                     launched_on=timezone.localdate() - timedelta(days=30 - i * 4),
@@ -96,7 +100,7 @@ class Command(BaseCommand):
         # looks these up by pincode — without a ServiceArea row the wizard's
         # very first step reports every seeded apartment's own pincode as
         # unserviceable.
-        for pincode in {"560095", "560034"}:
+        for pincode in {"500027", "500029"}:
             ServiceArea.objects.update_or_create(
                 hub=hub, pincode=pincode, defaults={"is_active": True}
             )
@@ -567,7 +571,7 @@ class Command(BaseCommand):
                     stock_items[sku],
                     qty=receive_qty,
                     unit_cost_minor=unit_cost,
-                    supplier="Bangalore Packaging Co.",
+                    supplier="Hyderabad Packaging Co.",
                     invoice_ref="INV-2026-0142",
                     actor=operator,
                 )

@@ -125,7 +125,7 @@ test("customer side", async ({ browser }) => {
   const ctx = await browser.newContext({ viewport: PHONE, isMobile: true, hasTouch: true });
   const page = await ctx.newPage();
   await page.goto("/book?ref=DEMOWATCH");
-  await page.getByLabel("Pincode").fill("560095");
+  await page.getByLabel("Pincode").fill("500027");
   await expect(page.getByText(/we service this area from/i)).toBeVisible();
   await shot(page, "28-book-start");
 
