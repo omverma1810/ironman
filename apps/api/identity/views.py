@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
+import customers.services as customers_services
 from common import audit
 from common.errors import ApiError
 from common.permissions import IsAdminOrFounder
@@ -118,6 +119,12 @@ class OtpVerifyView(APIView):
                 actor=user,
                 after={"phone": phone},
             )
+
+        # Someone added at the counter already has a customer record with
+        # this phone but no login: attach it now that they've proved they own
+        # the phone, so their history shows and their first booking doesn't
+        # collide with a duplicate customer for the same phone.
+        customers_services.link_existing_customer(user)
 
         tokens = _issue_jwt_pair(user)
         return Response({**tokens, "user": MeSerializer(user).data, "created": created})

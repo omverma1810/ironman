@@ -117,6 +117,29 @@ def get_customer(customer_id):
     return Customer.objects.get(pk=customer_id)
 
 
+def link_existing_customer(user, *, hub=None) -> Customer | None:
+    """Attach a customer record that already exists for this phone — added
+    at the counter, or by staff — to the user who just proved they own the
+    phone (a verified OTP). Only records with no login yet are eligible, so
+    a customer already tied to another user is never taken over. Returns
+    the user's customer, if they have or now have one."""
+    existing = getattr(user, "customer_profile", None)
+    if existing or not user.phone:
+        return existing
+    candidates = Customer.objects.filter(
+        phone=user.phone, user__isnull=True, deleted_at__isnull=True
+    )
+    if hub is not None:
+        candidates = candidates.filter(hub=hub)
+    customer = candidates.order_by("created_at").first()
+    if customer is None:
+        return None
+    customer.user = user
+    customer.save(update_fields=["user"])
+    user.customer_profile = customer
+    return customer
+
+
 def get_or_create_customer_for_user(user, *, hub, channel: str = "", apartment=None) -> Customer:
     """The self-service booking path (docs/04 §3.4 `POST /orders` `[C]`):
     a JWT-authenticated customer's `id` claim is a User, not a Customer —
@@ -130,7 +153,7 @@ def get_or_create_customer_for_user(user, *, hub, channel: str = "", apartment=N
     `acquisition_channel`/`acquisition_apartment` are write-once at first
     order (docs/02 §3.4) — set here, on the row's only creation, and
     never touched again."""
-    existing = getattr(user, "customer_profile", None)
+    existing = link_existing_customer(user, hub=hub)
     if existing:
         return existing
     return Customer.objects.create(
