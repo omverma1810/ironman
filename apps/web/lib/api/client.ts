@@ -51,6 +51,12 @@ export function resolveMediaUrl(url: string | null | undefined): string | null {
   return `${new URL(API_ORIGIN).origin}${url}`;
 }
 
+/** For file downloads (CSV export) that need the raw response rather than
+ * JSON — same origin/proxy handling as every `apiFetch` call. */
+export function buildApiUrl(path: string, params?: RequestOptions["params"]): string {
+  return buildUrl(path, params);
+}
+
 function buildUrl(path: string, params?: RequestOptions["params"]): string {
   // A DRF cursor-paginated response's `next`/`previous` (common/pagination.py)
   // is an absolute URL built server-side against the API's own origin —

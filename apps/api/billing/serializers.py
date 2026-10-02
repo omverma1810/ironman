@@ -15,6 +15,8 @@ class InvoiceListSerializer(serializers.ModelSerializer):
     order_ref = serializers.CharField(source="order.ref", read_only=True)
     customer_name = serializers.CharField(source="customer.name", read_only=True)
     paid_minor = serializers.SerializerMethodField()
+    credited_minor = serializers.SerializerMethodField()
+    balance_minor = serializers.SerializerMethodField()
 
     class Meta:
         model = Invoice
@@ -30,8 +32,17 @@ class InvoiceListSerializer(serializers.ModelSerializer):
             "total_minor",
             "gst_applied",
             "paid_minor",
+            "credited_minor",
+            "balance_minor",
         ]
         read_only_fields = fields
+
+    def get_credited_minor(self, obj: Invoice) -> int:
+        return sum(cn.amount_minor for cn in obj.credit_notes.all())
+
+    def get_balance_minor(self, obj: Invoice) -> int:
+        """Owed after credit notes and payments; negative = refund due."""
+        return obj.total_minor - self.get_credited_minor(obj) - self.get_paid_minor(obj)
 
     def get_paid_minor(self, obj: Invoice) -> int:
         # Same "SUCCEEDED-only" sum as `InvoiceDetailSerializer` — the
@@ -85,6 +96,7 @@ class InvoiceDetailSerializer(serializers.ModelSerializer):
     credited_minor = serializers.SerializerMethodField()
     payments = PaymentSerializer(many=True, read_only=True)
     paid_minor = serializers.SerializerMethodField()
+    balance_minor = serializers.SerializerMethodField()
 
     class Meta:
         model = Invoice
@@ -113,11 +125,15 @@ class InvoiceDetailSerializer(serializers.ModelSerializer):
             "credited_minor",
             "payments",
             "paid_minor",
+            "balance_minor",
         ]
         read_only_fields = fields
 
     def get_pdf_url(self, obj: Invoice) -> str | None:
         return obj.pdf_file.url if obj.pdf_file else None
+
+    def get_balance_minor(self, obj: Invoice) -> int:
+        return obj.total_minor - self.get_credited_minor(obj) - self.get_paid_minor(obj)
 
     def get_credited_minor(self, obj: Invoice) -> int:
         return sum(cn.amount_minor for cn in obj.credit_notes.all())
@@ -294,3 +310,11 @@ class GrantCreditSerializer(serializers.Serializer):
     reason = serializers.ChoiceField(choices=["REFERRAL", "GOODWILL", "REFUND"])
     amount = serializers.IntegerField(min_value=1)
     note = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
+
+
+class UninvoicedDeliverySerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    ref = serializers.CharField()
+    customer_name = serializers.CharField(source="customer.name")
+    delivered_at = serializers.DateTimeField()
+    total_minor = serializers.IntegerField()

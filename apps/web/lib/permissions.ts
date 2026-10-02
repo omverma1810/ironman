@@ -69,6 +69,13 @@ export function canRecordAdjustment(roles: Role[] | undefined): boolean {
   return hasRole(roles, ...MONEY_ROLES);
 }
 
+// Writing off a balance is an ADJUSTMENT payment — the API refuses it for
+// anyone but Admin/Founder, and so does this. Credit notes and the
+// accountant's CSV export share the same narrowing.
+export const canWriteOff = canRecordAdjustment;
+export const canIssueCreditNotes = canRecordAdjustment;
+export const canExportInvoices = canRecordAdjustment;
+
 // docs/06 §3.1 "Own cash balance / handover" row is `✓` for Operator —
 // confirming a rider's handover and banking hub cash are day-to-day hub
 // closing, the same tier that records a payment (`canManageOrders`), not

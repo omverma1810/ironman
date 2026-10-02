@@ -158,6 +158,9 @@ def complete_job(
         # is DONE (`compute_delivery_labour_cost` itself no-ops if either
         # was already written).
         billing_services.compute_delivery_labour_cost(job.order, actor=actor)
+        # The customer's invoice follows the delivery automatically
+        # (best-effort — never blocks the rider's completion).
+        billing_services.issue_invoice_on_delivery(job.order, actor=actor)
 
     return job
 

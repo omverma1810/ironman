@@ -34,12 +34,14 @@ import {
 } from "@/lib/api/hooks";
 import { newIdempotencyKey } from "@/lib/api/client";
 import {
+  canIssueCreditNotes,
   canIssueInvoices,
   canRecordAdjustment,
   canRecordCreditPayment,
   canRecordPayment,
   canViewCustomerCredit,
   canViewInvoices,
+  canWriteOff,
 } from "@/lib/permissions";
 import { formatDateTime } from "@/lib/format";
 import type { Invoice, PaymentMethod, Role } from "@/lib/api/types";
@@ -133,8 +135,14 @@ function InvoiceSummary({
 }) {
   const [creditOpen, setCreditOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
-  const remainingMinor = invoice.total_minor - invoice.paid_minor;
+  const [writeOffOpen, setWriteOffOpen] = useState(false);
+  // The server's balance already nets credit notes against payments — the
+  // old `total − paid` here ignored credits, so a credit-covered invoice
+  // kept asking for payment.
+  const remainingMinor = Math.max(invoice.balance_minor, 0);
+  const refundDueMinor = Math.max(-invoice.balance_minor, 0);
   const canRecord = canRecordPayment(roles) && remainingMinor > 0;
+  const canWriteOffBalance = canWriteOff(roles) && remainingMinor > 0;
 
   return (
     <div className="flex flex-col gap-3">
@@ -150,6 +158,14 @@ function InvoiceSummary({
       {invoice.issued_at && (
         <p className="text-xs text-text-muted">Issued {formatDateTime(invoice.issued_at)}</p>
       )}
+      {invoice.credited_minor > 0 && (
+        <div className="flex items-center justify-between text-xs text-text-muted">
+          <span>Credit notes</span>
+          <span>
+            −<MoneyText minor={invoice.credited_minor} className="inline" />
+          </span>
+        </div>
+      )}
       {invoice.paid_minor > 0 && (
         <div className="flex items-center justify-between text-xs text-text-muted">
           <span>Paid</span>
@@ -162,18 +178,45 @@ function InvoiceSummary({
           <MoneyText minor={remainingMinor} />
         </div>
       )}
-      <Separator />
-      <div className="flex items-center justify-between">
-        <Button size="sm" variant="ghost" onClick={() => setCreditOpen(true)}>
-          Issue credit note
-        </Button>
-        {canRecord && (
-          <Button size="sm" variant="outline" onClick={() => setPaymentOpen(true)}>
-            Record payment
+      {refundDueMinor > 0 && (
+        <div className="flex items-center justify-between text-xs font-medium text-status-warning">
+          <span>Refund due to customer</span>
+          <MoneyText minor={refundDueMinor} />
+        </div>
+      )}
+      {(canIssueCreditNotes(roles) || canRecord || canWriteOffBalance) && <Separator />}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        {canIssueCreditNotes(roles) ? (
+          <Button size="sm" variant="ghost" onClick={() => setCreditOpen(true)}>
+            Issue credit note
           </Button>
+        ) : (
+          <span />
         )}
+        <div className="flex items-center gap-2">
+          {canWriteOffBalance && (
+            <Button size="sm" variant="ghost" onClick={() => setWriteOffOpen(true)}>
+              Write off
+            </Button>
+          )}
+          {canRecord && (
+            <Button size="sm" variant="outline" onClick={() => setPaymentOpen(true)}>
+              Record payment
+            </Button>
+          )}
+        </div>
       </div>
-      <CreditNoteDialog invoiceRef={invoice.ref} open={creditOpen} onOpenChange={setCreditOpen} />
+      {canIssueCreditNotes(roles) && (
+        <CreditNoteDialog invoiceRef={invoice.ref} open={creditOpen} onOpenChange={setCreditOpen} />
+      )}
+      {canWriteOffBalance && (
+        <WriteOffDialog
+          invoiceRef={invoice.ref}
+          remainingMinor={remainingMinor}
+          open={writeOffOpen}
+          onOpenChange={setWriteOffOpen}
+        />
+      )}
       {canRecord && (
         <RecordPaymentDialog
           invoiceRef={invoice.ref}
@@ -246,6 +289,61 @@ export function CreditNoteDialog({
           </Button>
           <Button loading={issueCreditNote.isPending} disabled={!valid} onClick={handleSave}>
             Issue credit note
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Closes an unrecoverable balance. Recorded as an ADJUSTMENT payment for
+ * the whole remaining amount — never a deletion — so the invoice, the
+ * ledger and who did it all stay on record. Admin/Founder only (enforced
+ * server-side too). */
+export function WriteOffDialog({
+  invoiceRef,
+  remainingMinor,
+  open,
+  onOpenChange,
+}: {
+  invoiceRef: string;
+  remainingMinor: number;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const recordPayment = useRecordPayment();
+
+  function handleConfirm() {
+    recordPayment.mutate(
+      {
+        ref: invoiceRef,
+        input: {
+          method: "ADJUSTMENT",
+          amount: remainingMinor,
+          idempotency_key: newIdempotencyKey(),
+        },
+      },
+      { onSuccess: () => onOpenChange(false) }
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Write off {invoiceRef}?</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-text-secondary">
+          This closes the invoice by writing off the remaining balance of{" "}
+          <MoneyText minor={remainingMinor} className="inline font-medium" />. It is recorded as
+          an adjustment against your name and can&apos;t be undone from here.
+        </p>
+        <DialogFooter>
+          <Button variant="secondary" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button variant="danger" loading={recordPayment.isPending} onClick={handleConfirm}>
+            Write off balance
           </Button>
         </DialogFooter>
       </DialogContent>

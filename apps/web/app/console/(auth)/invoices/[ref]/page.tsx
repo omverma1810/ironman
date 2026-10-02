@@ -7,6 +7,7 @@ import {
   CreditNoteDialog,
   PAYMENT_METHOD_LABEL,
   RecordPaymentDialog,
+  WriteOffDialog,
 } from "@/components/billing/invoice-section";
 import { MoneyText } from "@/components/patterns/money-text";
 import { PageHeader } from "@/components/patterns/page-header";
@@ -19,7 +20,7 @@ import { Icon } from "@/components/icons/icon";
 import { useInvoice, useMe } from "@/lib/api/hooks";
 import { resolveMediaUrl } from "@/lib/api/client";
 import { formatDateTime } from "@/lib/format";
-import { canRecordAdjustment, canRecordPayment } from "@/lib/permissions";
+import { canIssueCreditNotes, canRecordPayment, canWriteOff } from "@/lib/permissions";
 
 export default function InvoiceDetailPage() {
   const params = useParams<{ ref: string }>();
@@ -29,6 +30,7 @@ export default function InvoiceDetailPage() {
   const roles = me.data?.roles;
   const [creditOpen, setCreditOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [writeOffOpen, setWriteOffOpen] = useState(false);
 
   return (
     <div className="flex flex-col gap-6">
@@ -38,8 +40,11 @@ export default function InvoiceDetailPage() {
 
       <AsyncBoundary query={invoiceQuery} loading={<Skeleton className="h-96" />}>
         {(invoice) => {
-          const remainingMinor = invoice.total_minor - invoice.paid_minor;
+          // Server-computed: total − credit notes − payments.
+          const remainingMinor = Math.max(invoice.balance_minor, 0);
+          const refundDueMinor = Math.max(-invoice.balance_minor, 0);
           const canRecord = canRecordPayment(roles) && remainingMinor > 0;
+          const canWriteOffBalance = canWriteOff(roles) && remainingMinor > 0;
           return (
           <>
             <PageHeader
@@ -57,9 +62,14 @@ export default function InvoiceDetailPage() {
                       </Button>
                     </a>
                   )}
-                  {canRecordAdjustment(roles) && (
+                  {canIssueCreditNotes(roles) && (
                     <Button size="sm" variant="outline" onClick={() => setCreditOpen(true)}>
                       Issue credit note
+                    </Button>
+                  )}
+                  {canWriteOffBalance && (
+                    <Button size="sm" variant="ghost" onClick={() => setWriteOffOpen(true)}>
+                      Write off
                     </Button>
                   )}
                   {canRecord && (
@@ -183,6 +193,12 @@ export default function InvoiceDetailPage() {
                             <MoneyText minor={remainingMinor} />
                           </div>
                         )}
+                        {refundDueMinor > 0 && (
+                          <div className="flex items-center justify-between text-sm font-medium text-status-warning">
+                            <span>Refund due to customer</span>
+                            <MoneyText minor={refundDueMinor} />
+                          </div>
+                        )}
                       </div>
                     )}
                   </CardContent>
@@ -206,6 +222,14 @@ export default function InvoiceDetailPage() {
             </div>
 
             <CreditNoteDialog invoiceRef={invoice.ref} open={creditOpen} onOpenChange={setCreditOpen} />
+            {canWriteOffBalance && (
+              <WriteOffDialog
+                invoiceRef={invoice.ref}
+                remainingMinor={remainingMinor}
+                open={writeOffOpen}
+                onOpenChange={setWriteOffOpen}
+              />
+            )}
             {canRecord && (
               <RecordPaymentDialog
                 invoiceRef={invoice.ref}

@@ -8,6 +8,8 @@ nothing upstream has ever computed `Order.tax_minor`."""
 
 from __future__ import annotations
 
+import logging
+
 from django.db import IntegrityError, models, transaction
 from django.utils import timezone
 
@@ -34,6 +36,8 @@ from identity.models import User
 from ordering.models import OrderStatus
 from ordering.models import PaymentStatus as OrderPaymentStatus
 from territory.models import Hub, OrderCostSettings, TaxSettings
+
+logger = logging.getLogger("ironman.billing")
 
 
 def get_invoice(ref: str) -> Invoice:
@@ -138,10 +142,73 @@ def _issue_invoice_once(order, *, apply_gst: bool | None, actor) -> Invoice:
     return invoice
 
 
+def issue_invoice_on_delivery(order, *, actor=None) -> Invoice | None:
+    """Every delivered order gets an invoice without anyone having to
+    remember to issue it. Best-effort by design: a rider's delivery
+    completion must never fail (or roll back) because billing couldn't
+    issue — a missing verified quantity, or the PDF renderer failing. The
+    savepoint keeps a failure from poisoning the delivery's own
+    transaction, and the order then shows up in `delivered_without_invoice`
+    so ops can fix the cause and issue it by hand."""
+    if Invoice.objects.filter(order=order).exists():
+        return None
+    try:
+        with transaction.atomic():
+            return issue_invoice(order, actor=actor)
+    except Exception:
+        logger.exception("Auto-invoice on delivery failed for order %s", order.ref)
+        return None
+
+
+def credited_minor(invoice: Invoice) -> int:
+    return sum(invoice.credit_notes.values_list("amount_minor", flat=True))
+
+
+def invoice_balance(invoice: Invoice) -> int:
+    """What's still owed: total, less credit notes, less payments. Negative
+    means the customer has paid more than they now owe (a credit note was
+    issued after payment) — a refund is due."""
+    return invoice.total_minor - credited_minor(invoice) - paid_minor(invoice)
+
+
+def _sync_settlement(invoice: Invoice) -> None:
+    """The one place an invoice's `PAID` status and its order's
+    `payment_status` follow from the money actually recorded. Called after
+    every payment *and* every credit note: a credit note that brings the
+    balance to zero settles the invoice just as much as the last payment
+    does, and the old "status flips only when a payment equals the
+    remainder" check missed that case, leaving a fully-covered invoice
+    open forever."""
+    paid = paid_minor(invoice)
+    credited = credited_minor(invoice)
+    balance = invoice.total_minor - credited - paid
+
+    settled = balance <= 0
+    target_status = InvoiceStatus.PAID if settled else InvoiceStatus.ISSUED
+    if invoice.status != target_status:
+        invoice.status = target_status
+        invoice.save(update_fields=["status"])
+
+    if settled:
+        order_status = OrderPaymentStatus.PAID
+    elif paid > 0 or credited > 0:
+        order_status = OrderPaymentStatus.PARTIALLY_PAID
+    else:
+        return
+    order = invoice.order
+    if order.payment_status != order_status:
+        order.payment_status = order_status
+        order.save(update_fields=["payment_status"])
+
+
 @transaction.atomic
 def issue_credit_note(
     invoice: Invoice, *, reason: str, amount_minor: int, actor=None
 ) -> CreditNote:
+    # Row lock: a payment or another credit note landing at the same moment
+    # must not both read the same remaining balance (same reasoning as
+    # `record_payment`'s own lock).
+    invoice = Invoice.objects.select_for_update().get(pk=invoice.pk)
     if invoice.status not in (InvoiceStatus.ISSUED, InvoiceStatus.PAID):
         raise ApiError(
             f"{invoice.ref} must be issued before it can carry a credit note.",
@@ -165,6 +232,7 @@ def issue_credit_note(
     )
     credit_note.pdf_file = render_credit_note_pdf(credit_note)
     credit_note.save()
+    _sync_settlement(invoice)
     return credit_note
 
 
@@ -259,14 +327,7 @@ def record_payment(
             actor=actor,
         )
 
-    if amount_minor == remaining:
-        locked.status = InvoiceStatus.PAID
-        locked.save(update_fields=["status"])
-        locked.order.payment_status = OrderPaymentStatus.PAID
-    else:
-        locked.order.payment_status = OrderPaymentStatus.PARTIALLY_PAID
-    locked.order.save(update_fields=["payment_status"])
-
+    _sync_settlement(locked)
     return payment
 
 

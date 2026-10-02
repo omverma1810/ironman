@@ -402,3 +402,15 @@ def mark_delivery_failed(order: Order, *, actor=None, reason: str, attempt_no: i
             order, OrderStatus.RETURNED_TO_HUB, actor=actor, event_type="order.returned_to_hub"
         )
     return order
+
+
+def delivered_without_invoice():
+    """Delivered orders nobody has billed — what auto-invoicing on delivery
+    failed to cover (or predates it). Unscoped: the caller applies hub
+    scoping."""
+    return (
+        Order.objects.filter(status__in=[OrderStatus.DELIVERED, OrderStatus.CLOSED])
+        .filter(invoice__isnull=True)
+        .select_related("customer")
+        .order_by("delivered_at")
+    )

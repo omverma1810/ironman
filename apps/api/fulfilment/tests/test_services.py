@@ -161,6 +161,37 @@ def test_complete_delivery_verifies_bag_codes_and_delivers(
     assert ready_order.status == OrderStatus.DELIVERED
 
 
+def test_complete_delivery_auto_issues_the_invoice(delivery_job, ready_order, ready_order_bag):
+    from billing.models import Invoice, InvoiceStatus
+
+    services.start_job(delivery_job)
+    services.complete_job(delivery_job, bag_codes=[ready_order_bag.code])
+
+    invoice = Invoice.objects.get(order=ready_order)
+    assert invoice.status == InvoiceStatus.ISSUED
+    assert invoice.total_minor == 3000
+
+
+def test_delivery_still_completes_when_auto_invoicing_fails(
+    delivery_job, ready_order, ready_order_bag, monkeypatch
+):
+    """Billing trouble must never strand a rider at the door: the order is
+    delivered anyway and surfaces in the uninvoiced-deliveries list."""
+    import billing.services as billing_services
+    from billing.models import Invoice
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("pdf renderer down")
+
+    monkeypatch.setattr(billing_services, "issue_invoice", boom)
+    services.start_job(delivery_job)
+    services.complete_job(delivery_job, bag_codes=[ready_order_bag.code])
+
+    ready_order.refresh_from_db()
+    assert ready_order.status == OrderStatus.DELIVERED
+    assert not Invoice.objects.filter(order=ready_order).exists()
+
+
 def test_complete_delivery_requires_bag_codes(delivery_job):
     services.start_job(delivery_job)
     with pytest.raises(ApiError):

@@ -36,6 +36,7 @@ import type {
   InitiateHandoverInput,
   Invoice,
   InvoiceDetail,
+  InvoiceListParams,
   Job,
   JobAttempt,
   JobKind,
@@ -82,6 +83,7 @@ import type {
   StockMovement,
   StockReceiptInput,
   WipSummary,
+  UninvoicedDelivery,
 } from "./types";
 
 // ── Auth / identity ────────────────────────────────────────────────────
@@ -519,8 +521,10 @@ export const notificationsApi = {
 };
 
 export const billingApi = {
-  invoices: (params?: { status?: string; order?: string }, accessToken?: string) =>
+  invoices: (params?: InvoiceListParams, accessToken?: string) =>
     apiFetch<Paginated<Invoice>>("/billing/invoices/", { params, accessToken }),
+  uninvoicedDeliveries: () =>
+    apiFetch<UninvoicedDelivery[]>("/billing/uninvoiced-deliveries"),
   invoice: (ref: string) => apiFetch<InvoiceDetail>(`/billing/invoices/${ref}/`),
   invoicePdfUrl: (ref: string, accessToken?: string) =>
     apiFetch<{ url: string | null }>(`/billing/invoices/${ref}/pdf/`, { accessToken }),

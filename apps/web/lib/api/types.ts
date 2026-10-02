@@ -723,6 +723,28 @@ export type Invoice = {
   // Sum of SUCCEEDED payments — on both the list and detail serializers
   // since the order-detail page's Invoice card reads the list endpoint.
   paid_minor: number;
+  credited_minor: number;
+  // total − credit notes − payments. Negative means the customer paid more
+  // than they now owe (a credit note landed after payment): a refund is due.
+  balance_minor: number;
+};
+
+export type UninvoicedDelivery = {
+  id: string;
+  ref: string;
+  customer_name: string;
+  delivered_at: string;
+  total_minor: number;
+};
+
+export type InvoiceListParams = {
+  status?: string;
+  order?: string;
+  search?: string;
+  issued_from?: string;
+  issued_to?: string;
+  outstanding?: boolean;
+  limit?: number;
 };
 
 export type InvoiceSnapshotLine = {
