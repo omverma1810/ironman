@@ -6,6 +6,7 @@ boundary rule)."""
 
 from __future__ import annotations
 
+import logging
 from datetime import timedelta
 from decimal import Decimal
 
@@ -14,12 +15,15 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 import catalog.services as catalog_services
+import growth.services as growth_services
 import notifications.services as notifications_services
 import territory.services as territory_services
 from common.errors import ApiError
 from customers.models import Customer
 from ordering.models import Order, OrderLine, OrderStatus, ReQuote
 from ordering.state_machine import transition
+
+logger = logging.getLogger("ironman.ordering")
 
 
 def get_order(order_id):
@@ -41,6 +45,7 @@ def create_order(
     special_instructions: str = "",
     actor=None,
     referral_code: str = "",
+    acquisition_source: str = "",
     idempotency_key: str | None = None,
 ) -> Order:
     """`idempotency_key` (the `Idempotency-Key` header, docs/04 §3.4) is
@@ -146,6 +151,15 @@ def create_order(
         order = transition(order, target, actor=actor, event_type="order.created")
         if target == OrderStatus.SCHEDULED:
             notifications_services.notify("order.scheduled", order)
+
+    # Attribution is bookkeeping: if it can't be recorded the booking still
+    # stands (savepoint, so a DB error here can't poison the booking's own
+    # transaction) and the gap is logged for the data-quality check.
+    try:
+        with transaction.atomic():
+            growth_services.capture_attribution(order, self_reported=acquisition_source)
+    except Exception:
+        logger.exception("Attribution capture failed for order %s", order.ref)
 
     return order
 

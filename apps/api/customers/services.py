@@ -138,6 +138,9 @@ def get_or_create_customer_for_user(user, *, hub, channel: str = "", apartment=N
         user=user,
         phone=user.phone,
         name=user.full_name,
-        acquisition_channel=channel,
+        # `acquisition_channel` is deliberately NOT set here: it is the
+        # growth.Channel the customer came from, decided by attribution
+        # capture at their first order (it used to hold the *order*
+        # channel — WEB/WHATSAPP — which is a different vocabulary).
         acquisition_apartment=apartment,
     )

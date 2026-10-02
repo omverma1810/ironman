@@ -8,8 +8,9 @@ from __future__ import annotations
 
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.utils import timezone
 
-from common.models import BaseModel, HubScopedModel
+from common.models import AppendOnlyModel, BaseModel, HubScopedModel
 
 
 class Feedback(HubScopedModel):
@@ -149,3 +150,64 @@ class ReferralCode(HubScopedModel):
 
     def __str__(self) -> str:
         return self.code
+
+
+class AttributionBasis(models.TextChoices):
+    """How the channel was decided — kept so analytics (and the
+    data-quality alerts of docs/08 batch 6.9) can tell a *known* channel
+    from the `ORGANIC` fallback."""
+
+    CODE = "CODE", "Referral code"
+    SELF_REPORTED = "SELF_REPORTED", "Customer said so"
+    ORDER_CHANNEL = "ORDER_CHANNEL", "How the order came in"
+    DEFAULT = "DEFAULT", "Fallback (unknown)"
+    BACKFILL = "BACKFILL", "Backfilled from older data"
+
+
+class Attribution(AppendOnlyModel):
+    """docs/02 §3.10 — where a customer came from. Append-only, and exactly
+    one `is_first_touch` row per customer (a partial unique constraint):
+    "attribution that can be edited later is attribution nobody believes"
+    (R-502, A-03). Later orders that carry a referral code add further,
+    non-first-touch rows."""
+
+    hub = models.ForeignKey("territory.Hub", on_delete=models.PROTECT, related_name="+")
+    customer = models.ForeignKey(
+        "customers.Customer", on_delete=models.PROTECT, related_name="attributions"
+    )
+    order = models.ForeignKey(
+        "ordering.Order", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    channel = models.ForeignKey(Channel, on_delete=models.PROTECT, related_name="+")
+    apartment = models.ForeignKey(
+        "territory.Apartment", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    partner = models.ForeignKey(
+        ReferralPartner, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    referral_code = models.ForeignKey(
+        ReferralCode, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    is_first_touch = models.BooleanField(default=False)
+    basis = models.CharField(max_length=16, choices=AttributionBasis.choices)
+    captured_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "growth_attribution"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["customer"],
+                condition=models.Q(is_first_touch=True),
+                name="uniq_growth_attribution_first_touch_per_customer",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["channel", "captured_at"]),
+            models.Index(fields=["apartment", "captured_at"]),
+            models.Index(fields=["customer", "captured_at"]),
+        ]
+
+    def __str__(self) -> str:
+        return (
+            f"{self.customer_id} via {self.channel_id}{' (first)' if self.is_first_touch else ''}"
+        )

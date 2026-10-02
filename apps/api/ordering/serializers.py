@@ -150,6 +150,8 @@ class OrderCreateSerializer(serializers.Serializer):
     notes = serializers.CharField(required=False, allow_blank=True)
     special_instructions = serializers.CharField(required=False, allow_blank=True)
     referral_code = serializers.CharField(required=False, allow_blank=True)
+    # "How did you hear about us?" — a growth.ChannelCode, validated there.
+    acquisition_source = serializers.CharField(required=False, allow_blank=True, max_length=24)
 
 
 class OrderCancelSerializer(serializers.Serializer):

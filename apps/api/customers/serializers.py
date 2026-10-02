@@ -57,6 +57,8 @@ class CustomerListSerializer(serializers.ModelSerializer):
             "lifetime_gross_minor",
             "acquisition_channel",
         ]
+        # Write-once, set by growth attribution capture — never by a client.
+        read_only_fields = ["acquisition_channel"]
 
 
 class CustomerDetailSerializer(serializers.ModelSerializer):

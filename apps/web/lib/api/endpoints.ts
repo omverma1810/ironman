@@ -5,6 +5,7 @@ import type {
   AddressInput,
   Apartment,
   ApartmentContact,
+  Attribution,
   BagDetail,
   CashBalance,
   CashDeposit,
@@ -309,6 +310,11 @@ export const growthApi = {
 };
 
 // ── Growth: referral partners & codes (docs/08 batch 5.1) ────────────────
+export const attributionsApi = {
+  list: (params?: { customer?: string; order?: string; is_first_touch?: boolean }) =>
+    apiFetch<Paginated<Attribution>>("/growth/attributions/", { params }),
+};
+
 export const partnersApi = {
   list: (params?: { kind?: string; status?: string; apartment?: string }) =>
     apiFetch<Paginated<ReferralPartner>>("/growth/partners/", { params }),

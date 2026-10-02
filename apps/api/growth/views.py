@@ -10,11 +10,12 @@ import customers.services as customers_services
 import ordering.services as ordering_services
 import territory.services as territory_services
 from common.errors import ApiError
-from common.permissions import IsAdminOrFounder, ScopedQuerysetMixin
+from common.permissions import IsAdminOrFounder, IsOpsStaff, ScopedQuerysetMixin
 from common.permissions import is_customer_only as _is_customer_only
 from growth import services
-from growth.models import Feedback, ReferralCode, ReferralPartner
+from growth.models import Attribution, Feedback, ReferralCode, ReferralPartner
 from growth.serializers import (
+    AttributionSerializer,
     FeedbackCreateSerializer,
     FeedbackModerateSerializer,
     FeedbackSerializer,
@@ -184,3 +185,17 @@ class ReferralCodeValidateView(APIView):
                 "apartment": referral_code.apartment_id,
             }
         )
+
+
+class AttributionViewSet(ScopedQuerysetMixin, viewsets.ReadOnlyModelViewSet):
+    """Where customers came from — read-only (the rows are append-only and
+    written only by `services.capture_attribution`). Ops staff see their
+    own hub's; a customer's own row is also what the console customer page
+    shows as "Acquired via"."""
+
+    queryset = Attribution.objects.select_related(
+        "channel", "partner", "referral_code", "order", "apartment"
+    )
+    serializer_class = AttributionSerializer
+    permission_classes = [IsOpsStaff]
+    filterset_fields = ["customer", "order", "is_first_touch", "basis"]

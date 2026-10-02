@@ -126,6 +126,7 @@ class OrderViewSet(ScopedQuerysetMixin, viewsets.ModelViewSet):
             notes=data.get("notes", ""),
             special_instructions=data.get("special_instructions", ""),
             referral_code=data.get("referral_code", ""),
+            acquisition_source=data.get("acquisition_source", ""),
             actor=request.user,
             idempotency_key=request.headers.get("Idempotency-Key"),
         )

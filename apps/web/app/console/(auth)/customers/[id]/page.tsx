@@ -12,8 +12,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Icon } from "@/components/icons/icon";
 import { MoneyText } from "@/components/patterns/money-text";
 import { CustomerCreditSection } from "@/components/billing/customer-credit-section";
-import { useCustomer, useMe } from "@/lib/api/hooks";
+import { useCustomer, useCustomerAttribution, useMe } from "@/lib/api/hooks";
 import { formatDate } from "@/lib/format";
+import { canIssueInvoices } from "@/lib/permissions";
+import type { Role } from "@/lib/api/types";
 
 export default function CustomerDetailPage() {
   const params = useParams<{ id: string }>();
@@ -51,6 +53,8 @@ export default function CustomerDetailPage() {
               <StatBlock label="Lifetime spend" value={<MoneyText minor={customer.lifetime_gross_minor} />} />
               <StatBlock label="Last order" value={formatDate(customer.last_order_at)} />
             </div>
+
+            <AcquiredVia customerId={customer.id} roles={me.data?.roles} />
 
             <CustomerCreditSection customerId={customer.id} roles={me.data?.roles} />
 
@@ -122,5 +126,23 @@ function StatBlock({ label, value }: { label: string; value: React.ReactNode }) 
       <span className="text-xs font-medium tracking-wide text-text-muted uppercase">{label}</span>
       <span className="font-display text-lg font-semibold text-text-primary">{value}</span>
     </div>
+  );
+}
+
+/** Where this customer came from (first touch). Quiet when unknown — a
+ * customer from before attribution existed is backfilled, so the row is
+ * normally there; ops roles only, same as the API. */
+function AcquiredVia({ customerId, roles }: { customerId: string; roles: Role[] | undefined }) {
+  const allowed = canIssueInvoices(roles); // Operator, Admin, Founder
+  const attribution = useCustomerAttribution(allowed ? customerId : undefined);
+  const a = attribution.data;
+  if (!allowed || !a) return null;
+  return (
+    <p className="text-sm text-text-secondary" data-testid="acquired-via">
+      Acquired via <span className="font-medium text-text-primary">{a.channel_name}</span>
+      {a.partner_name && <> · {a.partner_name}</>}
+      {a.code && <> (code {a.code})</>}
+      {a.basis === "DEFAULT" && <span className="text-text-muted"> — source unknown</span>}
+    </p>
   );
 }

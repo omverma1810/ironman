@@ -590,6 +590,30 @@ export type OfflineOpResult = {
 
 export type OrderLineInput = { garment_type: string; qty: number };
 
+export type AttributionBasis =
+  | "CODE"
+  | "SELF_REPORTED"
+  | "ORDER_CHANNEL"
+  | "DEFAULT"
+  | "BACKFILL";
+
+export type Attribution = {
+  id: string;
+  customer: string;
+  customer_name: string;
+  order: string | null;
+  order_ref: string;
+  channel_code: string;
+  channel_name: string;
+  partner: string | null;
+  partner_name: string;
+  code: string;
+  apartment_name: string;
+  is_first_touch: boolean;
+  basis: AttributionBasis;
+  captured_at: string;
+};
+
 export type CreateOrderInput = {
   hub: string;
   // Required for a staff caller (booking on someone else's behalf) — a
@@ -611,6 +635,8 @@ export type CreateOrderInput = {
   notes?: string;
   special_instructions?: string;
   referral_code?: string;
+  // "How did you hear about us?" — a growth channel code (batch 5.2).
+  acquisition_source?: string;
 };
 
 export type StockUnit = "PIECE" | "LITRE" | "KG" | "ROLL";

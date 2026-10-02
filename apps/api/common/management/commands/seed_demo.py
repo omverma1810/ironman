@@ -220,6 +220,11 @@ class Command(BaseCommand):
         self.stdout.write("Seeding supplies...")
         self._seed_supplies(hub, service, garment_types)
 
+        # Before the customer/order loop so some first orders can carry a
+        # referral code and exercise attribution capture (batch 5.2).
+        self.stdout.write("Seeding growth (partner + referral code)...")
+        demo_code = self._seed_growth(hub, apartments)
+
         self.stdout.write("Seeding customers + demo orders...")
         first_names = [
             "Priya",
@@ -296,6 +301,8 @@ class Command(BaseCommand):
                     service=service,
                     lines=lines,
                     channel=random.choice(["WEB", "WHATSAPP", "COUNTER"]),
+                    # Every fourth customer was brought in by the demo watchman.
+                    referral_code=demo_code if (j == 0 and i % 4 == 0) else "",
                     address=customer.addresses.first(),
                     apartment=customer.acquisition_apartment,
                     notes="",
@@ -326,6 +333,31 @@ class Command(BaseCommand):
                 "4 staff accounts (password: IronMan@2026)."
             )
         )
+
+    def _seed_growth(self, hub, apartments) -> str:
+        """One watchman with a fixed, memorable code so the booking e2e (and
+        anyone exploring the console) has a real referral to use. Idempotent:
+        re-seeding reuses the same partner and code."""
+        from growth.models import PartnerKind, ReferralCode, ReferralPartner
+        from growth.services import create_referral_code, onboard_partner
+
+        existing = ReferralCode.objects.filter(code="DEMOWATCH").first()
+        if existing:
+            return existing.code
+        admin = User.objects.get(email="admin@ironman.test")
+        partner = ReferralPartner.objects.filter(hub=hub, name="Ramesh (demo watchman)").first()
+        if partner is None:
+            partner = onboard_partner(
+                hub=hub,
+                kind=PartnerKind.WATCHMAN,
+                name="Ramesh (demo watchman)",
+                phone="9000000001",
+                apartment=apartments[0] if apartments else None,
+                actor=admin,
+            )
+        return create_referral_code(
+            hub=hub, owner_partner=partner, code="DEMOWATCH", actor=admin
+        ).code
 
     def _seed_customer_credit(self, customers, founder) -> int:
         """docs/08 batch 3.6: gives the credit ledger real rows on first
