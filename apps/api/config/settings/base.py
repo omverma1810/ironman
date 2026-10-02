@@ -286,11 +286,22 @@ LOGGING = {
     },
     "handlers": {
         "console": {"class": "logging.StreamHandler", "formatter": "console"},
+        "console_warnings": {
+            "class": "logging.StreamHandler",
+            "formatter": "console",
+            "level": "WARNING",
+        },
     },
     "root": {"handlers": ["console"], "level": "WARNING"},
     "loggers": {
         "django": {"handlers": ["console"], "level": "INFO", "propagate": False},
         "ironman": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        # WeasyPrint's font subsetting otherwise logs every table it writes
+        # at DEBUG, hundreds of lines per invoice or receipt PDF. The filter
+        # sits on the handler because WeasyPrint lowers this logger's level
+        # while subsetting and restores it without clearing logging's
+        # level cache, so a logger level alone doesn't hold.
+        "fontTools": {"handlers": ["console_warnings"], "level": "WARNING", "propagate": False},
     },
 }
 
