@@ -6,11 +6,13 @@ UI (Phase 2) has something real to render from the first page load.
 
 from __future__ import annotations
 
+import os
 import random
 from datetime import timedelta
 
+from django.conf import settings
 from django.contrib.auth.hashers import make_password
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
 
@@ -29,6 +31,22 @@ from territory.models import (
     ServiceArea,
     TaxSettings,
 )
+
+
+def demo_password() -> str:
+    """The demo staff password. Locally and in CI it is the documented
+    `IronMan@2026`. Under production settings it must come from the
+    DEMO_PASSWORD environment variable: this repository is public, so the
+    default must never guard a reachable system."""
+    password = os.environ.get("DEMO_PASSWORD", "")
+    if password:
+        return password
+    if settings.SETTINGS_MODULE.endswith(".prod"):
+        raise CommandError(
+            "Refusing to seed demo staff accounts in production without a private "
+            "password: set the DEMO_PASSWORD environment variable."
+        )
+    return "IronMan@2026"
 
 
 class Command(BaseCommand):
@@ -204,16 +222,22 @@ class Command(BaseCommand):
             ("operator@ironman.test", RoleCode.OPERATOR, "Suman Naik"),
             ("field@ironman.test", RoleCode.FIELD, "Vikram Singh"),
         ]
+        password = demo_password()
         for email, role_code, name in staff_specs:
             user, created = User.objects.get_or_create(
                 email=email,
                 defaults=dict(
                     full_name=name,
                     is_staff=True,
-                    password=make_password("IronMan@2026"),
+                    password=make_password(password),
                     email_verified_at=timezone.now(),
                 ),
             )
+            if not created and os.environ.get("DEMO_PASSWORD"):
+                # Re-seeding with a private password re-keys accounts an
+                # earlier run created with the public default.
+                user.set_password(password)
+                user.save(update_fields=["password"])
             UserRole.objects.get_or_create(user=user, role=roles[role_code], hub=hub)
 
         # Before the order loop below, which fast-forwards orders straight
@@ -334,7 +358,8 @@ class Command(BaseCommand):
                 f"{len(customers)} customers, {created_count} orders, "
                 f"{exception_count} exceptions, {invoice_count} invoices, "
                 f"{handover_count} cash handovers, {credit_count} credit grants, "
-                "4 staff accounts (password: IronMan@2026)."
+                "4 staff accounts"
+                + ("." if os.environ.get("DEMO_PASSWORD") else " (password: IronMan@2026).")
             )
         )
 
