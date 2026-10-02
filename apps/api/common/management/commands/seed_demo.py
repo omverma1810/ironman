@@ -32,10 +32,14 @@ from territory.models import (
     TaxSettings,
 )
 
+# Local and CI only: the e2e fixtures and the user manual use it, and
+# `demo_password` refuses it under production settings.
+LOCAL_DEMO_PASSWORD = "IronMan@2026"
+
 
 def demo_password() -> str:
     """The demo staff password. Locally and in CI it is the documented
-    `IronMan@2026`. Under production settings it must come from the
+    `LOCAL_DEMO_PASSWORD`. Under production settings it must come from the
     DEMO_PASSWORD environment variable: this repository is public, so the
     default must never guard a reachable system."""
     password = os.environ.get("DEMO_PASSWORD", "")
@@ -46,7 +50,7 @@ def demo_password() -> str:
             "Refusing to seed demo staff accounts in production without a private "
             "password: set the DEMO_PASSWORD environment variable."
         )
-    return "IronMan@2026"
+    return LOCAL_DEMO_PASSWORD
 
 
 class Command(BaseCommand):
@@ -359,7 +363,11 @@ class Command(BaseCommand):
                 f"{exception_count} exceptions, {invoice_count} invoices, "
                 f"{handover_count} cash handovers, {credit_count} credit grants, "
                 "4 staff accounts"
-                + ("." if os.environ.get("DEMO_PASSWORD") else " (password: IronMan@2026).")
+                + (
+                    "."
+                    if os.environ.get("DEMO_PASSWORD")
+                    else f" (password: {LOCAL_DEMO_PASSWORD})."
+                )
             )
         )
 
