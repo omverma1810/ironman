@@ -1,4 +1,4 @@
-import { test, expect } from "./fixtures";
+import { test, expect, DEMO_USERS } from "./fixtures";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
 
@@ -159,7 +159,7 @@ async function latestFirstTouch(
   customerName: string
 ) {
   const login = await request.post(`${API_BASE_URL}/auth/login`, {
-    data: { email: "operator@ironman.test", password: "IronMan@2026" },
+    data: { email: DEMO_USERS.operator.email, password: DEMO_USERS.operator.password },
   });
   expect(login.ok()).toBeTruthy();
   const res = await request.get(`${API_BASE_URL}/growth/attributions/`, {
