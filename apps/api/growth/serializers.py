@@ -1,6 +1,13 @@
 from rest_framework import serializers
 
-from growth.models import Feedback, PartnerKind, PartnerStatus, ReferralCode, ReferralPartner
+from growth.models import (
+    Attribution,
+    Feedback,
+    PartnerKind,
+    PartnerStatus,
+    ReferralCode,
+    ReferralPartner,
+)
 
 
 class FeedbackCreateSerializer(serializers.Serializer):
@@ -140,3 +147,36 @@ class ReferralCodeValidateResponseSerializer(serializers.Serializer):
     owner_partner = serializers.UUIDField(allow_null=True)
     owner_customer = serializers.UUIDField(allow_null=True)
     apartment = serializers.UUIDField(allow_null=True)
+
+
+class AttributionSerializer(serializers.ModelSerializer):
+    customer_name = serializers.CharField(source="customer.name", read_only=True)
+    channel_code = serializers.CharField(source="channel.code", read_only=True)
+    channel_name = serializers.CharField(source="channel.name", read_only=True)
+    partner_name = serializers.CharField(source="partner.name", read_only=True, default="")
+    code = serializers.CharField(source="referral_code.code", read_only=True, default="")
+    order_ref = serializers.CharField(source="order.ref", read_only=True, default="")
+    apartment_name = serializers.CharField(source="apartment.name", read_only=True, default="")
+
+    class Meta:
+        model = Attribution
+        fields = [
+            "id",
+            "customer",
+            "customer_name",
+            "order",
+            "order_ref",
+            "channel",
+            "channel_code",
+            "channel_name",
+            "partner",
+            "partner_name",
+            "referral_code",
+            "code",
+            "apartment",
+            "apartment_name",
+            "is_first_touch",
+            "basis",
+            "captured_at",
+        ]
+        read_only_fields = fields

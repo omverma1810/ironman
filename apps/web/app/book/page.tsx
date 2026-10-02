@@ -6,6 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { newIdempotencyKey } from "@/lib/api/client";
@@ -22,6 +29,18 @@ import {
   useVerifyOtp,
 } from "@/lib/api/hooks";
 import type { Channel, OrderDetail, PublicApartment } from "@/lib/api/types";
+
+// "How did you hear about us?" — values are growth channel codes
+// (apps/api growth.models.ChannelCode); the wording is the customer's.
+const HEARD_FROM = [
+  { value: "WATCHMAN", label: "Our building's security guard" },
+  { value: "CUSTOMER_REFERRAL", label: "A friend or neighbour" },
+  { value: "FLYER", label: "A flyer or poster" },
+  { value: "DIGITAL_AD", label: "An Instagram or Facebook ad" },
+  { value: "WHATSAPP", label: "A WhatsApp message" },
+  { value: "WALK_IN", label: "I saw your shop or stand" },
+  { value: "ORGANIC", label: "I searched online" },
+] as const;
 
 const STEPS = ["Location", "Address", "Service", "Items", "Slot", "Verify", "Confirm"] as const;
 
@@ -100,6 +119,13 @@ export default function BookPage() {
 
   // ── Step 6: confirm ────────────────────────────────────────────────────
   const createOrder = useCreateOrder();
+  // A watchman's shared link (`/book?ref=RAMESH7`) pre-fills the code.
+  const [referralCode, setReferralCode] = useState(() =>
+    typeof window !== "undefined"
+      ? (new URLSearchParams(window.location.search).get("ref") ?? "").slice(0, 24)
+      : ""
+  );
+  const [heardFrom, setHeardFrom] = useState("");
   const idempotencyKeyRef = useRef<string | null>(null);
   function confirmIdempotencyKey() {
     if (!idempotencyKeyRef.current) idempotencyKeyRef.current = newIdempotencyKey();
@@ -149,6 +175,8 @@ export default function BookPage() {
         pickup_capacity: slotId ?? undefined,
         lines,
         notes,
+        referral_code: referralCode.trim() || undefined,
+        acquisition_source: heardFrom || undefined,
       },
       accessToken,
       idempotencyKey: confirmIdempotencyKey(),
@@ -523,6 +551,33 @@ export default function BookPage() {
               </SummaryRow>
             )}
             <Separator />
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="referral-code">Referral code (optional)</Label>
+              <Input
+                id="referral-code"
+                value={referralCode}
+                maxLength={24}
+                autoCapitalize="characters"
+                onChange={(e) => setReferralCode(e.target.value)}
+              />
+            </div>
+            {!referralCode.trim() && (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="heard-from">How did you hear about us? (optional)</Label>
+                <Select value={heardFrom} onValueChange={setHeardFrom}>
+                  <SelectTrigger id="heard-from">
+                    <SelectValue placeholder="Choose one" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {HEARD_FROM.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <Button type="button" onClick={handleConfirm} disabled={createOrder.isPending}>
               Confirm booking
             </Button>

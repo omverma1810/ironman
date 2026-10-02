@@ -6,6 +6,7 @@ from growth import views
 router = DefaultRouter()
 router.register("growth/feedback", views.FeedbackViewSet, basename="feedback")
 router.register("growth/partners", views.ReferralPartnerViewSet, basename="referral-partner")
+router.register("growth/attributions", views.AttributionViewSet, basename="attribution")
 router.register("growth/referral-codes", views.ReferralCodeViewSet, basename="referral-code")
 
 urlpatterns = [

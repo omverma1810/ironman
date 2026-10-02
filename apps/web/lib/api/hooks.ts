@@ -14,6 +14,7 @@ import {
   notificationsApi,
   ordersApi,
   partnersApi,
+  attributionsApi,
   referralCodesApi,
   requotesApi,
   suppliesApi,
@@ -1375,6 +1376,17 @@ export function useGrantCredit() {
       toast.success("Credit granted");
     },
     onError: (err) => errorToast(err, "Couldn't grant credit."),
+  });
+}
+
+// ── Growth: attribution (docs/08 batch 5.2) ─────────────────────────────
+export function useCustomerAttribution(customerId: string | undefined) {
+  return useQuery({
+    queryKey: ["attribution", customerId],
+    queryFn: () => attributionsApi.list({ customer: customerId, is_first_touch: true }),
+    enabled: !!customerId,
+    staleTime: 60_000,
+    select: (page) => page.results[0] ?? null,
   });
 }
 
