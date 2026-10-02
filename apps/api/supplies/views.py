@@ -13,6 +13,7 @@ from django.db import models, transaction
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import viewsets
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -36,6 +37,24 @@ class StockItemViewSet(ScopedQuerysetMixin, viewsets.ModelViewSet):
     permission_classes = [IsOpsStaff]
     http_method_names = ["get", "post", "patch", "head", "options"]
 
+    def perform_create(self, serializer):
+        hub = serializer.validated_data["hub"]
+        if not services.user_can_access_hub(self.request.user, hub.id):
+            raise PermissionDenied("You can only create stock items for your own hub.")
+        serializer.save()
+
+    def perform_update(self, serializer):
+        hub = serializer.validated_data.get("hub")
+        if hub is not None and not services.user_can_access_hub(self.request.user, hub.id):
+            raise PermissionDenied("You can only move stock items within your own hub.")
+        serializer.save()
+
+
+def _can_see_cost(user) -> bool:
+    """Weighted-average unit cost is margin data: Admin/Founder only.
+    Operators handle stock day to day and don't need what it cost."""
+    return bool(user.role_codes & {"ADMIN", "FOUNDER"})
+
 
 class StockLevelViewSet(ScopedQuerysetMixin, viewsets.ReadOnlyModelViewSet):
     queryset = StockLevel.objects.select_related("stock_item").filter(
@@ -43,6 +62,9 @@ class StockLevelViewSet(ScopedQuerysetMixin, viewsets.ReadOnlyModelViewSet):
     )
     serializer_class = StockLevelSerializer
     permission_classes = [IsOpsStaff]
+
+    def get_serializer_context(self):
+        return {**super().get_serializer_context(), "show_cost": _can_see_cost(self.request.user)}
 
 
 class StockMovementViewSet(ScopedQuerysetMixin, viewsets.ReadOnlyModelViewSet):
@@ -73,7 +95,7 @@ class StockReceiptView(APIView):
         serializer = StockReceiptSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-        stock_item = services.get_stock_item(data["item"])
+        stock_item = services.get_stock_item(data["item"], request.user)
         movement = services.receive_stock(
             stock_item,
             qty=data["qty"],
@@ -94,7 +116,7 @@ class StockAdjustmentView(APIView):
         serializer = StockAdjustmentSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-        stock_item = services.get_stock_item(data["item"])
+        stock_item = services.get_stock_item(data["item"], request.user)
         movement = services.adjust_stock(
             stock_item,
             delta=data["delta"],
@@ -116,16 +138,26 @@ class ReorderAlertListView(ScopedQuerysetMixin, APIView):
             qty_on_hand__lte=models.F("stock_item__reorder_level"),
         )
         qs = self.scope_to_hub(qs)
-        return Response(StockLevelSerializer(qs, many=True).data)
+        return Response(
+            StockLevelSerializer(
+                qs, many=True, context={"show_cost": _can_see_cost(request.user)}
+            ).data
+        )
 
 
-class ConsumptionRuleView(APIView):
+class ConsumptionRuleView(ScopedQuerysetMixin, APIView):
     permission_classes = [IsAdminOrFounder]
+    # A rule belongs to whichever hub owns the stock item it draws down.
+    hub_field = "stock_item__hub"
+
+    def _rules(self):
+        return self.scope_to_hub(
+            ConsumptionRule.objects.select_related("service", "garment_type", "stock_item")
+        )
 
     @extend_schema(responses={200: ConsumptionRuleSerializer(many=True)})
     def get(self, request):
-        rules = ConsumptionRule.objects.select_related("service", "garment_type", "stock_item")
-        return Response(ConsumptionRuleSerializer(rules, many=True).data)
+        return Response(ConsumptionRuleSerializer(self._rules(), many=True).data)
 
     @extend_schema(
         request=ConsumptionRuleReplaceSerializer,
@@ -135,9 +167,13 @@ class ConsumptionRuleView(APIView):
     def put(self, request):
         serializer = ConsumptionRuleReplaceSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        for r in serializer.validated_data["rules"]:
+            if not services.user_can_access_hub(request.user, r["stock_item"].hub_id):
+                raise PermissionDenied("A rule references a stock item outside your hub.")
         # Soft-delete, not `.delete()` — no domain row is ever hard-deleted
-        # (common/models.py `BaseModel`).
-        ConsumptionRule.objects.update(deleted_at=timezone.now(), deleted_by=request.user)
+        # (common/models.py `BaseModel`). Only the caller's own hub's rules:
+        # a hub-scoped admin's PUT must never wipe another hub's set.
+        self._rules().update(deleted_at=timezone.now(), deleted_by=request.user)
         rules = [
             ConsumptionRule(
                 service=r["service"],
@@ -149,5 +185,4 @@ class ConsumptionRuleView(APIView):
             for r in serializer.validated_data["rules"]
         ]
         ConsumptionRule.objects.bulk_create(rules)
-        result = ConsumptionRule.objects.select_related("service", "garment_type", "stock_item")
-        return Response(ConsumptionRuleSerializer(result, many=True).data)
+        return Response(ConsumptionRuleSerializer(self._rules(), many=True).data)

@@ -20,11 +20,29 @@ from supplies.models import (
 )
 
 
-def get_stock_item(stock_item_id) -> StockItem:
+def user_can_access_hub(user, hub_id) -> bool:
+    """Same rule as `ScopedQuerysetMixin.scope_to_hub`: founders and
+    superusers span every hub, everyone else only their `hub_scope`."""
+    if user is None or not user.is_authenticated:
+        return False
+    if user.is_superuser or user.is_unrestricted:
+        return True
+    return hub_id in user.hub_scope
+
+
+def get_stock_item(stock_item_id, user=None) -> StockItem:
+    """With `user`, an item outside that user's hub scope is reported as
+    not found — never as forbidden, so a hub-scoped operator can't probe
+    which item ids exist at another hub (receipts and adjustments take the
+    id from the request body, so the viewset's own queryset scoping never
+    applies to them)."""
     try:
-        return StockItem.objects.get(pk=stock_item_id)
+        item = StockItem.objects.get(pk=stock_item_id, deleted_at__isnull=True)
     except StockItem.DoesNotExist as exc:
-        raise ApiError("Stock item not found.", code="not_found") from exc
+        raise ApiError("Stock item not found.", code="not_found", status_code=404) from exc
+    if user is not None and not user_can_access_hub(user, item.hub_id):
+        raise ApiError("Stock item not found.", code="not_found", status_code=404)
+    return item
 
 
 @transaction.atomic
@@ -138,7 +156,11 @@ def issue_consumables_for_garment(garment_line, *, actor=None) -> list[StockMove
     import billing.services as billing_services  # local: billing -> supplies is the other
 
     order = garment_line.order_line.order
-    rules = ConsumptionRule.objects.filter(service_id=order.service_id).filter(
+    # Only this hub's own stock: a rule pointing at another hub's item must
+    # never drain it for an order fulfilled here.
+    rules = ConsumptionRule.objects.filter(
+        service_id=order.service_id, stock_item__hub_id=order.hub_id
+    ).filter(
         models.Q(garment_type_id=garment_line.garment_type_id) | models.Q(garment_type__isnull=True)
     )
 

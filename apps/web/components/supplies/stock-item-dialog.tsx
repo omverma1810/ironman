@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useCreateStockItem, useHubs, useUpdateStockItem } from "@/lib/api/hooks";
+import { useCreateStockItem, useHubs, useMe, useUpdateStockItem } from "@/lib/api/hooks";
 import type { StockCategory, StockItem, StockUnit } from "@/lib/api/types";
 
 const CATEGORY_LABEL: Record<StockCategory, string> = {
@@ -50,13 +50,21 @@ export function StockItemDialog({
 }) {
   const isEdit = !!item;
   const hubsQuery = useHubs();
-  const hubs = hubsQuery.data?.results ?? [];
+  const meQuery = useMe();
+  // The hub list is readable by every ops role, but a hub-scoped user may
+  // only create stock at their own hub (the API refuses the rest), so only
+  // offer those.
+  const scope = meQuery.data?.hub_scope;
+  const hubs = (hubsQuery.data?.results ?? []).filter(
+    (h) => scope === "all" || (Array.isArray(scope) && scope.includes(h.id))
+  );
 
   const [sku, setSku] = useState(item?.sku ?? "");
   const [name, setName] = useState(item?.name ?? "");
   const [category, setCategory] = useState<StockCategory>(item?.category ?? "OTHER");
   const [unit, setUnit] = useState<StockUnit>(item?.unit ?? "PIECE");
   const [reorderLevel, setReorderLevel] = useState(String(item?.reorder_level ?? 0));
+  const [hubId, setHubId] = useState(item?.hub ?? "");
 
   const createItem = useCreateStockItem();
   const updateItem = useUpdateStockItem();
@@ -69,8 +77,12 @@ export function StockItemDialog({
       setCategory(item?.category ?? "OTHER");
       setUnit(item?.unit ?? "PIECE");
       setReorderLevel(String(item?.reorder_level ?? 0));
+      setHubId(item?.hub ?? "");
     }
   }, [open, item]);
+
+  // A single-hub operator never has to choose; a founder with several does.
+  const effectiveHub = hubId || hubs[0]?.id || "";
 
   function handleSave() {
     const reorder = Number(reorderLevel);
@@ -91,7 +103,7 @@ export function StockItemDialog({
     } else {
       createItem.mutate(
         {
-          hub: hubs[0]?.id ?? "",
+          hub: effectiveHub,
           sku: sku.trim(),
           name: name.trim(),
           category,
@@ -103,7 +115,11 @@ export function StockItemDialog({
     }
   }
 
-  const valid = sku.trim() && name.trim() && Number.isFinite(Number(reorderLevel));
+  const valid =
+    sku.trim() &&
+    name.trim() &&
+    Number.isFinite(Number(reorderLevel)) &&
+    (isEdit || !!effectiveHub);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -133,6 +149,23 @@ export function StockItemDialog({
                 </SelectContent>
               </Select>
             </div>
+            {!isEdit && hubs.length > 1 && (
+              <div className="col-span-2 flex flex-col gap-1.5">
+                <Label>Hub</Label>
+                <Select value={effectiveHub} onValueChange={setHubId}>
+                  <SelectTrigger aria-label="Hub">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {hubs.map((h) => (
+                      <SelectItem key={h.id} value={h.id}>
+                        {h.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="col-span-2 flex flex-col gap-1.5">
               <Label htmlFor="stock-name">Name</Label>
               <Input id="stock-name" value={name} onChange={(e) => setName(e.target.value)} />
@@ -171,7 +204,10 @@ export function StockItemDialog({
                   size="sm"
                   className="justify-start"
                   onClick={() =>
-                    updateItem.mutate({ id: item.id, patch: { is_active: !item.is_active } })
+                    updateItem.mutate({
+                      id: item.id,
+                      patch: { is_active: !item.is_active },
+                    })
                   }
                 >
                   {item.is_active ? (

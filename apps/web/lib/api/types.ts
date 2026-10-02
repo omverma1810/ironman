@@ -648,7 +648,8 @@ export type StockLevel = {
   unit: StockUnit;
   reorder_level: number;
   qty_on_hand: number;
-  avg_unit_cost_minor: number;
+  /** Absent for Operators — cost is Admin/Founder-only data. */
+  avg_unit_cost_minor?: number;
 };
 
 export type MovementKind = "RECEIPT" | "ISSUE" | "ADJUSTMENT" | "WASTAGE" | "RETURN";
