@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { AdjustStockDialog } from "@/components/supplies/adjust-stock-dialog";
 import { ReceiveStockDialog } from "@/components/supplies/receive-stock-dialog";
+import { ConsumptionRulesEditor } from "@/components/supplies/consumption-rules-editor";
+import { MovementLedger } from "@/components/supplies/movement-ledger";
 import { StockItemDialog } from "@/components/supplies/stock-item-dialog";
 import { AsyncBoundary } from "@/components/patterns/async-boundary";
 import { DataTable } from "@/components/patterns/data-table";
@@ -13,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Icon } from "@/components/icons/icon";
 import { useMe, useReorderAlerts, useStockItems, useStockLevels } from "@/lib/api/hooks";
 import { canSeeStockLedger } from "@/lib/permissions";
@@ -92,15 +95,23 @@ export default function SuppliesPage() {
         );
       },
     },
-    {
-      accessorKey: "avg_unit_cost_minor",
-      header: "Avg cost",
-      cell: ({ row }) => (
-        <span className="text-text-secondary tabular-nums">
-          {row.original.level ? formatMoneyMinor(row.original.level.avg_unit_cost_minor) : "—"}
-        </span>
-      ),
-    },
+    // Cost is margin data — the API withholds it from Operators, so the
+    // column only exists for the roles that receive it.
+    ...(showLedger
+      ? [
+          {
+            accessorKey: "avg_unit_cost_minor",
+            header: "Avg cost",
+            cell: ({ row }) => (
+              <span className="text-text-secondary tabular-nums">
+                {row.original.level?.avg_unit_cost_minor != null
+                  ? formatMoneyMinor(row.original.level.avg_unit_cost_minor)
+                  : "—"}
+              </span>
+            ),
+          } satisfies ColumnDef<Row, unknown>,
+        ]
+      : []),
     {
       accessorKey: "is_active",
       header: "Status",
@@ -151,88 +162,112 @@ export default function SuppliesPage() {
         </div>
       )}
 
-      <div className="relative max-w-sm">
-        <Icon
-          name="search"
-          className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-text-muted"
-        />
-        <Input
-          placeholder="Search by SKU or name…"
-          className="pl-9"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
-
-      <AsyncBoundary
-        query={itemsQuery}
-        loading={
-          <div className="flex flex-col gap-2">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-14" />
-            ))}
-          </div>
-        }
-        isEmpty={() => rows.length === 0}
-        empty={
-          <EmptyState
-            icon="package-open"
-            title={search ? "No items match" : "No stock items yet"}
-            body={
-              search
-                ? "Try a different search term."
-                : "Add hangers, covers, bags and other consumables to start tracking stock."
-            }
-            action={
-              !search ? (
-                <Button size="sm" onClick={() => setEditingId("new")}>
-                  <Icon name="plus" /> Add the first item
-                </Button>
-              ) : undefined
-            }
-          />
-        }
-      >
-        {() => (
-          <DataTable
-            data={rows}
-            columns={columns}
-            getRowId={(row) => row.id}
-            onRowClick={(row) => setEditingId(row.id)}
-            mobileCard={(row) => (
-              <div className="flex flex-col gap-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-medium text-text-primary">{row.name}</p>
-                    <p className="text-xs text-text-muted">{row.sku}</p>
-                  </div>
-                  {row.is_active ? (
-                    <Badge variant="success" dot>
-                      Active
-                    </Badge>
-                  ) : (
-                    <Badge variant="neutral" dot>
-                      Inactive
-                    </Badge>
-                  )}
-                </div>
-                <div className="flex items-center justify-between text-xs text-text-secondary">
-                  <span>
-                    {row.level?.qty_on_hand ?? 0} on hand / {row.reorder_level} reorder
-                  </span>
-                  <span>{row.category}</span>
-                </div>
-              </div>
-            )}
-          />
+      <Tabs defaultValue="stock" className="flex flex-col gap-4">
+        {showLedger && (
+          <TabsList className="self-start">
+            <TabsTrigger value="stock">Stock</TabsTrigger>
+            <TabsTrigger value="movements">Movements</TabsTrigger>
+            <TabsTrigger value="rules">Consumption rules</TabsTrigger>
+          </TabsList>
         )}
-      </AsyncBoundary>
 
-      {!showLedger && (
-        <p className="text-xs text-text-muted">
-          The stock movement ledger is visible to Ops/Admin and Founder accounts.
-        </p>
-      )}
+        <TabsContent value="stock" className="flex flex-col gap-4">
+          <div className="relative max-w-sm">
+            <Icon
+              name="search"
+              className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-text-muted"
+            />
+            <Input
+              placeholder="Search by SKU or name…"
+              className="pl-9"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+
+          <AsyncBoundary
+            query={itemsQuery}
+            loading={
+              <div className="flex flex-col gap-2">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <Skeleton key={i} className="h-14" />
+                ))}
+              </div>
+            }
+            isEmpty={() => rows.length === 0}
+            empty={
+              <EmptyState
+                icon="package-open"
+                title={search ? "No items match" : "No stock items yet"}
+                body={
+                  search
+                    ? "Try a different search term."
+                    : "Add hangers, covers, bags and other consumables to start tracking stock."
+                }
+                action={
+                  !search ? (
+                    <Button size="sm" onClick={() => setEditingId("new")}>
+                      <Icon name="plus" /> Add the first item
+                    </Button>
+                  ) : undefined
+                }
+              />
+            }
+          >
+            {() => (
+              <DataTable
+                data={rows}
+                columns={columns}
+                getRowId={(row) => row.id}
+                onRowClick={(row) => setEditingId(row.id)}
+                mobileCard={(row) => (
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-medium text-text-primary">{row.name}</p>
+                        <p className="text-xs text-text-muted">{row.sku}</p>
+                      </div>
+                      {row.is_active ? (
+                        <Badge variant="success" dot>
+                          Active
+                        </Badge>
+                      ) : (
+                        <Badge variant="neutral" dot>
+                          Inactive
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-text-secondary">
+                      <span>
+                        {row.level?.qty_on_hand ?? 0} on hand / {row.reorder_level} reorder
+                      </span>
+                      <span>{row.category}</span>
+                    </div>
+                  </div>
+                )}
+              />
+            )}
+          </AsyncBoundary>
+
+          {!showLedger && (
+            <p className="text-xs text-text-muted">
+              The stock movement ledger and consumption rules are visible to Ops/Admin and Founder
+              accounts.
+            </p>
+          )}
+        </TabsContent>
+
+        {showLedger && (
+          <>
+            <TabsContent value="movements">
+              <MovementLedger items={items} />
+            </TabsContent>
+            <TabsContent value="rules">
+              <ConsumptionRulesEditor items={items} />
+            </TabsContent>
+          </>
+        )}
+      </Tabs>
 
       <StockItemDialog
         item={editingItem}

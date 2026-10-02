@@ -41,6 +41,12 @@ class StockLevelSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = fields
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if not self.context.get("show_cost", False):
+            data.pop("avg_unit_cost_minor", None)
+        return data
+
 
 class StockMovementSerializer(serializers.ModelSerializer):
     sku = serializers.CharField(source="stock_item.sku", read_only=True)

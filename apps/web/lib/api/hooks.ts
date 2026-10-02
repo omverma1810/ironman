@@ -301,6 +301,16 @@ export function useGarmentTypes(service?: string) {
   });
 }
 
+/** Every garment type across services — the consumption-rules editor needs
+ * the whole set to offer a per-garment choice under any service. */
+export function useAllGarmentTypes() {
+  return useQuery({
+    queryKey: ["garment-types", "all"],
+    queryFn: () => catalogApi.garmentTypes(),
+    staleTime: 300_000,
+  });
+}
+
 // ── Pricing & offers (docs/08 batch 3.7) — Founder-only ──────────────────
 export function usePriceLists(params?: { hub?: string; service?: string; status?: PriceListStatus }) {
   return useQuery({
@@ -1131,11 +1141,11 @@ export function useReorderAlerts() {
   });
 }
 
-export function useStockMovements(params?: { item?: string; from?: string; to?: string }) {
+export function useStockMovements(params?: { item?: string; from?: string; to?: string; limit?: number }) {
   return useQuery({
     queryKey: ["stock-movements", params],
     queryFn: () => suppliesApi.movements(params),
-    enabled: !!params?.item,
+    staleTime: 15_000,
   });
 }
 

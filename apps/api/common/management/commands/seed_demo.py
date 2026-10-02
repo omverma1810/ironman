@@ -510,7 +510,9 @@ class Command(BaseCommand):
                 defaults=dict(name=name, category=category, unit=unit, reorder_level=reorder_level),
             )
             stock_items[sku] = item
-            already_seeded.append(hasattr(item, "level"))
+            # A level now exists from item creation, so the ledger is the
+            # only honest "has this been received yet" signal.
+            already_seeded.append(item.movements.exists())
 
         # The receipt + issue/wastage movements below are a single batch,
         # seeded together the first time this command runs against a hub —

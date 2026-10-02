@@ -186,7 +186,9 @@ export const territoryApi = {
 export const catalogApi = {
   services: () => apiFetch<Paginated<Service>>("/catalog/services/"),
   garmentTypes: (service?: string) =>
-    apiFetch<Paginated<GarmentType>>("/catalog/garment-types/", { params: { service } }),
+    apiFetch<Paginated<GarmentType>>("/catalog/garment-types/", {
+      params: { service, limit: 100 },
+    }),
   quote: (input: {
     hub: string;
     service: string;
@@ -481,7 +483,7 @@ export const suppliesApi = {
     apiFetch<StockItem>(`/supplies/items/${id}/`, { method: "PATCH", body: patch }),
   levels: (hub?: string) =>
     apiFetch<Paginated<StockLevel>>("/supplies/levels/", { params: { hub } }),
-  movements: (params?: { item?: string; from?: string; to?: string }) =>
+  movements: (params?: { item?: string; from?: string; to?: string; limit?: number }) =>
     apiFetch<Paginated<StockMovement>>("/supplies/movements/", { params }),
   reorderAlerts: () => apiFetch<StockLevel[]>("/supplies/reorder-alerts"),
   receiveStock: (input: StockReceiptInput) =>

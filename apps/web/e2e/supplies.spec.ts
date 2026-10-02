@@ -74,3 +74,83 @@ test.describe("Supplies", () => {
     await expect(page.getByText(/only \d+ SPOT-001 on hand/i)).toBeVisible();
   });
 });
+
+test.describe("Supplies — role gating", () => {
+  test("an operator gets no ledger/rules tabs and no cost column", async ({ page, isMobile }) => {
+    test.skip(isMobile, "desktop-only: reads <table> headers");
+    await loginAs(page, DEMO_USERS.operator);
+    await page.goto("/console/supplies");
+    await page.waitForSelector("table tbody tr");
+    await expect(page.getByRole("tab", { name: "Movements" })).toHaveCount(0);
+    await expect(page.getByRole("tab", { name: "Consumption rules" })).toHaveCount(0);
+    await expect(page.getByRole("columnheader", { name: "Avg cost" })).toHaveCount(0);
+  });
+
+  test("an admin sees the cost column", async ({ page, isMobile }) => {
+    test.skip(isMobile, "desktop-only: reads <table> headers");
+    await loginAs(page, DEMO_USERS.admin);
+    await page.goto("/console/supplies");
+    await page.waitForSelector("table tbody tr");
+    await expect(page.getByRole("columnheader", { name: "Avg cost" })).toBeVisible();
+  });
+});
+
+test.describe("Supplies — ledger and consumption rules (admin)", () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, DEMO_USERS.admin);
+    await page.goto("/console/supplies");
+  });
+
+  test("the movement ledger lists stock changes and filters by item", async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(isMobile, "desktop-only: reads <table> rows");
+    await page.getByRole("tab", { name: "Movements" }).click();
+    // seed_demo receives every item once, so receipts always exist.
+    await expect(page.locator("table tbody tr").first()).toBeVisible();
+    await expect(page.locator("table tbody tr", { hasText: "Receipt" }).first()).toBeVisible();
+
+    await page.getByRole("combobox", { name: "Filter ledger by item" }).click();
+    await page.getByRole("option", { name: /HANGER-001/ }).click();
+    await expect(page.locator("table tbody tr").first()).toContainText("HANGER-001");
+    await expect(page.locator("table tbody tr", { hasText: "COVER-001" })).toHaveCount(0);
+  });
+
+  test("consumption rules can be edited and saved, and an added rule can be removed", async ({
+    page,
+  }) => {
+    await page.getByRole("tab", { name: "Consumption rules" }).click();
+    const save = page.getByRole("button", { name: "Save rules" });
+    const remove = page.getByRole("button", { name: "Remove rule" });
+    await expect(remove.first()).toBeVisible();
+    // Nothing changed yet — nothing to save.
+    await expect(save).toBeDisabled();
+
+    // Adding then removing a row returns to the saved state.
+    const before = await remove.count();
+    await page.getByRole("button", { name: "Add rule" }).click();
+    await expect(remove).toHaveCount(before + 1);
+    await remove.last().click();
+    await expect(remove).toHaveCount(before);
+    await expect(save).toBeDisabled();
+
+    // A real edit round-trips through the server: bump a quantity, save,
+    // then put it back so the shared demo data ends where it started.
+    const qty = page.getByLabel("Quantity per garment").first();
+    const original = await qty.inputValue();
+    await qty.fill(String(Number(original) + 1));
+    await expect(save).toBeEnabled();
+    await save.click();
+    await expect(page.getByText("Consumption rules saved")).toBeVisible();
+    await page.reload();
+    await page.getByRole("tab", { name: "Consumption rules" }).click();
+    await expect(page.getByLabel("Quantity per garment").first()).toHaveValue(
+      String(Number(original) + 1)
+    );
+
+    await page.getByLabel("Quantity per garment").first().fill(original);
+    await page.getByRole("button", { name: "Save rules" }).click();
+    await expect(page.getByText("Consumption rules saved").first()).toBeVisible();
+  });
+});
