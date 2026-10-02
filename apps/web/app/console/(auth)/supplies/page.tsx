@@ -148,6 +148,30 @@ export default function SuppliesPage() {
         }
       />
 
+      {/* Levels and alerts load separately from the item list. If either
+          fails, the list would otherwise quietly show 0 on hand for every
+          item — say so instead of presenting made-up numbers. */}
+      {(levelsQuery.isError || alertsQuery.isError) && (
+        <div
+          role="alert"
+          className="flex items-center justify-between gap-3 rounded-md border border-status-danger bg-status-danger-bg px-4 py-3"
+        >
+          <p className="text-sm text-status-danger">
+            Couldn&apos;t load current stock levels — the quantities below may be out of date.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              levelsQuery.refetch();
+              alertsQuery.refetch();
+            }}
+          >
+            Retry
+          </Button>
+        </div>
+      )}
+
       {alerts.length > 0 && (
         <div className="flex items-start gap-3 rounded-md border border-status-warning bg-status-warning-bg px-4 py-3">
           <Icon name="alert-triangle" className="mt-0.5 size-4 shrink-0 text-status-warning" />

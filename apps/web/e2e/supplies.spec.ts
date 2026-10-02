@@ -154,3 +154,19 @@ test.describe("Supplies — ledger and consumption rules (admin)", () => {
     await expect(page.getByText("Consumption rules saved").first()).toBeVisible();
   });
 });
+
+test("a failed stock-level load is announced, not shown as zero stock", async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, "desktop-only");
+  await loginAs(page, DEMO_USERS.operator);
+  await page.route("**/supplies/levels/**", (route) =>
+    route.fulfill({ status: 500, contentType: "application/json", body: "{}" })
+  );
+  await page.goto("/console/supplies");
+  await expect(
+    page.getByRole("alert").filter({ hasText: /couldn.t load current stock levels/i })
+  ).toBeVisible();
+});
+
