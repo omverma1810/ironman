@@ -1,0 +1,4 @@
+# While this file exists, each production API deploy (.github/workflows/
+# deploy.yml, "Load demo data") loads the Barkatpura demo data set into the
+# production database for client testing. Delete this file once the client
+# is done testing, before clearing the database for real launch.

@@ -97,6 +97,38 @@ jobs:
             "$IMAGE:${{ github.sha }}" \
             python manage.py migrate --noinput
 
+      # Client demo (docs/user-manual): loads the Barkatpura demo data set
+      # into this database, in the exact image being deployed. Runs only while
+      # apps/api/.load-demo-data exists, and needs the DEMO_PASSWORD secret:
+      # this repository is public, so the demo staff password must never be
+      # the documented default (seed_demo refuses it under prod settings).
+      # The password reaches the container through the step env only, so it
+      # stays masked. Delete the flag file to stop re-seeding on later deploys.
+      - name: Load demo data
+        env:
+          DEMO_PASSWORD: ${{ secrets.DEMO_PASSWORD }}
+        run: |
+          if [ ! -f .load-demo-data ]; then
+            echo "Demo data not requested (no apps/api/.load-demo-data)."
+            exit 0
+          fi
+          if [ -z "$DEMO_PASSWORD" ]; then
+            echo "::error::Add the DEMO_PASSWORD repository secret before loading demo data."
+            exit 1
+          fi
+          docker run --rm \
+            -e DJANGO_SETTINGS_MODULE=config.settings.prod \
+            -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+            -e DJANGO_SECRET_KEY="${{ secrets.DJANGO_SECRET_KEY }}" \
+            -e DJANGO_ALLOWED_HOSTS="${{ secrets.DJANGO_ALLOWED_HOSTS }}" \
+            -e AWS_STORAGE_BUCKET_NAME="${{ secrets.AWS_STORAGE_BUCKET_NAME }}" \
+            -e AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}" \
+            -e AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
+            -e AWS_S3_REGION_NAME="${{ secrets.AWS_S3_REGION_NAME }}" \
+            -e DEMO_PASSWORD \
+            "$IMAGE:${{ github.sha }}" \
+            python manage.py seed_demo
+
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy "${{ env.SERVICE }}" \
