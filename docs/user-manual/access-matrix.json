@@ -1,0 +1,104 @@
+{
+  "Orders": {
+    "founder": 200,
+    "admin": 200,
+    "operator": 200,
+    "field": 200
+  },
+  "Customers": {
+    "founder": 200,
+    "admin": 200,
+    "operator": 200,
+    "field": 403
+  },
+  "Production (bags)": {
+    "founder": 200,
+    "admin": 200,
+    "operator": 200,
+    "field": 403
+  },
+  "Route days": {
+    "founder": 200,
+    "admin": 200,
+    "operator": 403,
+    "field": 403
+  },
+  "Delivery/pickup jobs": {
+    "founder": 200,
+    "admin": 200,
+    "operator": 403,
+    "field": 200
+  },
+  "Exceptions": {
+    "founder": 200,
+    "admin": 200,
+    "operator": 200,
+    "field": 403
+  },
+  "Stock levels": {
+    "founder": 200,
+    "admin": 200,
+    "operator": 200,
+    "field": 403
+  },
+  "Stock ledger": {
+    "founder": 200,
+    "admin": 200,
+    "operator": 403,
+    "field": 403
+  },
+  "Consumption rules": {
+    "founder": 200,
+    "admin": 200,
+    "operator": 403,
+    "field": 403
+  },
+  "Invoices": {
+    "founder": 200,
+    "admin": 200,
+    "operator": 200,
+    "field": 200
+  },
+  "Invoice CSV export": {
+    "founder": 200,
+    "admin": 200,
+    "operator": 403,
+    "field": 403
+  },
+  "Cash reconciliation": {
+    "founder": 200,
+    "admin": 200,
+    "operator": 403,
+    "field": 403
+  },
+  "Price lists": {
+    "founder": 200,
+    "admin": 403,
+    "operator": 403,
+    "field": 403
+  },
+  "Referral partners": {
+    "founder": 200,
+    "admin": 200,
+    "operator": 403,
+    "field": 403
+  },
+  "Customer attribution": {
+    "founder": 200,
+    "admin": 200,
+    "operator": 200,
+    "field": 403
+  },
+  "Staff list": {
+    "founder": 200,
+    "admin": 200,
+    "operator": 403,
+    "field": 403
+  },
+  "Message log": {
+    "founder": 200,
+    "admin": 200,
+    "operator": 200,
+    "field": 403
+  }
+}
