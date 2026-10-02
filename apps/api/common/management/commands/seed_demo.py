@@ -351,7 +351,7 @@ class Command(BaseCommand):
         credit_count = self._seed_customer_credit(customers, founder)
 
         self.stdout.write("Seeding invoices...")
-        invoice_count = self._seed_invoices(founder, field_staff)
+        invoice_count = self._seed_invoices(hub, founder, field_staff)
 
         self.stdout.write("Seeding cash custody...")
         handover_count = self._seed_cash_custody(hub, field_staff)
@@ -430,7 +430,7 @@ class Command(BaseCommand):
                 count += 1
         return count
 
-    def _seed_invoices(self, issuer, collector) -> int:
+    def _seed_invoices(self, hub, issuer, collector) -> int:
         """docs/08 Phase 3 exit criterion: "every delivered order has an
         invoice" — so every DELIVERED/CLOSED order in `demo_states` above
         gets one, not just a sample, and the console's Invoices screen
@@ -448,12 +448,17 @@ class Command(BaseCommand):
         actually collects CASH/UPI at the door — `record_payment`'s
         `collected_by` needs to be the rider for `_seed_cash_custody`
         (batch 3.3) to have a real balance to seed a handover from.
+
+        Only the demo hub's orders: the seed also runs against a database
+        that already holds real orders, and must never invoice or pay those.
         """
         import billing.services as billing_services
 
         count = 0
         orders = Order.objects.filter(
-            status__in=[OrderStatus.DELIVERED, OrderStatus.CLOSED], verified_total_qty__isnull=False
+            hub=hub,
+            status__in=[OrderStatus.DELIVERED, OrderStatus.CLOSED],
+            verified_total_qty__isnull=False,
         )
         for order in orders:
             # Delivering an order (done above through the real fulfilment
@@ -474,8 +479,14 @@ class Command(BaseCommand):
             # *both* branches below, so the CREDIT payment method (batch
             # 3.6) always has at least one real row rather than depending
             # on luck across a small demo dataset.
+            # Never more than is still owed: an invoice can already be part
+            # or fully settled (store credit applied, a payment taken in the
+            # console) by the time the seed reaches it.
+            owed = billing_services.invoice_balance(invoice)
+            if owed <= 0:
+                continue
             credit_balance = billing_services.customer_credit_balance(order.customer)
-            credit_used = min(credit_balance, invoice.total_minor)
+            credit_used = min(credit_balance, owed)
             if credit_used > 0:
                 billing_services.record_payment(
                     invoice,
@@ -486,7 +497,7 @@ class Command(BaseCommand):
                 )
 
             if order.status == OrderStatus.CLOSED:
-                remaining = invoice.total_minor - credit_used
+                remaining = owed - credit_used
                 if remaining > 0:
                     billing_services.record_payment(
                         invoice,
@@ -496,7 +507,7 @@ class Command(BaseCommand):
                         actor=collector,
                     )
             elif credit_used == 0 and random.random() < 0.6:
-                partial = max(1, invoice.total_minor // 2)
+                partial = max(1, owed // 2)
                 billing_services.record_payment(
                     invoice,
                     method=random.choice(["CASH", "UPI_QR"]),
