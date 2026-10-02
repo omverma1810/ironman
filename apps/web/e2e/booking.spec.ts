@@ -4,7 +4,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8
 
 /** The booking wizard at `/book` (docs/08 batch 4.3) is the site's first
  * genuinely public, unauthenticated-until-the-last-step flow — this file
- * never calls `loginAs`. It relies on `seed_demo`'s real Koramangala
+ * never calls `loginAs`. It relies on `seed_demo`'s real Barkatpura/Kacheguda
  * apartments/pincodes/capacity (same "don't reconstruct what's already
  * there" reasoning `tracking.spec.ts`/`order-costs.spec.ts` document for
  * their own seeded pools) plus the E2E-only `/auth/otp/debug` endpoint
@@ -27,13 +27,13 @@ async function bookUpToConfirm(
     await page.goto(url);
 
     // Step 1: pincode / serviceability.
-    await page.getByLabel("Pincode").fill("560095");
+    await page.getByLabel("Pincode").fill("500027");
     await expect(page.getByText(/we service this area from/i)).toBeVisible();
     await page.getByRole("button", { name: "Next" }).click();
 
     // Step 2: address — search a real seeded apartment.
-    await page.getByPlaceholder("Search your apartment by name…").fill("Prestige");
-    await page.getByRole("button", { name: "Prestige Lakeside Habitat" }).click();
+    await page.getByPlaceholder("Search your apartment by name…").fill("Sai Krupa");
+    await page.getByRole("button", { name: "Sai Krupa Residency" }).click();
     await page.getByLabel("Flat no.").fill("402");
     await page.getByRole("button", { name: "Next" }).click();
 
@@ -84,7 +84,7 @@ test.describe("Booking wizard", () => {
     await bookUpToConfirm(page, request);
 
     // Step 7: review & confirm.
-    await expect(page.getByText("Prestige Lakeside Habitat", { exact: false })).toBeVisible();
+    await expect(page.getByText("Sai Krupa Residency", { exact: false })).toBeVisible();
     await page.getByRole("button", { name: "Confirm booking" }).click();
 
     await expect(page.getByRole("heading", { name: "Booking confirmed!" })).toBeVisible();

@@ -48,7 +48,7 @@ test.describe("Customer feedback after delivery", () => {
     ).json();
     const garmentType = garmentTypes.results[0];
     const serviceability = await (
-      await request.get(`${API_BASE_URL}/territory/serviceability`, { params: { pincode: "560095" } })
+      await request.get(`${API_BASE_URL}/territory/serviceability`, { params: { pincode: "500027" } })
     ).json();
 
     const created = await request.post(`${API_BASE_URL}/orders/`, {
