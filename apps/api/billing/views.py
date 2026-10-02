@@ -16,8 +16,12 @@ not the invoice total an operator has to collect as COD. Credit notes stay
 
 from __future__ import annotations
 
+import csv
+
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import BigIntegerField, F, OuterRef, Q, Subquery, Sum
+from django.db.models.functions import Coalesce
+from django.http import HttpResponse
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from drf_spectacular.utils import extend_schema
@@ -30,7 +34,15 @@ import customers.services as customers_services
 import ordering.services as ordering_services
 import territory.services as territory_services
 from billing import services
-from billing.models import CashDeposit, CashHandover, Invoice
+from billing.models import (
+    CashDeposit,
+    CashHandover,
+    CreditNote,
+    Invoice,
+    InvoiceStatus,
+    Payment,
+    PaymentStatus,
+)
 from billing.serializers import (
     CashBalanceSerializer,
     CashDepositSerializer,
@@ -51,6 +63,7 @@ from billing.serializers import (
     OrderContributionMarginSerializer,
     PaymentSerializer,
     RecordPaymentSerializer,
+    UninvoicedDeliverySerializer,
 )
 from common.errors import ApiError
 from common.permissions import (
@@ -69,6 +82,19 @@ _CAN_VIEW_HANDOVERS = HasRole.any("FIELD", "OPERATOR", "ADMIN", "FOUNDER")
 # Field staff collect COD/UPI at the door — never an ADJUSTMENT (that's a
 # correction, admin/founder territory, same reasoning as credit notes).
 _FIELD_ALLOWED_METHODS = {"CASH", "UPI_QR"}
+
+
+_EXPORT_CAP = 5000
+
+
+def _rupees(minor: int) -> str:
+    return f"{minor / 100:.2f}"
+
+
+def _csv_safe(value: str) -> str:
+    """Spreadsheet formula injection: a customer name beginning `=`, `+`,
+    `-` or `@` would execute when the accountant opens the file."""
+    return f"'{value}" if value[:1] in ("=", "+", "-", "@") else value
 
 
 class InvoiceViewSet(ScopedQuerysetMixin, viewsets.ReadOnlyModelViewSet):
@@ -90,12 +116,107 @@ class InvoiceViewSet(ScopedQuerysetMixin, viewsets.ReadOnlyModelViewSet):
         # filter below ever runs. Build the base queryset directly instead,
         # same as `ordering.OrderViewSet.get_queryset`.
         user = self.request.user
-        qs = Invoice.objects.select_related("order", "customer", "hub").prefetch_related("payments")
+        qs = Invoice.objects.select_related("order", "customer", "hub").prefetch_related(
+            "payments", "credit_notes"
+        )
         if "CUSTOMER" in user.role_codes and not (user.role_codes - {"CUSTOMER"}):
             return qs.filter(customer__user=user)
         if "FIELD" in user.role_codes and not (user.role_codes - {"FIELD"}):
             return qs.filter(order__jobs__assigned_to=user).distinct()
-        return self.scope_to_hub(qs)
+        return self._apply_receivable_filters(self.scope_to_hub(qs))
+
+    def _apply_receivable_filters(self, qs):
+        """Receivables view for ops/admin: date range, free-text on
+        customer/invoice/order, and `outstanding` (issued, balance > 0).
+        Balance is computed in SQL with correlated subqueries — joining
+        both payments and credit notes into one aggregate would multiply
+        each by the other's row count."""
+        params = self.request.query_params
+        paid = (
+            Payment.objects.filter(invoice=OuterRef("pk"), status=PaymentStatus.SUCCEEDED)
+            .values("invoice")
+            .annotate(total=Sum("amount_minor"))
+            .values("total")
+        )
+        credited = (
+            CreditNote.objects.filter(invoice=OuterRef("pk"))
+            .values("invoice")
+            .annotate(total=Sum("amount_minor"))
+            .values("total")
+        )
+        qs = qs.annotate(
+            paid_sum=Coalesce(Subquery(paid, output_field=BigIntegerField()), 0),
+            credited_sum=Coalesce(Subquery(credited, output_field=BigIntegerField()), 0),
+        ).annotate(balance_sum=F("total_minor") - F("credited_sum") - F("paid_sum"))
+
+        issued_from = parse_date(params.get("issued_from", "") or "")
+        if issued_from:
+            qs = qs.filter(issued_at__date__gte=issued_from)
+        issued_to = parse_date(params.get("issued_to", "") or "")
+        if issued_to:
+            qs = qs.filter(issued_at__date__lte=issued_to)
+        search = (params.get("search") or "").strip()
+        if search:
+            qs = qs.filter(
+                Q(ref__icontains=search)
+                | Q(order__ref__icontains=search)
+                | Q(customer__name__icontains=search)
+                | Q(customer__phone__icontains=search)
+            )
+        if params.get("outstanding") in ("1", "true", "True"):
+            qs = qs.filter(status=InvoiceStatus.ISSUED, balance_sum__gt=0)
+        return qs
+
+    @extend_schema(responses={(200, "text/csv"): bytes})
+    @action(detail=False, methods=["get"], permission_classes=[IsAdminOrFounder])
+    def export(self, request):
+        """The accountant's CSV: the same filters as the list, one row per
+        invoice, capped so a runaway range can't build an unbounded
+        response. Admin/Founder only — it carries every customer's balance."""
+        rows = self.filter_queryset(self.get_queryset()).order_by("issued_at")[:_EXPORT_CAP]
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="invoices.csv"'
+        writer = csv.writer(response)
+        writer.writerow(
+            [
+                "Invoice",
+                "Order",
+                "Customer",
+                "Phone",
+                "Issued",
+                "Status",
+                "Subtotal",
+                "Discount",
+                "Tax",
+                "Total",
+                "Credited",
+                "Paid",
+                "Balance",
+                "GST applied",
+                "GSTIN",
+            ]
+        )
+        for inv in rows:
+            writer.writerow(
+                [
+                    inv.ref,
+                    inv.order.ref,
+                    _csv_safe(inv.customer.name),
+                    _csv_safe(inv.customer.phone),
+                    inv.issued_at.date().isoformat() if inv.issued_at else "",
+                    inv.status,
+                    _rupees(inv.subtotal_minor),
+                    _rupees(inv.discount_minor),
+                    _rupees(inv.tax_minor),
+                    _rupees(inv.total_minor),
+                    _rupees(inv.credited_sum),
+                    _rupees(inv.paid_sum),
+                    _rupees(inv.balance_sum),
+                    "yes" if inv.gst_applied else "no",
+                    inv.gstin_snapshot,
+                ]
+            )
+        return response
 
     @action(detail=True, methods=["get"])
     def pdf(self, request, ref=None):
@@ -137,6 +258,13 @@ class InvoiceViewSet(ScopedQuerysetMixin, viewsets.ReadOnlyModelViewSet):
                     status_code=403,
                 )
 
+        if data["method"] == "ADJUSTMENT" and not (user.role_codes & {"ADMIN", "FOUNDER"}):
+            raise ApiError(
+                "Only Admin or Founder can write off a balance.",
+                code="permission_denied",
+                status_code=403,
+            )
+
         payment = services.record_payment(
             invoice,
             method=data["method"],
@@ -166,6 +294,20 @@ class IssueInvoiceView(APIView):
             actor=request.user,
         )
         return Response(InvoiceDetailSerializer(invoice).data, status=201)
+
+
+class UninvoicedDeliveriesView(ScopedQuerysetMixin, APIView):
+    """GET /billing/uninvoiced-deliveries — delivered orders with no
+    invoice. Auto-invoicing on delivery is best-effort, so this is the
+    safety net: anything it couldn't bill shows up here instead of
+    silently never being charged."""
+
+    permission_classes = [IsOpsStaff]
+
+    @extend_schema(responses={200: UninvoicedDeliverySerializer(many=True)})
+    def get(self, request):
+        orders = self.scope_to_hub(ordering_services.delivered_without_invoice())
+        return Response(UninvoicedDeliverySerializer(orders, many=True).data)
 
 
 class CashMineView(APIView):

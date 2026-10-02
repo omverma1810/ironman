@@ -387,9 +387,17 @@ class Command(BaseCommand):
             status__in=[OrderStatus.DELIVERED, OrderStatus.CLOSED], verified_total_qty__isnull=False
         )
         for order in orders:
-            if hasattr(order, "invoice"):
-                continue
-            invoice = billing_services.issue_invoice(order, actor=issuer)
+            # Delivering an order (done above through the real fulfilment
+            # services) now issues its invoice automatically, so by the
+            # time we get here the invoice usually already exists — issue
+            # only if it doesn't, but still seed its payments below.
+            invoice = getattr(order, "invoice", None)
+            if invoice is None:
+                invoice = billing_services.issue_invoice(order, actor=issuer)
+            elif invoice.payments.filter(
+                idempotency_key__startswith=f"seed-{invoice.ref}"
+            ).exists():
+                continue  # already seeded on an earlier run
             count += 1
 
             # Spend down whatever store credit `_seed_customer_credit`

@@ -143,6 +143,78 @@ test.describe("Billing", () => {
   });
 });
 
+test.describe("Billing — write-off and credit-note settlement", () => {
+  test.describe.configure({ mode: "serial" });
+
+  // Two invoices this describe owns outright, issued over the API so the UI
+  // tests below start from a known unpaid balance.
+  const refs: string[] = [];
+  const orders: string[] = [];
+
+  test.beforeAll(async ({ request }) => {
+    const login = await request.post(`${API_BASE_URL}/auth/login`, {
+      data: { email: DEMO_USERS.operator.email, password: DEMO_USERS.operator.password },
+    });
+    expect(login.ok()).toBeTruthy();
+    const headers = await csrfHeader(request);
+    for (let i = 0; i < 2; i++) {
+      const orderId = await createInvoiceableOrder(request);
+      const issued = await request.post(`${API_BASE_URL}/billing/invoices/${orderId}/issue`, {
+        headers,
+        data: {},
+      });
+      expect(issued.ok()).toBeTruthy();
+      refs.push(((await issued.json()) as { ref: string }).ref);
+      orders.push(orderId);
+    }
+  });
+
+  test("an operator can record payments but can't write off or issue credit notes", async ({
+    page,
+  }) => {
+    await loginAs(page, DEMO_USERS.operator);
+    await page.goto(`/console/orders/${orders[0]}`);
+    await expect(page.getByText(refs[0], { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Record payment" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Write off" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Issue credit note" })).toHaveCount(0);
+  });
+
+  test("an admin can write off the balance, which settles the invoice", async ({ page }) => {
+    await loginAs(page, DEMO_USERS.admin);
+    await page.goto(`/console/invoices/${refs[0]}`);
+    await page.getByRole("button", { name: "Write off", exact: true }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.getByRole("heading", { name: `Write off ${refs[0]}?` })).toBeVisible();
+    await dialog.getByRole("button", { name: "Write off balance" }).click();
+    await expect(page.getByText(/Payment recorded/i)).toBeVisible();
+    await expect(page.getByText("paid", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("Balance due", { exact: true })).toBeHidden();
+    await expect(page.getByRole("button", { name: "Write off", exact: true })).toBeHidden();
+  });
+
+  test("a credit note covering the whole balance settles the invoice", async ({ page }) => {
+    await loginAs(page, DEMO_USERS.admin);
+    await page.goto(`/console/invoices/${refs[1]}`);
+    const totalMinor = ((await (
+      await page.request.get(`${API_BASE_URL}/billing/invoices/${refs[1]}/`)
+    ).json()) as { total_minor: number }).total_minor;
+
+    await page.getByRole("button", { name: "Issue credit note" }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("Amount (₹)").fill((totalMinor / 100).toFixed(2));
+    await dialog.getByLabel("Reason").fill("e2e: full goodwill credit");
+    await dialog.getByRole("button", { name: "Issue credit note" }).click();
+    await expect(page.getByText("Credit note issued")).toBeVisible();
+
+    // Nothing left to collect: previously the invoice stayed ISSUED with a
+    // phantom balance and kept offering "Record payment".
+    await expect(page.getByText("Balance due", { exact: true })).toBeHidden();
+    await expect(page.getByRole("button", { name: "Record payment" })).toBeHidden();
+    await expect(page.getByText("paid", { exact: true }).first()).toBeVisible();
+  });
+});
+
 /** Clicks "Issue invoice" and waits for its POST to resolve, failing loudly
  * with the response body if the API itself rejected it — a bare UI-text
  * timeout doesn't say whether that's a real rejection or a slow-but-fine

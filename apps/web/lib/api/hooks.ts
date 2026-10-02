@@ -54,6 +54,7 @@ import type {
   StockAdjustmentInput,
   StockItemInput,
   StockReceiptInput,
+  InvoiceListParams,
 } from "./types";
 import { newClientOpId, opsStore, proofsStore, type QueuedOpType } from "@/lib/offline/db";
 import { flushOfflineQueue, pendingCount } from "@/lib/offline/sync";
@@ -1200,10 +1201,19 @@ export function useReplaceConsumptionRules() {
 }
 
 // ── Billing (docs/08 batch 3.1) ──────────────────────────────────────────
-export function useInvoices(params?: { status?: string; order?: string }) {
+export function useInvoices(params?: InvoiceListParams) {
   return useQuery({
     queryKey: ["invoices", params],
     queryFn: () => billingApi.invoices(params),
+    staleTime: 30_000,
+  });
+}
+
+export function useUninvoicedDeliveries(enabled = true) {
+  return useQuery({
+    queryKey: ["uninvoiced-deliveries"],
+    queryFn: billingApi.uninvoicedDeliveries,
+    enabled,
     staleTime: 30_000,
   });
 }
@@ -1223,6 +1233,7 @@ export function useIssueInvoice() {
       billingApi.issueInvoice(orderId, applyGst),
     onSuccess: (invoice) => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["uninvoiced-deliveries"] });
       queryClient.invalidateQueries({ queryKey: ["order", invoice.order] });
       toast.success(`${invoice.ref} issued`);
     },

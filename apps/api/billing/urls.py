@@ -14,6 +14,11 @@ urlpatterns = [
         views.IssueInvoiceView.as_view(),
         name="billing-invoice-issue",
     ),
+    path(
+        "billing/uninvoiced-deliveries",
+        views.UninvoicedDeliveriesView.as_view(),
+        name="billing-uninvoiced-deliveries",
+    ),
     path("billing/cash/mine", views.CashMineView.as_view(), name="billing-cash-mine"),
     path(
         "billing/cash/handover-recipients",
