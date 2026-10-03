@@ -1169,6 +1169,109 @@ export type CustomerReferralReward = {
   created_at: string;
 };
 
+// ── Marketing (docs/08 batch 5.6) ────────────────────────────────────────
+export type GrowthChannelCode =
+  | "WATCHMAN"
+  | "CUSTOMER_REFERRAL"
+  | "INFLUENCER"
+  | "FLYER"
+  | "DIGITAL_AD"
+  | "WALK_IN"
+  | "ORGANIC"
+  | "WHATSAPP";
+
+export type SpendCategory = "INFLUENCER" | "PRINT" | "ADS" | "INCENTIVE" | "OTHER";
+
+export type Campaign = {
+  id: string;
+  hub: string;
+  name: string;
+  channel: GrowthChannelCode;
+  channel_name: string;
+  apartment: string | null;
+  apartment_name: string;
+  cluster: string | null;
+  cluster_name: string;
+  start_on: string;
+  end_on: string | null;
+  objective: string;
+  summary: { spend_minor: number; new_customers: number; cost_per_customer_minor: number | null };
+  created_at: string;
+};
+
+export type CampaignInput = {
+  hub: string;
+  name: string;
+  channel: GrowthChannelCode;
+  apartment?: string | null;
+  start_on?: string;
+  end_on?: string | null;
+  objective?: string;
+};
+
+export type Spend = {
+  id: string;
+  hub: string;
+  campaign: string;
+  campaign_name: string;
+  channel: GrowthChannelCode;
+  amount_minor: number;
+  spent_on: string;
+  category: SpendCategory;
+  note: string;
+  entered_by_name: string;
+  created_at: string;
+};
+
+export type SpendInput = {
+  campaign: string;
+  amount_minor: number;
+  category: SpendCategory;
+  spent_on?: string;
+  note?: string;
+};
+
+export type ChannelCost = {
+  channel: GrowthChannelCode;
+  channel_name: string;
+  is_paid: boolean;
+  spend_minor: number;
+  commission_minor: number;
+  new_customers: number;
+  cac_minor: number | null;
+};
+
+export type AcquisitionCost = {
+  start: string;
+  end: string;
+  channels: ChannelCost[];
+  total_cost_minor: number;
+  new_customers: number;
+  blended_cac_minor: number | null;
+  paid_cac_minor: number | null;
+};
+
+// ── Re-engagement (docs/08 batch 5.7) ────────────────────────────────────
+export type LapsedCustomer = {
+  customer: string;
+  name: string;
+  phone: string;
+  apartment_name: string;
+  delivered_orders: number;
+  spent_minor: number;
+  last_delivered_at: string;
+  days_since: number;
+  last_contacted_at: string | null;
+};
+
+export type ReengagementResult = {
+  eligible: number;
+  sent: number;
+  recently_contacted: number;
+  opted_out: number;
+  not_sent: number;
+};
+
 export type ReferralPartnerInput = {
   hub: string;
   kind: PartnerKind;

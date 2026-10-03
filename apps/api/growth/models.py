@@ -397,3 +397,55 @@ class CustomerReferralReward(BaseModel):
 
     class Meta:
         db_table = "growth_customer_referral_reward"
+
+
+class Campaign(HubScopedModel):
+    """docs/02 §3.10 / G-3 — a piece of marketing with a channel and,
+    optionally, the apartment or cluster it targets ("₹4,000 to an
+    influencer on 12 Sept, targeting Prestige Lakeside"). It's the label
+    spend is entered against, so CAC can be worked out per channel and per
+    apartment (docs/07 ④)."""
+
+    name = models.CharField(max_length=120)
+    channel = models.ForeignKey(Channel, on_delete=models.PROTECT, related_name="campaigns")
+    apartment = models.ForeignKey(
+        "territory.Apartment", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    cluster = models.ForeignKey(
+        "territory.Cluster", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    start_on = models.DateField(default=timezone.localdate)
+    end_on = models.DateField(null=True, blank=True)
+    objective = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        db_table = "growth_campaign"
+        indexes = [models.Index(fields=["hub", "start_on"])]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class SpendCategory(models.TextChoices):
+    INFLUENCER = "INFLUENCER", "Influencer"
+    PRINT = "PRINT", "Print & flyers"
+    ADS = "ADS", "Online ads"
+    INCENTIVE = "INCENTIVE", "Incentives"
+    OTHER = "OTHER", "Other"
+
+
+class Spend(BaseModel):
+    """docs/02 §3.10 — one marketing payment, the CAC data source (G-3).
+    Never edited: a wrong entry is removed (soft-deleted, audit-logged) and
+    entered again, so the history of what was claimed stays visible."""
+
+    hub = models.ForeignKey("territory.Hub", on_delete=models.PROTECT, related_name="+")
+    campaign = models.ForeignKey(Campaign, on_delete=models.PROTECT, related_name="spend")
+    amount_minor = models.PositiveIntegerField()
+    spent_on = models.DateField(default=timezone.localdate)
+    category = models.CharField(max_length=16, choices=SpendCategory.choices)
+    note = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        db_table = "growth_spend"
+        indexes = [models.Index(fields=["hub", "spent_on"])]

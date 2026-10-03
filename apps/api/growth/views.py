@@ -1,9 +1,11 @@
 import uuid
+from datetime import timedelta
 
 from django.db.models import Q, Sum
 from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 from drf_spectacular.utils import OpenApiTypes, extend_schema
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -17,10 +19,11 @@ import territory.services as territory_services
 from common.errors import ApiError
 from common.permissions import IsAdminOrFounder, IsFounder, IsOpsStaff, ScopedQuerysetMixin
 from common.permissions import is_customer_only as _is_customer_only
-from growth import commission, referrals, services
+from growth import commission, marketing, reengagement, referrals, services
 from growth.models import (
     AccrualStatus,
     Attribution,
+    Campaign,
     CommissionAccrual,
     CommissionRule,
     CustomerReferralReward,
@@ -28,10 +31,15 @@ from growth.models import (
     ReferralCode,
     ReferralPartner,
     Settlement,
+    Spend,
 )
 from growth.serializers import (
     AccrualVoidSerializer,
+    AcquisitionCostSerializer,
     AttributionSerializer,
+    CampaignCreateSerializer,
+    CampaignSerializer,
+    CampaignUpdateSerializer,
     CommissionAccrualSerializer,
     CommissionRuleCreateSerializer,
     CommissionRuleSerializer,
@@ -40,9 +48,12 @@ from growth.serializers import (
     FeedbackCreateSerializer,
     FeedbackModerateSerializer,
     FeedbackSerializer,
+    LapsedCustomerSerializer,
     MyReferralSerializer,
     PartnerBalanceSerializer,
     PartnerCommissionRuleSerializer,
+    ReengagementResultSerializer,
+    ReengagementSendSerializer,
     ReferralCodeCreateSerializer,
     ReferralCodeSerializer,
     ReferralCodeValidateResponseSerializer,
@@ -55,6 +66,9 @@ from growth.serializers import (
     SettlementCreateSerializer,
     SettlementMarkPaidSerializer,
     SettlementSerializer,
+    SpendCreateSerializer,
+    SpendRemoveSerializer,
+    SpendSerializer,
 )
 from supplies.services import user_can_access_hub
 
@@ -64,6 +78,27 @@ def _check_hub_access(user, hub_id) -> None:
     a request body — reported as not found, never forbidden (no probing)."""
     if not user_can_access_hub(user, hub_id):
         raise ApiError("Not found.", code="not_found", status_code=404)
+
+
+def _resolve_hub(request):
+    """`?hub=` if given (and the caller may see it), else the caller's own
+    hub — founders, who span every hub, get the first one."""
+    hub_id = request.query_params.get("hub")
+    if hub_id:
+        try:
+            hub_id = uuid.UUID(hub_id)
+        except ValueError as exc:
+            raise ApiError("Not found.", code="not_found", status_code=404) from exc
+        _check_hub_access(request.user, hub_id)
+        return territory_services.get_hub(hub_id)
+    hub_ids = request.user.hub_scope
+    if request.user.is_superuser or request.user.is_unrestricted or not hub_ids:
+        hub = territory_services.default_hub()
+    else:
+        hub = territory_services.get_hub(sorted(hub_ids, key=str)[0])
+    if hub is None:
+        raise ApiError("No hub is set up yet.", code="not_found", status_code=404)
+    return hub
 
 
 class FeedbackViewSet(viewsets.ModelViewSet):
@@ -453,27 +488,11 @@ class ReferralProgramView(APIView):
             return [IsFounder()]
         return [IsAdminOrFounder()]
 
-    def _hub(self, request):
-        hub_id = request.query_params.get("hub")
-        if hub_id:
-            try:
-                hub_id = uuid.UUID(hub_id)
-            except ValueError as exc:
-                raise ApiError("Not found.", code="not_found", status_code=404) from exc
-            _check_hub_access(request.user, hub_id)
-            return territory_services.get_hub(hub_id)
-        hub_ids = request.user.hub_scope
-        if request.user.is_superuser or request.user.is_unrestricted or not hub_ids:
-            hub = territory_services.default_hub()
-        else:
-            hub = territory_services.get_hub(sorted(hub_ids, key=str)[0])
-        if hub is None:
-            raise ApiError("No hub is set up yet.", code="not_found", status_code=404)
-        return hub
-
     @extend_schema(responses={200: ReferralProgramSerializer})
     def get(self, request):
-        return Response(ReferralProgramSerializer(referrals.get_program(self._hub(request))).data)
+        return Response(
+            ReferralProgramSerializer(referrals.get_program(_resolve_hub(request))).data
+        )
 
     @extend_schema(
         request=ReferralProgramUpdateSerializer, responses={200: ReferralProgramSerializer}
@@ -482,7 +501,7 @@ class ReferralProgramView(APIView):
         serializer = ReferralProgramUpdateSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         program = referrals.update_program(
-            referrals.get_program(self._hub(request)),
+            referrals.get_program(_resolve_hub(request)),
             changes=dict(serializer.validated_data),
             actor=request.user,
         )
@@ -498,3 +517,137 @@ class CustomerReferralRewardViewSet(ScopedQuerysetMixin, viewsets.ReadOnlyModelV
     serializer_class = CustomerReferralRewardSerializer
     permission_classes = [IsAdminOrFounder]
     filterset_fields = ["referrer", "referee"]
+
+
+class CampaignViewSet(ScopedQuerysetMixin, viewsets.ModelViewSet):
+    """docs/06 §2 "Enter marketing spend": Founder only — campaigns and the
+    spend against them are the cost side of unit economics."""
+
+    queryset = (
+        Campaign.objects.filter(deleted_at__isnull=True)
+        .select_related("channel", "apartment", "cluster")
+        .order_by("-start_on", "name")
+    )
+    serializer_class = CampaignSerializer
+    permission_classes = [IsFounder]
+    filterset_fields = ["apartment", "cluster"]
+    http_method_names = ["get", "post", "patch", "head", "options"]
+
+    @extend_schema(request=CampaignCreateSerializer, responses={201: CampaignSerializer})
+    def create(self, request, *args, **kwargs):
+        serializer = CampaignCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = dict(serializer.validated_data)
+        _check_hub_access(request.user, data["hub"])
+        hub = territory_services.get_hub(data.pop("hub"))
+        apartment = territory_services.get_apartment(data.pop("apartment", None))
+        cluster_id = data.pop("cluster", None)
+        cluster = territory_services.get_cluster(cluster_id) if cluster_id else None
+        campaign = marketing.create_campaign(
+            hub=hub, apartment=apartment, cluster=cluster, actor=request.user, **data
+        )
+        return Response(CampaignSerializer(campaign).data, status=201)
+
+    @extend_schema(request=CampaignUpdateSerializer, responses={200: CampaignSerializer})
+    def partial_update(self, request, *args, **kwargs):
+        campaign = self.get_object()
+        serializer = CampaignUpdateSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        campaign = marketing.update_campaign(
+            campaign, changes=dict(serializer.validated_data), actor=request.user
+        )
+        return Response(CampaignSerializer(campaign).data)
+
+
+class SpendViewSet(ScopedQuerysetMixin, viewsets.ModelViewSet):
+    """docs/04 §3.9 `POST /growth/spend` (G-3) — Founder only."""
+
+    queryset = (
+        Spend.objects.filter(deleted_at__isnull=True)
+        .select_related("campaign", "campaign__channel", "created_by")
+        .order_by("-spent_on", "-created_at")
+    )
+    serializer_class = SpendSerializer
+    permission_classes = [IsFounder]
+    filterset_fields = ["campaign", "category"]
+    http_method_names = ["get", "post", "head", "options"]
+
+    @extend_schema(request=SpendCreateSerializer, responses={201: SpendSerializer})
+    def create(self, request, *args, **kwargs):
+        serializer = SpendCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = dict(serializer.validated_data)
+        campaign = marketing.get_campaign(data.pop("campaign"))
+        _check_hub_access(request.user, campaign.hub_id)
+        spend = marketing.record_spend(campaign, actor=request.user, **data)
+        return Response(SpendSerializer(spend).data, status=201)
+
+    @extend_schema(request=SpendRemoveSerializer, responses={200: SpendSerializer})
+    @action(detail=True, methods=["post"])
+    def remove(self, request, pk=None):
+        spend = self.get_object()
+        serializer = SpendRemoveSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        spend = marketing.remove_spend(
+            spend, reason=serializer.validated_data["reason"], actor=request.user
+        )
+        return Response(SpendSerializer(spend).data)
+
+
+class AcquisitionCostView(APIView):
+    """docs/07 ④ — cost to get a customer per channel for a period
+    (default: the last 30 days). Founder only, like unit economics."""
+
+    permission_classes = [IsFounder]
+
+    @extend_schema(responses={200: AcquisitionCostSerializer})
+    def get(self, request):
+        today = timezone.localdate()
+        end = parse_date(request.query_params.get("to") or "") or today
+        start = parse_date(request.query_params.get("from") or "") or (end - timedelta(days=29))
+        if start > end:
+            raise ApiError("'from' must be on or before 'to'.", code="validation_error")
+        hub = _resolve_hub(request)
+        return Response(marketing.acquisition_cost(hub, start, end))
+
+
+class LapsedCustomersView(APIView):
+    """docs/08 batch 5.7 — customers who've been delivered to but not come
+    back. Carries phone numbers, so Admin and Founder only (docs/06 §2)."""
+
+    permission_classes = [IsAdminOrFounder]
+
+    @extend_schema(responses={200: LapsedCustomerSerializer(many=True)})
+    def get(self, request):
+        try:
+            days = int(request.query_params.get("days") or 0) or None
+        except ValueError as exc:
+            raise ApiError("'days' must be a number.", code="validation_error") from exc
+        one_time = request.query_params.get("one_time_only") in ("1", "true", "True")
+        rows = reengagement.lapsed_customers(
+            _resolve_hub(request), days=days, one_time_only=one_time
+        )
+        return Response(LapsedCustomerSerializer(rows, many=True).data)
+
+
+class ReengagementSendView(APIView):
+    """docs/04 §3.9 `POST /growth/campaigns/lapsed/send` `[A]` (A-06)."""
+
+    permission_classes = [IsAdminOrFounder]
+
+    @extend_schema(
+        request=ReengagementSendSerializer, responses={200: ReengagementResultSerializer}
+    )
+    def post(self, request):
+        serializer = ReengagementSendSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        result = reengagement.send(
+            _resolve_hub(request),
+            days=data.get("days"),
+            one_time_only=data["one_time_only"],
+            customer_ids=data.get("customers"),
+            offer=data["offer"],
+            actor=request.user,
+        )
+        return Response(result)

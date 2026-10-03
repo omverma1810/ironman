@@ -2,6 +2,8 @@ from rest_framework import serializers
 
 from growth.models import (
     Attribution,
+    Campaign,
+    ChannelCode,
     CommissionAccrual,
     CommissionAppliesTo,
     CommissionBasis,
@@ -14,6 +16,8 @@ from growth.models import (
     ReferralPartner,
     ReferralProgram,
     Settlement,
+    Spend,
+    SpendCategory,
 )
 
 
@@ -407,3 +411,138 @@ class MyReferralSerializer(serializers.Serializer):
     referee_reward_minor = serializers.IntegerField()
     min_order_minor = serializers.IntegerField()
     credit_balance_minor = serializers.IntegerField()
+
+
+class CampaignSerializer(serializers.ModelSerializer):
+    channel = serializers.CharField(source="channel.code", read_only=True)
+    channel_name = serializers.CharField(source="channel.name", read_only=True)
+    apartment_name = serializers.CharField(source="apartment.name", read_only=True, default="")
+    cluster_name = serializers.CharField(source="cluster.name", read_only=True, default="")
+    summary = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Campaign
+        fields = [
+            "id",
+            "hub",
+            "name",
+            "channel",
+            "channel_name",
+            "apartment",
+            "apartment_name",
+            "cluster",
+            "cluster_name",
+            "start_on",
+            "end_on",
+            "objective",
+            "summary",
+            "created_at",
+        ]
+        read_only_fields = fields
+
+    def get_summary(self, obj) -> dict:
+        from growth.marketing import campaign_summary
+
+        return campaign_summary(obj)
+
+
+class CampaignCreateSerializer(serializers.Serializer):
+    hub = serializers.UUIDField()
+    name = serializers.CharField(max_length=120)
+    channel = serializers.ChoiceField(choices=ChannelCode.choices)
+    apartment = serializers.UUIDField(required=False, allow_null=True)
+    cluster = serializers.UUIDField(required=False, allow_null=True)
+    start_on = serializers.DateField(required=False)
+    end_on = serializers.DateField(required=False, allow_null=True)
+    objective = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
+
+
+class CampaignUpdateSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=120, required=False)
+    objective = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    start_on = serializers.DateField(required=False)
+    end_on = serializers.DateField(required=False, allow_null=True)
+
+
+class SpendSerializer(serializers.ModelSerializer):
+    campaign_name = serializers.CharField(source="campaign.name", read_only=True)
+    channel = serializers.CharField(source="campaign.channel.code", read_only=True)
+    entered_by_name = serializers.CharField(
+        source="created_by.full_name", read_only=True, default=""
+    )
+
+    class Meta:
+        model = Spend
+        fields = [
+            "id",
+            "hub",
+            "campaign",
+            "campaign_name",
+            "channel",
+            "amount_minor",
+            "spent_on",
+            "category",
+            "note",
+            "entered_by_name",
+            "created_at",
+        ]
+        read_only_fields = fields
+
+
+class SpendCreateSerializer(serializers.Serializer):
+    campaign = serializers.UUIDField()
+    amount_minor = serializers.IntegerField(min_value=1)
+    category = serializers.ChoiceField(choices=SpendCategory.choices)
+    spent_on = serializers.DateField(required=False)
+    note = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
+
+
+class SpendRemoveSerializer(serializers.Serializer):
+    reason = serializers.CharField(max_length=255)
+
+
+class ChannelCostSerializer(serializers.Serializer):
+    channel = serializers.CharField()
+    channel_name = serializers.CharField()
+    is_paid = serializers.BooleanField()
+    spend_minor = serializers.IntegerField()
+    commission_minor = serializers.IntegerField()
+    new_customers = serializers.IntegerField()
+    cac_minor = serializers.IntegerField(allow_null=True)
+
+
+class AcquisitionCostSerializer(serializers.Serializer):
+    start = serializers.DateField()
+    end = serializers.DateField()
+    channels = ChannelCostSerializer(many=True)
+    total_cost_minor = serializers.IntegerField()
+    new_customers = serializers.IntegerField()
+    blended_cac_minor = serializers.IntegerField(allow_null=True)
+    paid_cac_minor = serializers.IntegerField(allow_null=True)
+
+
+class LapsedCustomerSerializer(serializers.Serializer):
+    customer = serializers.UUIDField()
+    name = serializers.CharField()
+    phone = serializers.CharField()
+    apartment_name = serializers.CharField()
+    delivered_orders = serializers.IntegerField()
+    spent_minor = serializers.IntegerField()
+    last_delivered_at = serializers.DateTimeField()
+    days_since = serializers.IntegerField()
+    last_contacted_at = serializers.DateTimeField(allow_null=True)
+
+
+class ReengagementSendSerializer(serializers.Serializer):
+    days = serializers.IntegerField(min_value=7, max_value=365, required=False)
+    one_time_only = serializers.BooleanField(default=False)
+    customers = serializers.ListField(child=serializers.UUIDField(), required=False)
+    offer = serializers.CharField(max_length=120, required=False, allow_blank=True, default="")
+
+
+class ReengagementResultSerializer(serializers.Serializer):
+    eligible = serializers.IntegerField()
+    sent = serializers.IntegerField()
+    recently_contacted = serializers.IntegerField()
+    opted_out = serializers.IntegerField()
+    not_sent = serializers.IntegerField()

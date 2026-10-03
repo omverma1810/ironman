@@ -15,6 +15,7 @@ import logging
 from django.conf import settings
 
 from notifications.models import (
+    ApprovalStatus,
     NotificationChannel,
     NotificationDelivery,
     NotificationPref,
@@ -150,13 +151,15 @@ def _dispatch(
     recipient_id,
     recipient_phone: str,
     context: dict,
+    hub=None,
+    dedupe_key: str | None = None,
 ) -> NotificationRequest:
-    dedupe_key = f"{order.id}:{template.code}:{channel}:{recipient_id}"
+    dedupe_key = dedupe_key or f"{order.id}:{template.code}:{channel}:{recipient_id}"
 
     request, created = NotificationRequest.objects.get_or_create(
         dedupe_key=dedupe_key,
         defaults=dict(
-            hub=order.hub,
+            hub=hub or order.hub,
             order=order,
             template=template,
             channel=channel,
@@ -204,3 +207,63 @@ def _dispatch(
         status=NotificationDelivery.Status.SENT,
     )
     return request
+
+
+def ensure_template(code: str, body: str, variables: list[str]) -> None:
+    """Make sure a non-order message (re-engagement, docs/08 batch 5.7) has
+    templates to send with: SMS usable at once, WhatsApp pending approval
+    — the same split `seed_demo` uses for the order templates. Never
+    overwrites a template staff have already edited."""
+    NotificationTemplate.objects.get_or_create(
+        code=code,
+        channel=NotificationChannel.SMS,
+        locale="en",
+        defaults=dict(body=body, variables=variables),
+    )
+    NotificationTemplate.objects.get_or_create(
+        code=code,
+        channel=NotificationChannel.WHATSAPP,
+        locale="en",
+        defaults=dict(body=body, variables=variables, approval_status=ApprovalStatus.PENDING),
+    )
+
+
+def notify_customer(
+    event_key: str, customer, *, context: dict, dedupe_key: str
+) -> tuple[NotificationRequest | None, str]:
+    """Message a customer outside any order. Returns the request (if one
+    was made) and an outcome: "sent", "duplicate", "opted_out",
+    "no_template", "skipped" or "failed". Never raises."""
+    try:
+        opted_out = True
+        for channel in _CHANNEL_PRIORITY:
+            if not is_opted_in(
+                recipient_kind=RecipientKind.CUSTOMER, recipient_id=customer.id, channel=channel
+            ):
+                continue
+            opted_out = False
+            template = _select_template(event_key, channel)
+            if not template or not template.is_usable:
+                continue
+            key = f"{dedupe_key}:{channel}"
+            if NotificationRequest.objects.filter(dedupe_key=key).exists():
+                return None, "duplicate"
+            request = _dispatch(
+                template=template,
+                channel=channel,
+                order=None,
+                hub=customer.hub,
+                recipient_id=customer.id,
+                recipient_phone=customer.phone,
+                context=context,
+                dedupe_key=key,
+            )
+            outcome = {
+                NotificationRequest.Status.SENT: "sent",
+                NotificationRequest.Status.SKIPPED: "skipped",
+            }.get(request.status, "failed")
+            return request, outcome
+        return None, "opted_out" if opted_out else "no_template"
+    except Exception:
+        logger.exception("notify_customer(%s, %s) failed", event_key, customer.id)
+        return None, "failed"
