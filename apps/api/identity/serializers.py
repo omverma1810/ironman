@@ -44,6 +44,14 @@ class MeSerializer(serializers.ModelSerializer):
         return obj.requires_mfa()
 
 
+class DeleteAccountSerializer(serializers.Serializer):
+    """DELETE /me (docs/06 §6): `code` is a fresh OTP sent to the account's
+    phone, so a borrowed unlocked phone with an open session isn't enough."""
+
+    code = serializers.CharField(max_length=6)
+    reason = serializers.CharField(max_length=500, required=False, allow_blank=True)
+
+
 class MeUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
