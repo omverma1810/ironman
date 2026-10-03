@@ -9,12 +9,12 @@ import type { Role } from "@/lib/api/types";
 import {
   canEditPricing,
   canManageCashCustody,
+  canManageOrders,
   canManageGrowthPartners,
   canManageMarketing,
   canManageStaff,
   canManageSupplies,
   canPlanRouteDays,
-  canSeeMoney,
   canViewInvoices,
   canViewNotificationLog,
 } from "@/lib/permissions";
@@ -74,7 +74,8 @@ const NAV: NavItem[] = [
     href: "/console/analytics",
     label: "Analytics",
     icon: "chart",
-    show: (roles) => canSeeMoney(roles),
+    // Operators get the operations view; the rest is Admin/Founder.
+    show: (roles) => canManageOrders(roles),
   },
   {
     href: "/console/staff",
