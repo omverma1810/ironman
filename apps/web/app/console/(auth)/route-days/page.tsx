@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/patterns/empty-state";
+import { ErrorState } from "@/components/patterns/error-state";
 import { PageHeader } from "@/components/patterns/page-header";
 import { RouteDayBoard } from "@/components/fulfilment/route-day-board";
 import { useClusters, useCreateRouteDay, useRouteDays } from "@/lib/api/hooks";
@@ -64,12 +65,16 @@ export default function RouteDaysPage() {
         </div>
       </div>
 
-      {!clusterId ? (
+      {clustersQuery.isError ? (
+        <ErrorState error={clustersQuery.error} onRetry={() => clustersQuery.refetch()} />
+      ) : !clusterId ? (
         <EmptyState
           icon="truck"
           title="Pick a cluster"
           body="Choose a cluster above to see or plan its route day."
         />
+      ) : routeDaysQuery.isError ? (
+        <ErrorState error={routeDaysQuery.error} onRetry={() => routeDaysQuery.refetch()} />
       ) : routeDaysQuery.isPending ? (
         <Skeleton className="h-40" />
       ) : !routeDay ? (

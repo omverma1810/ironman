@@ -1846,3 +1846,12 @@ export function useAuditLog(params?: AuditLogParams) {
     placeholderData: keepPreviousData,
   });
 }
+
+/** The hub most screens default to, plus the query behind it. Screens that
+ * wait on the hub before loading anything must surface `hubsQuery.error`
+ * themselves: their own query never starts without a hub, so it can't fail
+ * on its own, and the screen would otherwise sit on a skeleton forever. */
+export function useDefaultHub() {
+  const hubsQuery = useHubs();
+  return { hubId: hubsQuery.data?.results[0]?.id, hubsQuery };
+}

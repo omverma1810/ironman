@@ -5,10 +5,11 @@ import { DrillDownDialog } from "@/components/analytics/drill-down-dialog";
 import { detailLine, formatMetric, LOWER_IS_BETTER } from "@/components/analytics/metric-format";
 import { Sparkline } from "@/components/analytics/sparkline";
 import { Icon } from "@/components/icons/icon";
+import { ErrorState } from "@/components/patterns/error-state";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { analyticsApi } from "@/lib/api/endpoints";
-import { useHubs, useWeeklyMetrics } from "@/lib/api/hooks";
+import { useDefaultHub, useWeeklyMetrics } from "@/lib/api/hooks";
 import { addDaysIso, formatDate, todayIsoIST } from "@/lib/format";
 import type { MetricKey, MetricTile } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
@@ -71,7 +72,7 @@ function Tile({ tile, onOpen }: { tile: MetricTile; onOpen: () => void }) {
 }
 
 export function WeeklyPanel() {
-  const hub = useHubs().data?.results[0]?.id;
+  const { hubId: hub, hubsQuery } = useDefaultHub();
   const thisWeek = mondayOf(todayIsoIST());
   const [week, setWeek] = useState(thisWeek);
   const [open, setOpen] = useState<MetricKey | null>(null);
@@ -116,7 +117,12 @@ export function WeeklyPanel() {
         </div>
       </div>
 
-      {query.isLoading || !query.data ? (
+      {hubsQuery.error || query.error ? (
+        <ErrorState
+          error={hubsQuery.error ?? query.error}
+          onRetry={() => (hubsQuery.error ? hubsQuery.refetch() : query.refetch())}
+        />
+      ) : !query.data ? (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} className="h-36" />

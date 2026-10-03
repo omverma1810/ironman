@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { ColumnDef } from "@tanstack/react-table";
 import { AsyncBoundary } from "@/components/patterns/async-boundary";
+import { ErrorState } from "@/components/patterns/error-state";
 import { DataTable } from "@/components/patterns/data-table";
 import { EmptyState } from "@/components/patterns/empty-state";
 import { PageHeader } from "@/components/patterns/page-header";
@@ -20,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useHubs, useLapsedCustomers, useMe, useSendReengagement } from "@/lib/api/hooks";
+import { useDefaultHub, useLapsedCustomers, useMe, useSendReengagement } from "@/lib/api/hooks";
 import { formatDate, formatMoneyMinor } from "@/lib/format";
 import { canSeeMoney } from "@/lib/permissions";
 import type { LapsedCustomer } from "@/lib/api/types";
@@ -35,7 +36,7 @@ const WINDOWS = [
 export default function LapsedCustomersPage() {
   const me = useMe();
   const allowed = canSeeMoney(me.data?.roles);
-  const hubId = useHubs().data?.results[0]?.id;
+  const { hubId, hubsQuery } = useDefaultHub();
   const [days, setDays] = useState("30");
   const [oneTimeOnly, setOneTimeOnly] = useState(false);
   const [offer, setOffer] = useState("");
@@ -180,35 +181,43 @@ export default function LapsedCustomersPage() {
         </CardContent>
       </Card>
 
-      <AsyncBoundary
-        query={query}
-        loading={<Skeleton className="h-40" />}
-        isEmpty={() => rows.length === 0}
-        empty={
-          <EmptyState
-            icon="users"
-            title="Nobody has lapsed"
-            body="Everyone who's had an order delivered has ordered again within this window, or has an order in progress."
-          />
-        }
-      >
-        {() => (
-          <DataTable
-            data={rows}
-            columns={columns}
-            getRowId={(row) => row.customer}
-            mobileCard={(r) => (
-              <div className="flex flex-col gap-1">
-                <p className="text-sm font-medium text-text-primary">{r.name || r.phone}</p>
-                <p className="text-xs text-text-secondary">
-                  {r.days_since} days since last delivery · {r.delivered_orders} orders ·{" "}
-                  {r.last_contacted_at ? `messaged ${formatDate(r.last_contacted_at)}` : "never messaged"}
-                </p>
-              </div>
-            )}
-          />
-        )}
-      </AsyncBoundary>
+      {/* Without a hub the list query never starts, so its own error can't
+          show; surface the hub failure instead. */}
+      {hubsQuery.isError ? (
+        <ErrorState error={hubsQuery.error} onRetry={() => hubsQuery.refetch()} />
+      ) : (
+        <AsyncBoundary
+          query={query}
+          loading={<Skeleton className="h-40" />}
+          isEmpty={() => rows.length === 0}
+          empty={
+            <EmptyState
+              icon="users"
+              title="Nobody has lapsed"
+              body="Everyone who's had an order delivered has ordered again within this window, or has an order in progress."
+            />
+          }
+        >
+          {() => (
+            <DataTable
+              data={rows}
+              columns={columns}
+              getRowId={(row) => row.customer}
+              mobileCard={(r) => (
+                <div className="flex flex-col gap-1">
+                  <p className="text-sm font-medium text-text-primary">{r.name || r.phone}</p>
+                  <p className="text-xs text-text-secondary">
+                    {r.days_since} days since last delivery · {r.delivered_orders} orders ·{" "}
+                    {r.last_contacted_at
+                      ? `messaged ${formatDate(r.last_contacted_at)}`
+                      : "never messaged"}
+                  </p>
+                </div>
+              )}
+            />
+          )}
+        </AsyncBoundary>
+      )}
     </div>
   );
 }
