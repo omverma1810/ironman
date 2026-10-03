@@ -49,17 +49,27 @@ class CustomerViewSet(ScopedQuerysetMixin, viewsets.ModelViewSet):
         return Response(CustomerDetailSerializer(result).data)
 
 
-class AddressViewSet(viewsets.ModelViewSet):
-    """`[A]` staff manage any customer's addresses; `[C]` a customer manages
-    only their own (docs/08 batch 4.4's account area) — `get_queryset`'s
-    filter is what makes another customer's address 404 rather than
-    editable, the same ownership scoping as `OrderViewSet`/
+def _ensure_customer_in_scope(user, customer) -> None:
+    """Staff may only attach records to a customer of a hub they work in
+    (docs/06 §3.2) — the same "not found" a scoped read would give."""
+    if customer is None or user.is_superuser or user.is_unrestricted:
+        return
+    if customer.hub_id not in user.hub_scope:
+        raise ApiError("Customer not found.", code="not_found", status_code=404)
+
+
+class AddressViewSet(ScopedQuerysetMixin, viewsets.ModelViewSet):
+    """`[A]` staff manage the addresses of their hub's customers; `[C]` a
+    customer manages only their own (docs/08 batch 4.4's account area) —
+    `get_queryset`'s filter is what makes another customer's address 404
+    rather than editable, the same ownership scoping as `OrderViewSet`/
     `InvoiceViewSet`."""
 
     queryset = Address.objects.filter(deleted_at__isnull=True)
     serializer_class = AddressSerializer
     permission_classes = [IsAuthenticated]
     filterset_fields = ["customer"]
+    hub_field = "customer__hub"
 
     def get_queryset(self):
         qs = Address.objects.filter(deleted_at__isnull=True)
@@ -67,7 +77,7 @@ class AddressViewSet(viewsets.ModelViewSet):
             return qs.filter(customer__user=self.request.user)
         if not IsOpsStaff().has_permission(self.request, self):
             return qs.none()
-        return qs
+        return self.scope_to_hub(qs)
 
     def perform_create(self, serializer):
         if _is_customer_only(self.request.user):
@@ -82,6 +92,7 @@ class AddressViewSet(viewsets.ModelViewSet):
         else:
             if "customer" not in serializer.validated_data:
                 raise ApiError("customer is required.", code="validation_error", status_code=400)
+            _ensure_customer_in_scope(self.request.user, serializer.validated_data["customer"])
             serializer.save()
 
     def perform_update(self, serializer):
@@ -91,21 +102,38 @@ class AddressViewSet(viewsets.ModelViewSet):
         # touching the field on this path is enough.
         if _is_customer_only(self.request.user):
             serializer.validated_data.pop("customer", None)
+        else:
+            _ensure_customer_in_scope(self.request.user, serializer.validated_data.get("customer"))
         serializer.save()
 
 
-class ConsentRecordViewSet(viewsets.ModelViewSet):
+class ConsentRecordViewSet(ScopedQuerysetMixin, viewsets.ModelViewSet):
     queryset = ConsentRecord.objects.filter(deleted_at__isnull=True)
     serializer_class = ConsentRecordSerializer
     permission_classes = [IsOpsStaff]
     filterset_fields = ["customer", "purpose"]
+    hub_field = "customer__hub"
+
+    def perform_create(self, serializer):
+        _ensure_customer_in_scope(self.request.user, serializer.validated_data.get("customer"))
+        serializer.save()
+
+    def perform_update(self, serializer):
+        _ensure_customer_in_scope(self.request.user, serializer.validated_data.get("customer"))
+        serializer.save()
 
 
-class CustomerNoteViewSet(viewsets.ModelViewSet):
+class CustomerNoteViewSet(ScopedQuerysetMixin, viewsets.ModelViewSet):
     queryset = CustomerNote.objects.filter(deleted_at__isnull=True)
     serializer_class = CustomerNoteSerializer
     permission_classes = [IsOpsStaff]
     filterset_fields = ["customer"]
+    hub_field = "customer__hub"
 
     def perform_create(self, serializer):
+        _ensure_customer_in_scope(self.request.user, serializer.validated_data.get("customer"))
         serializer.save(author=self.request.user)
+
+    def perform_update(self, serializer):
+        _ensure_customer_in_scope(self.request.user, serializer.validated_data.get("customer"))
+        serializer.save()

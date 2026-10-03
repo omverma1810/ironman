@@ -38,6 +38,7 @@ import {
 } from "./endpoints";
 import { ApiError } from "./errors";
 import type {
+  AuditLogParams,
   ActivatePriceListInput,
   ConfirmHandoverInput,
   ConsumptionRuleInput,
@@ -1835,5 +1836,13 @@ export function useDataQuality(hub: string | undefined, enabled = true) {
     queryKey: ["analytics-data-quality", hub],
     queryFn: () => analyticsApi.dataQuality({ hub }),
     enabled: enabled && !!hub,
+  });
+}
+
+export function useAuditLog(params?: AuditLogParams) {
+  return useQuery({
+    queryKey: ["audit-log", params],
+    queryFn: () => identityApi.audit(params),
+    placeholderData: keepPreviousData,
   });
 }

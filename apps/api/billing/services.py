@@ -40,6 +40,17 @@ from territory.models import Hub, OrderCostSettings, TaxSettings
 logger = logging.getLogger("ironman.billing")
 
 
+def lock_hub(hub_id) -> Hub:
+    """Serialize money writes for one hub (invoice numbering, cash balances).
+
+    FOR NO KEY UPDATE, not FOR UPDATE: lockers still queue behind each
+    other, but the KEY SHARE lock that Postgres takes on this row when any
+    transaction inserting a row that references the hub commits (orders,
+    jobs, events…) is not blocked. A full FOR UPDATE deadlocked against
+    concurrent counter-order commits."""
+    return Hub.objects.select_for_update(no_key=True).get(pk=hub_id)
+
+
 def get_invoice_for_order(order) -> Invoice | None:
     return Invoice.objects.filter(order=order).first()
 
@@ -112,7 +123,7 @@ def _issue_invoice_once(order, *, apply_gst: bool | None, actor) -> Invoice:
 
     # See `issue_invoice`'s docstring: serializes ref generation for this
     # hub against any other concurrent issuance for it.
-    Hub.objects.select_for_update().get(pk=order.hub_id)
+    lock_hub(order.hub_id)
 
     tax_settings = TaxSettings.objects.filter(hub=order.hub).first()
     gst_enabled = tax_settings.gst_enabled if tax_settings else False
@@ -397,7 +408,7 @@ def initiate_handover(*, from_user, to_user, amount_minor: int) -> CashHandover:
     # hub lock) so two concurrent handover-initiations from the same rider
     # can't both read the same pre-handover balance and together declare
     # more cash than the rider actually has.
-    hub = Hub.objects.select_for_update().get(pk=hub_ids[0])
+    hub = lock_hub(hub_ids[0])
 
     if amount_minor > cash_balance(from_user):
         raise ApiError(
@@ -459,7 +470,7 @@ def record_deposit(
     # Same hub-row-lock reasoning as everywhere else in this file: two
     # concurrent deposits for the same hub can't both read the same
     # pre-deposit available balance and together overdraw it.
-    locked_hub = Hub.objects.select_for_update().get(pk=hub.pk)
+    locked_hub = lock_hub(hub.pk)
     available = hub_cash_on_hand(locked_hub)
     if amount_minor > available:
         raise ApiError(

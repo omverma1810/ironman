@@ -1436,3 +1436,29 @@ export type DeletionScheduled = {
   requested_at: string;
   scheduled_for: string;
 };
+
+// ── Audit log (docs/06 §3.3) ───────────────────────────────────────────
+
+export type AuditEventRow = {
+  id: string;
+  created_at: string;
+  actor: string | null;
+  actor_name: string;
+  actor_role: string;
+  action: string;
+  object_type: string;
+  object_id: string;
+  hub: string | null;
+  before: Record<string, unknown>;
+  after: Record<string, unknown>;
+  ip: string | null;
+};
+
+export type AuditLogParams = {
+  action?: string;
+  object_type?: string;
+  object_id?: string;
+  from?: string;
+  to?: string;
+  cursor?: string;
+};

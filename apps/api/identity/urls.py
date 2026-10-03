@@ -35,6 +35,8 @@ urlpatterns = [
     path("auth/invite/accept", views.StaffInviteAcceptView.as_view(), name="staff-invite-accept"),
     path("me", views.MeView.as_view(), name="me"),
     path("identity/staff", views.StaffListView.as_view(), name="staff-list"),
+    path("identity/audit", views.AuditLogView.as_view(), name="audit-log"),
+    path("identity/audit/export.csv", views.AuditLogExportView.as_view(), name="audit-export"),
 ]
 
 if settings.IRONMAN.get("EXPOSE_OTP_DEBUG_ENDPOINT"):

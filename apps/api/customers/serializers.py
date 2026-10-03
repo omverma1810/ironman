@@ -31,7 +31,7 @@ class AddressSerializer(serializers.ModelSerializer):
 class ConsentRecordSerializer(serializers.ModelSerializer):
     class Meta:
         model = ConsentRecord
-        fields = ["id", "purpose", "granted", "source", "created_at"]
+        fields = ["id", "customer", "purpose", "granted", "source", "created_at"]
 
 
 class CustomerNoteSerializer(serializers.ModelSerializer):
@@ -39,7 +39,7 @@ class CustomerNoteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomerNote
-        fields = ["id", "body", "is_internal", "author", "author_name", "created_at"]
+        fields = ["id", "customer", "body", "is_internal", "author", "author_name", "created_at"]
         read_only_fields = ["author"]
 
 

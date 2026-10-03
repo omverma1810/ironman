@@ -27,6 +27,7 @@ const STATIC_ROUTES = [
   "/console/pricing",
   "/console/staff",
   "/console/notifications",
+  "/console/audit",
   "/console/settings",
 ];
 

@@ -6,6 +6,8 @@ import type {
   Apartment,
   ApartmentContact,
   Attribution,
+  AuditEventRow,
+  AuditLogParams,
   BagDetail,
   CashBalance,
   CashDeposit,
@@ -154,6 +156,9 @@ export const authApi = {
 
 export const identityApi = {
   staff: (role?: Role) => apiFetch<Staff[]>("/identity/staff", { params: { role } }),
+  audit: (params?: AuditLogParams) =>
+    apiFetch<Paginated<AuditEventRow>>("/identity/audit", { params }),
+  auditCsvUrl: (params?: AuditLogParams) => buildApiUrl("/identity/audit/export.csv", params),
 };
 
 // ── Territory ──────────────────────────────────────────────────────────
