@@ -67,6 +67,7 @@ MATRIX = [
     # People
     ("Manage users & roles (staff list)", "get", "identity/staff", {A, X}),
     ("View audit log", "get", "identity/audit", {A, X}),
+    ("Invite staff", "post", "identity/team/invites", {A, X}),
     # Privacy
     ("Delete own account", "delete", "me", {C}),
     ("Export own data", "get", "me/export", {C}),

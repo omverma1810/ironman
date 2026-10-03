@@ -23,6 +23,7 @@ const SCREENS = [
   "/console/marketing",
   "/console/analytics",
   "/console/pricing",
+  "/console/staff",
   "/console/notifications",
   "/console/audit",
 ];

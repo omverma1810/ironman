@@ -1462,3 +1462,30 @@ export type AuditLogParams = {
   to?: string;
   cursor?: string;
 };
+
+// ── Staff management (docs/06 §3.1 "Manage users & roles") ─────────────
+
+export type StaffRole = Exclude<Role, "CUSTOMER">;
+
+export type TeamMember = {
+  id: string;
+  full_name: string;
+  email: string | null;
+  phone: string | null;
+  is_active: boolean;
+  last_login: string | null;
+  roles: { role: StaffRole; hub: string | null; hub_name: string }[];
+};
+
+export type StaffInvite = {
+  id: string;
+  email: string;
+  role: StaffRole;
+  hub: string | null;
+  hub_name: string;
+  invited_by_name: string;
+  expires_at: string;
+  token?: string;
+};
+
+export type Team = { members: TeamMember[]; invites: StaffInvite[] };

@@ -3,7 +3,7 @@ from __future__ import annotations
 from django.contrib.auth import password_validation
 from rest_framework import serializers
 
-from identity.models import AuditEvent, Role, User
+from identity.models import AuditEvent, Role, StaffInvite, User, UserRole
 
 
 class RoleSerializer(serializers.ModelSerializer):
@@ -141,3 +141,68 @@ class AuditEventSerializer(serializers.ModelSerializer):
         if obj.actor is None:
             return "System"
         return obj.actor.full_name or obj.actor.email or obj.actor.phone or ""
+
+
+class TeamRoleSerializer(serializers.ModelSerializer):
+    role = serializers.CharField(source="role.code")
+    hub_name = serializers.CharField(source="hub.name", default="", read_only=True)
+
+    class Meta:
+        model = UserRole
+        fields = ["role", "hub", "hub_name"]
+
+
+class TeamMemberSerializer(serializers.ModelSerializer):
+    """The staff-management screen's row (docs/06 §3.1 "Manage users & roles")."""
+
+    roles = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ["id", "full_name", "email", "phone", "is_active", "last_login", "roles"]
+        read_only_fields = fields
+
+    def get_roles(self, obj) -> list[dict]:
+        from identity.models import STAFF_ROLES
+
+        rows = [ur for ur in obj.user_roles.all() if ur.role.code in STAFF_ROLES]
+        return TeamRoleSerializer(rows, many=True).data
+
+
+class StaffInviteSerializer(serializers.ModelSerializer):
+    role = serializers.CharField(source="role.code", read_only=True)
+    hub_name = serializers.CharField(source="hub.name", default="", read_only=True)
+    invited_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = StaffInvite
+        fields = ["id", "email", "role", "hub", "hub_name", "invited_by_name", "expires_at"]
+        read_only_fields = fields
+
+    def get_invited_by_name(self, obj) -> str:
+        user = obj.invited_by
+        return (user.full_name or user.email or "") if user else ""
+
+
+class StaffInviteCreatedSerializer(StaffInviteSerializer):
+    """Returned once, to the person who created the invite: the token is
+    what they send to the new staff member."""
+
+    class Meta(StaffInviteSerializer.Meta):
+        fields = StaffInviteSerializer.Meta.fields + ["token"]
+        read_only_fields = fields
+
+
+class StaffInviteCreateSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    role = serializers.CharField()
+    hub = serializers.UUIDField(required=False, allow_null=True)
+
+
+class TeamRoleChangeSerializer(serializers.Serializer):
+    role = serializers.CharField()
+    hub = serializers.UUIDField(required=False, allow_null=True)
+
+
+class TeamActiveSerializer(serializers.Serializer):
+    reason = serializers.CharField(max_length=255, required=False, allow_blank=True)

@@ -36,6 +36,24 @@ urlpatterns = [
     path("me", views.MeView.as_view(), name="me"),
     path("identity/staff", views.StaffListView.as_view(), name="staff-list"),
     path("identity/audit", views.AuditLogView.as_view(), name="audit-log"),
+    path("identity/team", views.TeamView.as_view(), name="team"),
+    path("identity/team/invites", views.TeamInviteView.as_view(), name="team-invite"),
+    path(
+        "identity/team/invites/<uuid:invite_id>",
+        views.TeamInviteRevokeView.as_view(),
+        name="team-invite-revoke",
+    ),
+    path("identity/team/<uuid:user_id>/role", views.TeamRoleView.as_view(), name="team-role"),
+    path(
+        "identity/team/<uuid:user_id>/deactivate",
+        views.TeamDeactivateView.as_view(),
+        name="team-deactivate",
+    ),
+    path(
+        "identity/team/<uuid:user_id>/reactivate",
+        views.TeamReactivateView.as_view(),
+        name="team-reactivate",
+    ),
     path("identity/audit/export.csv", views.AuditLogExportView.as_view(), name="audit-export"),
 ]
 

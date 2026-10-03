@@ -39,6 +39,7 @@ import {
 import { ApiError } from "./errors";
 import type {
   AuditLogParams,
+  StaffRole,
   ActivatePriceListInput,
   ConfirmHandoverInput,
   ConsumptionRuleInput,
@@ -1854,4 +1855,41 @@ export function useAuditLog(params?: AuditLogParams) {
 export function useDefaultHub() {
   const hubsQuery = useHubs();
   return { hubId: hubsQuery.data?.results[0]?.id, hubsQuery };
+}
+
+// ── Staff management ───────────────────────────────────────────────────
+
+export function useTeam() {
+  return useQuery({ queryKey: ["team"], queryFn: identityApi.team });
+}
+
+function useTeamMutation<TVars, TResult>(fn: (vars: TVars) => Promise<TResult>) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["team"] });
+      queryClient.invalidateQueries({ queryKey: ["staff"] });
+    },
+  });
+}
+
+export function useInviteStaff() {
+  return useTeamMutation(identityApi.invite);
+}
+
+export function useRevokeInvite() {
+  return useTeamMutation(identityApi.revokeInvite);
+}
+
+export function useChangeStaffRole() {
+  return useTeamMutation((v: { userId: string; role: StaffRole; hub: string | null }) =>
+    identityApi.changeRole(v.userId, { role: v.role, hub: v.hub })
+  );
+}
+
+export function useSetStaffActive() {
+  return useTeamMutation((v: { userId: string; active: boolean; reason?: string }) =>
+    identityApi.setActive(v.userId, v.active, v.reason)
+  );
 }
