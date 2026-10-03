@@ -396,3 +396,33 @@ def test_complete_delivery_accrues_the_referring_partners_commission(
     assert accrual.partner_id == partner.id
     assert accrual.amount_minor == 300  # 10% of the ₹30 invoice
     assert OrderCost.objects.filter(order=ready_order, kind="COMMISSION").exists()
+
+
+def test_complete_delivery_pays_the_customer_referral_reward(
+    delivery_job, ready_order, ready_order_bag, hub
+):
+    """docs/08 batch 5.5: a referred friend's first delivered order credits
+    the customer who shared their code, with no one having to remember to."""
+    from billing.services import customer_credit_balance
+    from customers.models import Customer
+    from growth import referrals
+    from growth import services as growth_services
+    from growth.models import Attribution, ChannelCode
+
+    referrer = Customer.objects.create(hub=hub, name="Priya", phone="+919855500077")
+    code = referrals.customer_code(referrer)
+    Attribution.objects.create(
+        hub=hub,
+        customer=ready_order.customer,
+        order=ready_order,
+        channel=growth_services.get_channel(ChannelCode.CUSTOMER_REFERRAL),
+        referral_code=code,
+        is_first_touch=True,
+        basis="CODE",
+    )
+
+    services.start_job(delivery_job)
+    services.complete_job(delivery_job, bag_codes=[ready_order_bag.code])
+
+    assert customer_credit_balance(referrer) == 5000
+    assert customer_credit_balance(ready_order.customer) == 2500

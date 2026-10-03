@@ -13,6 +13,7 @@ from django.db import transaction
 import billing.services as billing_services
 import custody.services as custody_services
 import growth.commission as growth_commission
+import growth.referrals as growth_referrals
 import ordering.services as ordering_services
 from common.errors import ApiError, InvalidStateTransition
 from fulfilment.models import (
@@ -166,6 +167,9 @@ def complete_job(
         # delivered (and invoiced, so a percentage rule sees the billed
         # value) — best-effort for the same reason.
         growth_commission.accrue_on_delivery(job.order, actor=actor)
+        # A referred friend's first delivered order earns both customers
+        # their referral credit (docs/08 batch 5.5) — best-effort too.
+        growth_referrals.reward_on_delivery(job.order, actor=actor)
 
     return job
 

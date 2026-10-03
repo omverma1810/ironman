@@ -17,6 +17,7 @@ import {
   commissionRulesApi,
   commissionAccrualsApi,
   settlementsApi,
+  referralProgramApi,
   attributionsApi,
   referralCodesApi,
   requotesApi,
@@ -55,6 +56,7 @@ import type {
   ReferralCodeInput,
   ReferralPartnerInput,
   CommissionRuleInput,
+  ReferralProgramInput,
   PayoutMethod,
   SetPriceLinesInput,
   StockAdjustmentInput,
@@ -1615,5 +1617,35 @@ export function useCancelSettlement() {
       toast.success(`${settlement.ref} cancelled — its commission is unpaid again`);
     },
     onError: (err) => errorToast(err, "Couldn't cancel the settlement."),
+  });
+}
+
+// ── Growth: customer referrals (docs/08 batch 5.5) ───────────────────────
+export function useReferralProgram(hub: string | undefined) {
+  return useQuery({
+    queryKey: ["referral-program", hub],
+    queryFn: () => referralProgramApi.get(hub),
+    enabled: !!hub,
+  });
+}
+
+export function useUpdateReferralProgram() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ hub, patch }: { hub: string | undefined; patch: ReferralProgramInput }) =>
+      referralProgramApi.update(hub, patch),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["referral-program"] });
+      toast.success("Refer-a-friend terms saved");
+    },
+    onError: (err) => errorToast(err, "Couldn't save the refer-a-friend terms."),
+  });
+}
+
+export function useCustomerReferralRewards() {
+  return useQuery({
+    queryKey: ["customer-referral-rewards"],
+    queryFn: () => referralProgramApi.rewards(),
+    staleTime: 30_000,
   });
 }

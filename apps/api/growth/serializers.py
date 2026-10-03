@@ -6,11 +6,13 @@ from growth.models import (
     CommissionAppliesTo,
     CommissionBasis,
     CommissionRule,
+    CustomerReferralReward,
     Feedback,
     PartnerKind,
     PartnerStatus,
     ReferralCode,
     ReferralPartner,
+    ReferralProgram,
     Settlement,
 )
 
@@ -346,3 +348,62 @@ class SettlementCreateSerializer(serializers.Serializer):
 class SettlementMarkPaidSerializer(serializers.Serializer):
     payment_method = serializers.ChoiceField(choices=["UPI", "CASH", "BANK"], default="UPI")
     payment_ref = serializers.CharField(max_length=64, required=False, allow_blank=True, default="")
+
+
+class ReferralProgramSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReferralProgram
+        fields = [
+            "id",
+            "hub",
+            "is_active",
+            "referrer_reward_minor",
+            "referee_reward_minor",
+            "min_order_minor",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "hub", "updated_at"]
+
+
+class ReferralProgramUpdateSerializer(serializers.Serializer):
+    is_active = serializers.BooleanField(required=False)
+    referrer_reward_minor = serializers.IntegerField(min_value=0, required=False)
+    referee_reward_minor = serializers.IntegerField(min_value=0, required=False)
+    min_order_minor = serializers.IntegerField(min_value=0, required=False)
+
+
+class CustomerReferralRewardSerializer(serializers.ModelSerializer):
+    referrer_name = serializers.CharField(source="referrer.name", read_only=True)
+    referee_name = serializers.CharField(source="referee.name", read_only=True)
+    code = serializers.CharField(source="referral_code.code", read_only=True)
+    order_ref = serializers.CharField(source="order.ref", read_only=True)
+
+    class Meta:
+        model = CustomerReferralReward
+        fields = [
+            "id",
+            "hub",
+            "referrer",
+            "referrer_name",
+            "referee",
+            "referee_name",
+            "code",
+            "order",
+            "order_ref",
+            "referrer_credit_minor",
+            "referee_credit_minor",
+            "created_at",
+        ]
+        read_only_fields = fields
+
+
+class MyReferralSerializer(serializers.Serializer):
+    code = serializers.CharField()
+    is_active = serializers.BooleanField()
+    friends_joined = serializers.IntegerField()
+    rewards_count = serializers.IntegerField()
+    rewards_earned_minor = serializers.IntegerField()
+    referrer_reward_minor = serializers.IntegerField()
+    referee_reward_minor = serializers.IntegerField()
+    min_order_minor = serializers.IntegerField()
+    credit_balance_minor = serializers.IntegerField()

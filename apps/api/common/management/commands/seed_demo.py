@@ -359,6 +359,11 @@ class Command(BaseCommand):
         self.stdout.write("Seeding partner commission...")
         accrual_count = self._seed_commission(hub, founder)
 
+        self.stdout.write("Seeding a customer referral...")
+        self._seed_customer_referral(
+            hub, customers[0], service, garment_types, founder, field_staff
+        )
+
         self.stdout.write(
             self.style.SUCCESS(
                 f"Seed complete: 1 hub, 2 clusters, {len(apartments)} apartments, "
@@ -446,6 +451,45 @@ class Command(BaseCommand):
             if commission.partner_balance(partner)["accrued_minor"] > 0:
                 commission.create_settlement(partner, actor=founder)
         return partner.accruals.count() if partner else 0
+
+    def _seed_customer_referral(
+        self, hub, referrer, service, garment_types, founder, field_staff
+    ) -> None:
+        """docs/08 batch 5.5: one customer has shared their code, and the
+        friend who booked with it has had a first order delivered — so both
+        hold referral credit and the console's rewards list isn't empty.
+        Idempotent: does nothing once the hub has any referral reward."""
+        from growth import referrals
+        from growth.models import CustomerReferralReward
+
+        if CustomerReferralReward.objects.filter(hub=hub).exists():
+            return
+        code = referrals.customer_code(referrer).code
+        friend, _ = Customer.objects.get_or_create(
+            hub=hub,
+            phone="+919870009001",
+            defaults={
+                "name": "Kavya Reddy",
+                "acquisition_apartment": referrer.acquisition_apartment,
+            },
+        )
+        order = Order.objects.filter(customer=friend).order_by("created_at").first()
+        if order is None:
+            first_type = next(iter(garment_types.values()))[0]
+            order = ordering_services.create_order(
+                hub=hub,
+                customer=friend,
+                service=service,
+                lines=[{"garment_type": first_type.id, "qty": 4}],
+                channel="WEB",
+                referral_code=code,
+                apartment=friend.acquisition_apartment,
+                notes="",
+                actor=founder,
+            )
+            self._fast_forward(order, OrderStatus.DELIVERED, founder, field_staff)
+            order.refresh_from_db()
+        referrals.reward_for_order(order, actor=founder)
 
     def _attach_demo_referrals(self, hub, partner, count: int = 3) -> None:
         """Which seeded customers end up with a delivered order is down to

@@ -354,3 +354,46 @@ class CommissionAccrual(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.partner} · {self.amount_minor}p"
+
+
+class ReferralProgram(HubScopedModel):
+    """docs/08 batch 5.5 — the customer-refers-a-friend terms for one hub.
+    When a referred customer's first order is delivered, the customer whose
+    code they used earns `referrer_reward_minor` of store credit and the new
+    customer `referee_reward_minor` (a welcome credit for their next
+    order). Store credit, not cash: it can only be spent with IronMan (D-06)."""
+
+    is_active = models.BooleanField(default=True)
+    referrer_reward_minor = models.PositiveIntegerField(default=5000)
+    referee_reward_minor = models.PositiveIntegerField(default=2500)
+    min_order_minor = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = "growth_referral_program"
+        constraints = [
+            models.UniqueConstraint(fields=["hub"], name="growth_one_referral_program_per_hub")
+        ]
+
+
+class CustomerReferralReward(BaseModel):
+    """One friend, one reward — the credit a referral earned and the order
+    that qualified it. Unique on the referee, so a customer can only ever
+    trigger a reward once, however many orders they place or codes they
+    try."""
+
+    hub = models.ForeignKey("territory.Hub", on_delete=models.PROTECT, related_name="+")
+    referrer = models.ForeignKey(
+        "customers.Customer", on_delete=models.PROTECT, related_name="referral_rewards_earned"
+    )
+    referee = models.OneToOneField(
+        "customers.Customer", on_delete=models.PROTECT, related_name="referral_reward"
+    )
+    referral_code = models.ForeignKey(
+        ReferralCode, on_delete=models.PROTECT, related_name="customer_rewards"
+    )
+    order = models.ForeignKey("ordering.Order", on_delete=models.PROTECT, related_name="+")
+    referrer_credit_minor = models.PositiveIntegerField()
+    referee_credit_minor = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = "growth_customer_referral_reward"

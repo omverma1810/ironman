@@ -69,6 +69,10 @@ import type {
   ReferralPartnerInput,
   CommissionAccrual,
   CommissionRule,
+  CustomerReferralReward,
+  MyReferral,
+  ReferralProgram,
+  ReferralProgramInput,
   CommissionRuleInput,
   PartnerBalance,
   PayoutMethod,
@@ -313,6 +317,20 @@ export const requotesApi = {
 export const growthApi = {
   submitFeedback: (input: FeedbackInput, accessToken?: string) =>
     apiFetch<Feedback>("/growth/feedback/", { method: "POST", body: input, accessToken }),
+  myReferral: (accessToken?: string) =>
+    apiFetch<MyReferral>("/growth/my-referral", { accessToken }),
+};
+
+export const referralProgramApi = {
+  get: (hub?: string) =>
+    apiFetch<ReferralProgram>("/growth/referral-program", { params: { hub } }),
+  update: (hub: string | undefined, patch: ReferralProgramInput) =>
+    apiFetch<ReferralProgram>("/growth/referral-program", {
+      method: "PATCH",
+      params: { hub },
+      body: patch,
+    }),
+  rewards: () => apiFetch<Paginated<CustomerReferralReward>>("/growth/customer-referral-rewards/"),
 };
 
 // ── Growth: referral partners & codes (docs/08 batch 5.1) ────────────────

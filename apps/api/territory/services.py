@@ -55,6 +55,12 @@ def get_hub(hub_id):
     return Hub.objects.get(pk=hub_id)
 
 
+def default_hub():
+    """The first hub by creation — the single-hub default until a screen
+    needs to pick one (ADR-013)."""
+    return Hub.objects.order_by("created_at").first()
+
+
 def get_apartment(apartment_id):
     return Apartment.objects.get(pk=apartment_id) if apartment_id else None
 

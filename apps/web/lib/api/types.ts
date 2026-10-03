@@ -1124,6 +1124,51 @@ export type Settlement = {
   created_at: string;
 };
 
+// ── Customer referrals (docs/08 batch 5.5) ───────────────────────────────
+export type MyReferral = {
+  code: string;
+  is_active: boolean;
+  friends_joined: number;
+  rewards_count: number;
+  rewards_earned_minor: number;
+  referrer_reward_minor: number;
+  referee_reward_minor: number;
+  min_order_minor: number;
+  credit_balance_minor: number;
+};
+
+export type ReferralProgram = {
+  id: string;
+  hub: string;
+  is_active: boolean;
+  referrer_reward_minor: number;
+  referee_reward_minor: number;
+  min_order_minor: number;
+  updated_at: string;
+};
+
+export type ReferralProgramInput = Partial<
+  Pick<
+    ReferralProgram,
+    "is_active" | "referrer_reward_minor" | "referee_reward_minor" | "min_order_minor"
+  >
+>;
+
+export type CustomerReferralReward = {
+  id: string;
+  hub: string;
+  referrer: string;
+  referrer_name: string;
+  referee: string;
+  referee_name: string;
+  code: string;
+  order: string;
+  order_ref: string;
+  referrer_credit_minor: number;
+  referee_credit_minor: number;
+  created_at: string;
+};
+
 export type ReferralPartnerInput = {
   hub: string;
   kind: PartnerKind;

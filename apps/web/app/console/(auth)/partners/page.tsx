@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { CommissionRulesPanel } from "@/components/partners/commission-rules-panel";
+import { CustomerReferralsPanel } from "@/components/partners/customer-referrals-panel";
 import { PartnerCommissionDialog } from "@/components/partners/partner-commission-dialog";
 import { PartnerDialog } from "@/components/partners/partner-dialog";
 import { SettlementsPanel } from "@/components/partners/settlements-panel";
@@ -245,11 +246,13 @@ export default function PartnersPage() {
       />
 
       <Tabs defaultValue="partners">
-        <TabsList>
+        {/* Five tabs outgrow a phone's width — scroll them, not the page. */}
+        <TabsList className="max-w-full justify-start overflow-x-auto">
           <TabsTrigger value="partners">Partners</TabsTrigger>
           <TabsTrigger value="codes">Referral codes</TabsTrigger>
           <TabsTrigger value="rules">Commission rules</TabsTrigger>
           <TabsTrigger value="settlements">Settlements</TabsTrigger>
+          <TabsTrigger value="customer-referrals">Customer referrals</TabsTrigger>
         </TabsList>
 
         <TabsContent value="partners" className="flex flex-col gap-4">
@@ -401,6 +404,10 @@ export default function PartnersPage() {
 
         <TabsContent value="settlements" className="flex flex-col gap-4">
           <SettlementsPanel canManage={canManageMoney} />
+        </TabsContent>
+
+        <TabsContent value="customer-referrals" className="flex flex-col gap-4">
+          <CustomerReferralsPanel canManage={canManageMoney} />
         </TabsContent>
       </Tabs>
 
