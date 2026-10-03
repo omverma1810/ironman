@@ -1,4 +1,4 @@
-import { apiFetch, newIdempotencyKey } from "./client";
+import { apiFetch, buildApiUrl, newIdempotencyKey } from "./client";
 import type {
   ActivatePriceListInput,
   Address,
@@ -67,6 +67,12 @@ import type {
   ReferralCodeInput,
   ReferralPartner,
   ReferralPartnerInput,
+  CommissionAccrual,
+  CommissionRule,
+  CommissionRuleInput,
+  PartnerBalance,
+  PayoutMethod,
+  Settlement,
   ReQuote,
   Role,
   RouteDay,
@@ -327,6 +333,42 @@ export const partnersApi = {
       method: "POST",
       body: { status },
     }),
+  setCommissionRule: (id: string, ruleId: string | null) =>
+    apiFetch<ReferralPartner>(`/growth/partners/${id}/commission-rule/`, {
+      method: "POST",
+      body: { commission_rule: ruleId },
+    }),
+  balance: (id: string) => apiFetch<PartnerBalance>(`/growth/partners/${id}/balance/`),
+  accruals: (id: string) =>
+    apiFetch<Paginated<CommissionAccrual>>(`/growth/partners/${id}/accruals/`),
+};
+
+export const commissionRulesApi = {
+  list: () => apiFetch<Paginated<CommissionRule>>("/growth/commission-rules/"),
+  create: (input: CommissionRuleInput) =>
+    apiFetch<CommissionRule>("/growth/commission-rules/", { method: "POST", body: input }),
+  update: (id: string, patch: Partial<Omit<CommissionRuleInput, "hub">>) =>
+    apiFetch<CommissionRule>(`/growth/commission-rules/${id}/`, { method: "PATCH", body: patch }),
+};
+
+export const commissionAccrualsApi = {
+  void: (id: string, reason: string) =>
+    apiFetch<CommissionAccrual>(`/growth/commission-accruals/${id}/void/`, {
+      method: "POST",
+      body: { reason },
+    }),
+};
+
+export const settlementsApi = {
+  list: (params?: { partner?: string; status?: string }) =>
+    apiFetch<Paginated<Settlement>>("/growth/settlements/", { params }),
+  create: (input: { partner: string; period_start?: string | null; period_end?: string | null }) =>
+    apiFetch<Settlement>("/growth/settlements/", { method: "POST", body: input }),
+  markPaid: (id: string, input: { payment_method: PayoutMethod; payment_ref: string }) =>
+    apiFetch<Settlement>(`/growth/settlements/${id}/mark-paid/`, { method: "POST", body: input }),
+  cancel: (id: string) =>
+    apiFetch<Settlement>(`/growth/settlements/${id}/cancel/`, { method: "POST" }),
+  statementUrl: (id: string) => buildApiUrl(`/growth/settlements/${id}/statement/`),
 };
 
 export const referralCodesApi = {

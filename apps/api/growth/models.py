@@ -87,11 +87,58 @@ class PartnerStatus(models.TextChoices):
     INACTIVE = "INACTIVE", "Inactive"
 
 
+class CommissionBasis(models.TextChoices):
+    PER_ORDER = "PER_ORDER", "Fixed amount per order"
+    PER_ITEM = "PER_ITEM", "Fixed amount per item"
+    PERCENT_OF_ORDER = "PERCENT_OF_ORDER", "Percent of order value"
+    FLAT_FIRST_ORDER = "FLAT_FIRST_ORDER", "Flat amount, first order only"
+
+
+class CommissionAppliesTo(models.TextChoices):
+    FIRST_ORDER_ONLY = "FIRST_ORDER_ONLY", "Customer's first order only"
+    ALL_ORDERS = "ALL_ORDERS", "Every order"
+    FIRST_N_ORDERS = "FIRST_N_ORDERS", "Customer's first N orders"
+
+
+class CommissionRule(HubScopedModel):
+    """docs/02 §3.10 — what a referral partner earns per qualifying order.
+
+    Rule-based and dated (A-04: "₹3 of a ₹15 shirt" first-order-only vs
+    every order is a 5x swing in unit economics). `value` is paise for the
+    fixed bases and basis points (1/100 of a percent) for
+    `PERCENT_OF_ORDER`, so no float ever touches money (ADR-004).
+
+    Terms are never edited once a rule has earned anything: every accrual
+    keeps its own copy of the terms it was computed under, and changing
+    terms means a new rule (D-01, docs/01 §2 "configuration is versioned,
+    not mutated"). `is_default` marks the hub's rule for partners who
+    don't have one of their own."""
+
+    name = models.CharField(max_length=80)
+    basis = models.CharField(max_length=20, choices=CommissionBasis.choices)
+    value = models.PositiveIntegerField()
+    applies_to = models.CharField(
+        max_length=20,
+        choices=CommissionAppliesTo.choices,
+        default=CommissionAppliesTo.FIRST_ORDER_ONLY,
+    )
+    first_n = models.PositiveSmallIntegerField(null=True, blank=True)
+    cap_minor = models.PositiveIntegerField(null=True, blank=True)
+    effective_from = models.DateField(default=timezone.localdate)
+    effective_to = models.DateField(null=True, blank=True)
+    is_default = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = "growth_commission_rule"
+        indexes = [models.Index(fields=["hub", "is_default"])]
+
+    def __str__(self) -> str:
+        return self.name
+
+
 class ReferralPartner(HubScopedModel):
-    """docs/02 §3.10. `commission_rule` isn't wired yet — batch 5.3 adds
-    `CommissionRule` and the FK to it, the same "stops at what this batch
-    needs" split `supplies.ConsumptionRule`'s own docstring describes for
-    `OrderCost` (which didn't exist yet when that model was written)."""
+    """docs/02 §3.10. `commission_rule` is optional: a partner without one
+    earns under their hub's default rule (`CommissionRule.is_default`)."""
 
     kind = models.CharField(max_length=16, choices=PartnerKind.choices)
     name = models.CharField(max_length=120)
@@ -107,6 +154,9 @@ class ReferralPartner(HubScopedModel):
         "identity.User", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
     )
     notes = models.CharField(max_length=255, blank=True)
+    commission_rule = models.ForeignKey(
+        CommissionRule, null=True, blank=True, on_delete=models.PROTECT, related_name="partners"
+    )
 
     class Meta:
         db_table = "growth_referral_partner"
@@ -211,3 +261,96 @@ class Attribution(AppendOnlyModel):
         return (
             f"{self.customer_id} via {self.channel_id}{' (first)' if self.is_first_touch else ''}"
         )
+
+
+class AccrualStatus(models.TextChoices):
+    ACCRUED = "ACCRUED", "Accrued"
+    APPROVED = "APPROVED", "In a settlement"
+    SETTLED = "SETTLED", "Paid"
+    VOID = "VOID", "Void"
+
+
+class SettlementStatus(models.TextChoices):
+    PENDING = "PENDING", "Awaiting payment"
+    PAID = "PAID", "Paid"
+    CANCELLED = "CANCELLED", "Cancelled"
+
+
+def _settlement_ref() -> str:
+    now = timezone.localtime()
+    seq = (
+        Settlement.objects.filter(created_at__year=now.year, created_at__month=now.month).count()
+        + 1
+    )
+    return f"SET-{now:%y%m}-{seq:04d}"
+
+
+def _statement_pdf_path(instance: "Settlement", filename: str) -> str:
+    return f"growth/statements/{instance.hub_id}/{instance.ref}.pdf"
+
+
+class Settlement(HubScopedModel):
+    """docs/02 §3.10, A-13 — one payout to one partner covering every
+    unpaid accrual up to `period_end`. `total_minor` is written once from
+    the accruals it claims and never recomputed, so a statement always
+    reconciles to its own lines (SC-6)."""
+
+    ref = models.CharField(max_length=24, unique=True, editable=False, default=_settlement_ref)
+    partner = models.ForeignKey(
+        ReferralPartner, on_delete=models.PROTECT, related_name="settlements"
+    )
+    period_start = models.DateField(null=True, blank=True)
+    period_end = models.DateField()
+    total_minor = models.BigIntegerField()
+    status = models.CharField(
+        max_length=16, choices=SettlementStatus.choices, default=SettlementStatus.PENDING
+    )
+    paid_at = models.DateTimeField(null=True, blank=True)
+    payment_method = models.CharField(max_length=16, blank=True)
+    payment_ref = models.CharField(max_length=64, blank=True)
+    approved_by = models.ForeignKey(
+        "identity.User", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    statement_pdf = models.FileField(upload_to=_statement_pdf_path, null=True, blank=True)
+
+    class Meta:
+        db_table = "growth_settlement"
+        indexes = [models.Index(fields=["partner", "status"])]
+
+    def __str__(self) -> str:
+        return self.ref
+
+
+class CommissionAccrual(BaseModel):
+    """docs/02 §3.10 — what one order earned one partner. The amount and
+    the terms it was computed under are fixed at creation; only `status`
+    (and the settlement that claims it) moves, and only through
+    `growth.commission`. A partner earns once per order (docs/02 §5 #7);
+    a mistake is voided, never edited or deleted."""
+
+    hub = models.ForeignKey("territory.Hub", on_delete=models.PROTECT, related_name="+")
+    partner = models.ForeignKey(ReferralPartner, on_delete=models.PROTECT, related_name="accruals")
+    order = models.ForeignKey("ordering.Order", on_delete=models.PROTECT, related_name="+")
+    rule = models.ForeignKey(CommissionRule, on_delete=models.PROTECT, related_name="accruals")
+    rule_terms = models.JSONField(default=dict)
+    amount_minor = models.BigIntegerField()
+    status = models.CharField(
+        max_length=16, choices=AccrualStatus.choices, default=AccrualStatus.ACCRUED
+    )
+    settlement = models.ForeignKey(
+        Settlement, null=True, blank=True, on_delete=models.SET_NULL, related_name="accruals"
+    )
+    accrued_at = models.DateTimeField(default=timezone.now)
+    void_reason = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        db_table = "growth_commission_accrual"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["partner", "order"], name="growth_accrual_once_per_partner_order"
+            )
+        ]
+        indexes = [models.Index(fields=["partner", "status"])]
+
+    def __str__(self) -> str:
+        return f"{self.partner} · {self.amount_minor}p"

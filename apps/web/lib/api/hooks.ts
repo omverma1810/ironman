@@ -14,6 +14,9 @@ import {
   notificationsApi,
   ordersApi,
   partnersApi,
+  commissionRulesApi,
+  commissionAccrualsApi,
+  settlementsApi,
   attributionsApi,
   referralCodesApi,
   requotesApi,
@@ -51,6 +54,8 @@ import type {
   RecordPaymentInput,
   ReferralCodeInput,
   ReferralPartnerInput,
+  CommissionRuleInput,
+  PayoutMethod,
   SetPriceLinesInput,
   StockAdjustmentInput,
   StockItemInput,
@@ -1467,5 +1472,148 @@ export function useSetReferralCodeActive() {
       toast.success(`${code.code} ${code.is_active ? "activated" : "deactivated"}`);
     },
     onError: (err) => errorToast(err, "Couldn't update the referral code."),
+  });
+}
+
+// ── Growth: commission & settlements (docs/08 batches 5.3/5.4) ───────────
+function invalidateCommission(queryClient: ReturnType<typeof useQueryClient>) {
+  queryClient.invalidateQueries({ queryKey: ["referral-partners"] });
+  queryClient.invalidateQueries({ queryKey: ["partner-balance"] });
+  queryClient.invalidateQueries({ queryKey: ["partner-accruals"] });
+  queryClient.invalidateQueries({ queryKey: ["settlements"] });
+}
+
+export function useCommissionRules(enabled = true) {
+  return useQuery({
+    queryKey: ["commission-rules"],
+    queryFn: () => commissionRulesApi.list(),
+    staleTime: 30_000,
+    enabled,
+  });
+}
+
+export function useCreateCommissionRule() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CommissionRuleInput) => commissionRulesApi.create(input),
+    onSuccess: (rule) => {
+      queryClient.invalidateQueries({ queryKey: ["commission-rules"] });
+      toast.success(`Rule "${rule.name}" created`);
+    },
+    onError: (err) => errorToast(err, "Couldn't create the rule."),
+  });
+}
+
+export function useUpdateCommissionRule() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: Partial<Omit<CommissionRuleInput, "hub">> }) =>
+      commissionRulesApi.update(id, patch),
+    onSuccess: (rule) => {
+      queryClient.invalidateQueries({ queryKey: ["commission-rules"] });
+      toast.success(`Rule "${rule.name}" updated`);
+    },
+    onError: (err) => errorToast(err, "Couldn't update the rule."),
+  });
+}
+
+export function useSetPartnerCommissionRule() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ruleId }: { id: string; ruleId: string | null }) =>
+      partnersApi.setCommissionRule(id, ruleId),
+    onSuccess: (partner) => {
+      queryClient.invalidateQueries({ queryKey: ["referral-partners"] });
+      queryClient.invalidateQueries({ queryKey: ["commission-rules"] });
+      toast.success(
+        partner.commission_rule_name
+          ? `${partner.name} now earns under "${partner.commission_rule_name}"`
+          : `${partner.name} now earns under the hub default`
+      );
+    },
+    onError: (err) => errorToast(err, "Couldn't change the partner's rule."),
+  });
+}
+
+export function usePartnerBalance(partnerId: string | null) {
+  return useQuery({
+    queryKey: ["partner-balance", partnerId],
+    queryFn: () => partnersApi.balance(partnerId!),
+    enabled: !!partnerId,
+  });
+}
+
+export function usePartnerAccruals(partnerId: string | null) {
+  return useQuery({
+    queryKey: ["partner-accruals", partnerId],
+    queryFn: () => partnersApi.accruals(partnerId!),
+    enabled: !!partnerId,
+  });
+}
+
+export function useVoidAccrual() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      commissionAccrualsApi.void(id, reason),
+    onSuccess: (accrual) => {
+      invalidateCommission(queryClient);
+      toast.success(`Commission on ${accrual.order_ref} voided`);
+    },
+    onError: (err) => errorToast(err, "Couldn't void the commission."),
+  });
+}
+
+export function useSettlements(params?: { partner?: string; status?: string }, enabled = true) {
+  return useQuery({
+    queryKey: ["settlements", params],
+    queryFn: () => settlementsApi.list(params),
+    staleTime: 15_000,
+    enabled,
+  });
+}
+
+export function useCreateSettlement() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { partner: string; period_end?: string | null }) =>
+      settlementsApi.create(input),
+    onSuccess: (settlement) => {
+      invalidateCommission(queryClient);
+      toast.success(`${settlement.ref} created for ${settlement.partner_name}`);
+    },
+    onError: (err) => errorToast(err, "Couldn't create the settlement."),
+  });
+}
+
+export function useMarkSettlementPaid() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      method,
+      reference,
+    }: {
+      id: string;
+      method: PayoutMethod;
+      reference: string;
+    }) => settlementsApi.markPaid(id, { payment_method: method, payment_ref: reference }),
+    onSuccess: (settlement) => {
+      invalidateCommission(queryClient);
+      toast.success(`${settlement.ref} marked paid`);
+    },
+    onError: (err) => errorToast(err, "Couldn't mark the settlement paid."),
+  });
+}
+
+export function useCancelSettlement() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => settlementsApi.cancel(id),
+    onSuccess: (settlement) => {
+      invalidateCommission(queryClient);
+      toast.success(`${settlement.ref} cancelled — its commission is unpaid again`);
+    },
+    onError: (err) => errorToast(err, "Couldn't cancel the settlement."),
   });
 }

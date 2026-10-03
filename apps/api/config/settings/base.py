@@ -213,6 +213,10 @@ SPECTACULAR_SETTINGS = {
         # they're different enums without this, and auto-suffixes one.
         "OrderChannelEnum": "ordering.models.Channel",
         "NotificationChannelEnum": "notifications.models.NotificationChannel",
+        # `Attribution.basis` (how the channel was decided) and
+        # `CommissionRule.basis` (how commission is computed) share a name.
+        "AttributionBasisEnum": "growth.models.AttributionBasis",
+        "CommissionBasisEnum": "growth.models.CommissionBasis",
     },
 }
 

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page { size: A4; margin: 20mm 18mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "DejaVu Sans", "Helvetica Neue", Arial, sans-serif;
+    color: #17171b;
+    font-size: 10.5pt;
+    margin: 0;
+  }
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 3px solid #F5C518;
+    padding-bottom: 12pt;
+    margin-bottom: 16pt;
+  }
+  .brand { display: flex; align-items: center; gap: 8pt; }
+  .brand-mark {
+    width: 28pt; height: 28pt; border-radius: 6pt;
+    background: #F5C518; color: #0b0b0c;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 14pt;
+  }
+  .brand-name { font-size: 15pt; font-weight: 700; color: #0b0b0c; }
+  .doc-title { text-align: right; }
+  .doc-title h1 { margin: 0; font-size: 18pt; color: #0b0b0c; }
+  .doc-title .ref { color: #55555f; font-size: 10pt; margin-top: 2pt; }
+
+  .meta {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 18pt;
+  }
+  .meta .block { width: 47%; }
+  .meta h3 {
+    font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.06em;
+    color: #78787f; margin: 0 0 4pt;
+  }
+  .meta p { margin: 0 0 2pt; line-height: 1.4; }
+
+  table.lines { width: 100%; border-collapse: collapse; margin-bottom: 16pt; }
+  table.lines th {
+    text-align: left; font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.04em;
+    color: #78787f; border-bottom: 1.5pt solid #0b0b0c; padding: 6pt 4pt;
+  }
+  table.lines th.num, table.lines td.num { text-align: right; }
+  table.lines td { padding: 6pt 4pt; border-bottom: 0.75pt solid #e4e4e8; }
+
+  .totals { width: 55%; margin-left: 45%; }
+  .totals .row { display: flex; justify-content: space-between; padding: 3pt 4pt; }
+  .totals .row.total {
+    border-top: 1.5pt solid #0b0b0c; margin-top: 4pt; padding-top: 6pt;
+    font-weight: 700; font-size: 12pt;
+  }
+
+  .footer {
+    margin-top: 28pt; padding-top: 10pt; border-top: 0.75pt solid #e4e4e8;
+    color: #78787f; font-size: 8.5pt; line-height: 1.5;
+  }
+  .gstin { color: #55555f; font-size: 9pt; margin-top: 2pt; }
+  .status { display: inline-block; padding: 2pt 8pt; border-radius: 10pt; font-size: 8.5pt;
+    font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+  .status.paid { background: #e3f4e8; color: #1d6b35; }
+  .status.pending { background: #fff4cc; color: #6b5300; }
+  .status.cancelled { background: #ececef; color: #55555f; }
+  .sign { display: flex; justify-content: space-between; margin-top: 36pt; }
+  .sign .line { width: 45%; border-top: 0.75pt solid #0b0b0c; padding-top: 4pt;
+    font-size: 8.5pt; color: #55555f; }
+  .muted { color: #78787f; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="brand">
+      <div class="brand-mark">I</div>
+      <div class="brand-name">IronMan</div>
+    </div>
+    <div class="doc-title">
+      <h1>Commission statement</h1>
+      <div class="ref">{{ settlement.ref }}</div>
+    </div>
+  </div>
+
+  <div class="meta">
+    <div class="block">
+      <h3>Paid to</h3>
+      <p>{{ settlement.partner.name }} <span class="muted">({{ partner_kind }})</span></p>
+      <p>{{ settlement.partner.phone }}</p>
+      {% if settlement.partner.upi_id %}<p>UPI {{ settlement.partner.upi_id }}</p>{% endif %}
+    </div>
+    <div class="block">
+      <h3>Details</h3>
+      <p>Period {{ period }}</p>
+      <p>Generated {{ generated_date }}</p>
+      <p>{{ settlement.hub.name }}</p>
+      <p><span class="status {{ status_class }}">{{ status_label }}</span></p>
+      {% if settlement.paid_at %}
+        <p>Paid {{ paid_date }} by {{ settlement.payment_method }}{% if settlement.payment_ref %} · ref {{ settlement.payment_ref }}{% endif %}</p>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if lines %}
+  <table class="lines">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Order</th>
+        <th>Customer</th>
+        <th>Earned for</th>
+        <th class="num">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for line in lines %}
+      <tr>
+        <td>{{ line.date }}</td>
+        <td>{{ line.order_ref }}</td>
+        <td>{{ line.customer }}</td>
+        <td>{{ line.basis }}</td>
+        <td class="num">{{ line.amount }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">This settlement was cancelled; its commission went back to the unpaid balance.</p>
+  {% endif %}
+
+  <div class="totals">
+    <div class="row"><span>Orders</span><span>{{ lines|length }}</span></div>
+    <div class="row total"><span>Total payable</span><span>{{ total_display }}</span></div>
+  </div>
+
+  {% if settlement.payment_method == "CASH" or settlement.status == "PENDING" %}
+  <div class="sign">
+    <div class="line">Received by ({{ settlement.partner.name }})</div>
+    <div class="line">Paid by (IronMan)</div>
+  </div>
+  {% endif %}
+
+  <div class="footer">
+    <p>Commission for customers referred to IronMan, computed from the delivered orders above.</p>
+    <p>IronMan · {{ settlement.hub.address }}</p>
+  </div>
+</body>
+</html>

@@ -283,12 +283,15 @@ class OrderCost(AppendOnlyModel):
     QC-pass to `PACKED` — `custody.state_machine.transition_garment_line`)
     and `LABOUR`/`DELIVERY` (on the order's final delivery —
     `fulfilment.services.complete_job`, via `billing.services`). `COMMISSION`
-    rows are the growth app's to write once it ships (docs/08 Phase 5).
+    rows are written by `growth.commission` when a partner's commission
+    accrues (docs/08 batch 5.3), and reversed if it is voided.
     """
 
     order = models.ForeignKey("ordering.Order", on_delete=models.CASCADE, related_name="costs")
     kind = models.CharField(max_length=16, choices=OrderCostKind.choices)
-    amount_minor = models.PositiveIntegerField()
+    # Signed: a correction is a negative row (`reverse_order_cost`), the
+    # same append-only discipline as every other ledger here.
+    amount_minor = models.BigIntegerField()
     source_ref = models.CharField(max_length=64, blank=True)
     at = models.DateTimeField(default=timezone.now)
 

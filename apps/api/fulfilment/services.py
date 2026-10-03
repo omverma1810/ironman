@@ -12,6 +12,7 @@ from django.db import transaction
 
 import billing.services as billing_services
 import custody.services as custody_services
+import growth.commission as growth_commission
 import ordering.services as ordering_services
 from common.errors import ApiError, InvalidStateTransition
 from fulfilment.models import (
@@ -161,6 +162,10 @@ def complete_job(
         # The customer's invoice follows the delivery automatically
         # (best-effort — never blocks the rider's completion).
         billing_services.issue_invoice_on_delivery(job.order, actor=actor)
+        # The referring partner's commission accrues once the order is
+        # delivered (and invoiced, so a percentage rule sees the billed
+        # value) — best-effort for the same reason.
+        growth_commission.accrue_on_delivery(job.order, actor=actor)
 
     return job
 
