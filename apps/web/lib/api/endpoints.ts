@@ -71,6 +71,12 @@ import type {
   MetricKey,
   MetricRows,
   WeeklyMetrics,
+  ApartmentPerformanceRow,
+  ChannelPerformanceRow,
+  UnitEconomics,
+  OperationsDaily,
+  Checkpoint,
+  DataQuality,
   LapsedCustomer,
   ReengagementResult,
   Campaign,
@@ -685,10 +691,29 @@ export const platformApi = {
 };
 
 export const analyticsApi = {
+  dataQuality: (params: { hub?: string }) =>
+    apiFetch<DataQuality>("/analytics/data-quality", { params }),
+  apartments: (params: { from?: string; to?: string; hub?: string }) =>
+    apiFetch<{ from: string; to: string; rows: ApartmentPerformanceRow[] }>(
+      "/analytics/apartments",
+      { params }
+    ),
+  channels: (params: { from?: string; to?: string; hub?: string }) =>
+    apiFetch<{ from: string; to: string; rows: ChannelPerformanceRow[] }>("/analytics/channels", {
+      params,
+    }),
+  unitEconomics: (params: { from?: string; to?: string; hub?: string }) =>
+    apiFetch<UnitEconomics>("/analytics/unit-economics", { params }),
+  operations: (params: { date?: string; hub?: string }) =>
+    apiFetch<OperationsDaily>("/analytics/operations", { params }),
+  checkpoint: (params: { as_of?: string; hub?: string }) =>
+    apiFetch<Checkpoint>("/analytics/checkpoint", { params }),
   weekly: (params: { week?: string; hub?: string }) =>
     apiFetch<WeeklyMetrics>("/analytics/weekly", { params }),
   rows: (key: MetricKey, params: { week?: string; hub?: string }) =>
     apiFetch<MetricRows>(`/analytics/weekly/${key}/rows`, { params }),
+  pdfUrl: (params: { week?: string; hub?: string }) =>
+    buildApiUrl("/analytics/weekly/export.pdf", params),
   excelUrl: (params: { week?: string; hub?: string }) =>
     buildApiUrl("/analytics/weekly/export.xlsx", params),
   csvUrl: (key: MetricKey, params: { week?: string; hub?: string }) =>

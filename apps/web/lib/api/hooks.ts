@@ -1785,3 +1785,55 @@ export function useMetricRows(key: MetricKey | null, params: { week: string; hub
     enabled: !!key && !!params.hub,
   });
 }
+
+// ── Analytics: reports (docs/08 batches 6.3–6.7) ─────────────────────────
+type Period = { from?: string; to?: string; hub?: string };
+
+export function useApartmentPerformance(params: Period, enabled = true) {
+  return useQuery({
+    queryKey: ["analytics-apartments", params],
+    queryFn: () => analyticsApi.apartments(params),
+    enabled: enabled && !!params.hub,
+  });
+}
+
+export function useChannelPerformance(params: Period, enabled = true) {
+  return useQuery({
+    queryKey: ["analytics-channels", params],
+    queryFn: () => analyticsApi.channels(params),
+    enabled: enabled && !!params.hub,
+  });
+}
+
+export function useUnitEconomics(params: Period, enabled = true) {
+  return useQuery({
+    queryKey: ["analytics-unit-economics", params],
+    queryFn: () => analyticsApi.unitEconomics(params),
+    enabled: enabled && !!params.hub,
+  });
+}
+
+export function useOperationsDaily(hub: string | undefined) {
+  return useQuery({
+    queryKey: ["analytics-operations", hub],
+    queryFn: () => analyticsApi.operations({ hub }),
+    enabled: !!hub,
+    refetchInterval: 60_000,
+  });
+}
+
+export function useCheckpoint(params: { as_of?: string; hub?: string }, enabled = true) {
+  return useQuery({
+    queryKey: ["analytics-checkpoint", params],
+    queryFn: () => analyticsApi.checkpoint(params),
+    enabled: enabled && !!params.hub,
+  });
+}
+
+export function useDataQuality(hub: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: ["analytics-data-quality", hub],
+    queryFn: () => analyticsApi.dataQuality({ hub }),
+    enabled: enabled && !!hub,
+  });
+}

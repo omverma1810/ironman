@@ -112,3 +112,81 @@ def metric_csv(hub, key: str, week_start: date) -> str:
         for row in rows:
             writer.writerow({k: _cell(k, v) for k, v in row.items()})
     return out.getvalue()
+
+
+_MONEY_TILES = ("acquisition_cost", "average_order_value", "contribution")
+
+
+def _display(key, value) -> str:
+    if value is None:
+        return "—"
+    if key in _MONEY_TILES:
+        return f"₹{value / 100:,.2f}"
+    if key == "on_time":
+        return f"{value}%"
+    if key == "feedback":
+        return f"{value:.1f} / 5"
+    return str(value)
+
+
+def _detail(tile: dict) -> str:
+    k = tile["key"]
+    if k == "repeat_customers":
+        return f"Cohort repeat: {tile['cohort_repeated']}/{tile['cohort_size']}" + (
+            " (maturing)" if tile.get("cohort_maturing") else ""
+        )
+    if k == "orders_per_customer":
+        return f"{tile['orders']} orders · {tile['active_customers']} customers"
+    if k == "acquisition_cost":
+        return f"Paid channels {_display(k, tile.get('paid_cac_minor'))}"
+    if k == "referrals":
+        return f"Watchmen {tile['watchman']} · customers {tile['customer_referral']}"
+    if k == "apartments":
+        return f"Busiest: {tile['top']}" if tile.get("top") else ""
+    if k == "average_order_value":
+        return f"Median {_display(k, tile.get('median_minor'))} · {tile['orders']} orders"
+    if k == "contribution":
+        return f"{tile.get('margin_pct')}% margin, before fixed costs"
+    if k == "on_time":
+        return f"{tile.get('excluding_customer_caused')}% excluding customer no-shows"
+    if k == "feedback":
+        return f"{tile['responses']} ratings · {tile.get('response_rate')}% responded"
+    return ""
+
+
+def weekly_pdf(hub, week_start: date, *, include_money: bool, generated_by: str) -> bytes:
+    from django.template.loader import render_to_string
+    from weasyprint import HTML
+
+    pack = metrics.weekly(hub, week_start, include_money=include_money)
+    tiles = []
+    for tile in pack["tiles"]:
+        if tile["restricted"]:
+            tiles.append(tile)
+            continue
+        value, previous = tile["value"], tile["previous"]
+        if value is None or previous is None:
+            delta = "No comparison with last week"
+        elif value == previous:
+            delta = "Same as last week"
+        else:
+            delta = f"{'Up' if value > previous else 'Down'} from {_display(tile['key'], previous)}"
+        tiles.append(
+            {
+                **tile,
+                "display": _display(tile["key"], value),
+                "delta": delta,
+                "detail": _detail(tile),
+            }
+        )
+    html = render_to_string(
+        "analytics/weekly.html",
+        {
+            "hub": hub,
+            "week_label": f"{week_start:%d %b} – {week_start + timedelta(days=6):%d %b %Y}",
+            "tile_pairs": [tiles[i : i + 2] for i in range(0, len(tiles), 2)],
+            "generated": timezone.localtime().strftime("%d %b %Y, %H:%M IST"),
+            "generated_by": generated_by,
+        },
+    )
+    return HTML(string=html).write_pdf()

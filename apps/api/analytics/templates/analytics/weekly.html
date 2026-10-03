@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page { size: A4; margin: 20mm 18mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "DejaVu Sans", "Helvetica Neue", Arial, sans-serif;
+    color: #17171b;
+    font-size: 10.5pt;
+    margin: 0;
+  }
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 3px solid #F5C518;
+    padding-bottom: 12pt;
+    margin-bottom: 16pt;
+  }
+  .brand { display: flex; align-items: center; gap: 8pt; }
+  .brand-mark {
+    width: 28pt; height: 28pt; border-radius: 6pt;
+    background: #F5C518; color: #0b0b0c;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 14pt;
+  }
+  .brand-name { font-size: 15pt; font-weight: 700; color: #0b0b0c; }
+  .doc-title { text-align: right; }
+  .doc-title h1 { margin: 0; font-size: 18pt; color: #0b0b0c; }
+  .doc-title .ref { color: #55555f; font-size: 10pt; margin-top: 2pt; }
+
+  .meta {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 18pt;
+  }
+  .meta .block { width: 47%; }
+  .meta h3 {
+    font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.06em;
+    color: #78787f; margin: 0 0 4pt;
+  }
+  .meta p { margin: 0 0 2pt; line-height: 1.4; }
+
+  table.lines { width: 100%; border-collapse: collapse; margin-bottom: 16pt; }
+  table.lines th {
+    text-align: left; font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.04em;
+    color: #78787f; border-bottom: 1.5pt solid #0b0b0c; padding: 6pt 4pt;
+  }
+  table.lines th.num, table.lines td.num { text-align: right; }
+  table.lines td { padding: 6pt 4pt; border-bottom: 0.75pt solid #e4e4e8; }
+
+  .totals { width: 55%; margin-left: 45%; }
+  .totals .row { display: flex; justify-content: space-between; padding: 3pt 4pt; }
+  .totals .row.total {
+    border-top: 1.5pt solid #0b0b0c; margin-top: 4pt; padding-top: 6pt;
+    font-weight: 700; font-size: 12pt;
+  }
+
+  .footer {
+    margin-top: 28pt; padding-top: 10pt; border-top: 0.75pt solid #e4e4e8;
+    color: #78787f; font-size: 8.5pt; line-height: 1.5;
+  }
+  .gstin { color: #55555f; font-size: 9pt; margin-top: 2pt; }
+  .status { display: inline-block; padding: 2pt 8pt; border-radius: 10pt; font-size: 8.5pt;
+    font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+  .status.paid { background: #e3f4e8; color: #1d6b35; }
+  .status.pending { background: #fff4cc; color: #6b5300; }
+  .status.cancelled { background: #ececef; color: #55555f; }
+  .sign { display: flex; justify-content: space-between; margin-top: 36pt; }
+  .sign .line { width: 45%; border-top: 0.75pt solid #0b0b0c; padding-top: 4pt;
+    font-size: 8.5pt; color: #55555f; }
+  .muted { color: #78787f; }
+  .tiles { width: 100%; border-collapse: collapse; margin-bottom: 14pt; }
+  .tiles td { width: 50%; vertical-align: top; padding: 8pt; border: 0.75pt solid #e4e4e8; }
+  .tiles .label { font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.05em; color: #78787f; }
+  .tiles .value { font-size: 16pt; font-weight: 700; margin: 2pt 0; }
+  .tiles .detail { font-size: 8.5pt; color: #55555f; }
+  .delta-up { color: #1d6b35; } .delta-down { color: #a12a1f; }
+  .restricted { color: #78787f; font-style: italic; }
+  @page { @bottom-center { content: "Page " counter(page) " of " counter(pages); font-size: 8pt; color: #78787f; } }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="brand">
+      <div class="brand-mark">I</div>
+      <div class="brand-name">IronMan</div>
+    </div>
+    <div class="doc-title">
+      <h1>Weekly numbers</h1>
+      <div class="ref">{{ week_label }}</div>
+    </div>
+  </div>
+
+  <table class="tiles">
+    {% for pair in tile_pairs %}
+    <tr>
+      {% for tile in pair %}
+      <td>
+        <div class="label">{{ tile.label }}</div>
+        {% if tile.restricted %}
+          <div class="value restricted">Founder only</div>
+        {% else %}
+          <div class="value">{{ tile.display }}</div>
+          <div class="detail">{{ tile.delta }}</div>
+          <div class="detail">{{ tile.detail }}</div>
+        {% endif %}
+      </td>
+      {% endfor %}
+    </tr>
+    {% endfor %}
+  </table>
+
+  <div class="footer">
+    <p>Generated {{ generated }} by {{ generated_by }} · {{ hub.name }}.</p>
+    <p>A customer counts as new on their first delivered order. Money made per order excludes fixed costs (rent, salaries, equipment).</p>
+  </div>
+</body>
+</html>

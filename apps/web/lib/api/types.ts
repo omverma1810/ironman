@@ -1336,3 +1336,87 @@ export type MetricRows = {
   value: number | null;
   rows: Record<string, string | number | null>[];
 };
+
+export type ApartmentPerformanceRow = {
+  apartment: string;
+  name: string;
+  cluster: string;
+  days_since_launch: number | null;
+  customers: number;
+  new_customers: number;
+  orders: number;
+  repeat_rate: number | null;
+  aov_minor: number | null;
+  margin_minor?: number;
+  avg_rating: number | null;
+  orders_per_customer: number | null;
+  score: number;
+};
+
+export type ChannelPerformanceRow = {
+  channel: string;
+  channel_name: string;
+  new_customers: number;
+  spend_minor: number;
+  commission_minor: number;
+  cac_minor: number | null;
+  repeat_rate: number | null;
+  revenue_60d_per_customer_minor: number | null;
+};
+
+export type UnitEconomics = {
+  from: string;
+  to: string;
+  orders: number;
+  margin_pct: number | null;
+  steps: { step: string; total_minor: number; per_order_minor: number | null }[];
+};
+
+export type OperationsDaily = {
+  date: string;
+  on_time: { value: number | null; pickup: number | null; delivery: number | null; jobs: number };
+  wip: { status: string; label: string; orders: number; oldest_hours: number; average_hours: number }[];
+  capacity: { slots: number; booked: number; utilisation: number | null };
+  overdue: {
+    order: string;
+    ref: string;
+    customer: string;
+    status: string;
+    promised: string;
+    hours_late: number;
+  }[];
+  open_exceptions: Partial<Record<"LOW" | "MEDIUM" | "HIGH", number>>;
+};
+
+export type Checkpoint = {
+  as_of: string;
+  launched_on: string | null;
+  days_live: number;
+  checkpoint: number;
+  orders: number;
+  customers: number;
+  new_customers: number;
+  orders_per_customer: number | null;
+  aov_minor: number | null;
+  contribution_per_order_minor: number | null;
+  margin_pct: number | null;
+  cohort_repeat_rate: number | null;
+  cohort_size: number;
+  top_apartments: ApartmentPerformanceRow[];
+  channels: ChannelPerformanceRow[];
+  price_versions: { version: number | null; orders: number; avg_order_minor: number | null }[];
+  active_customers_total: number;
+};
+
+export type DataQualityCheck = {
+  key: string;
+  label: string;
+  value: number;
+  threshold: number;
+  ok: boolean;
+  explain: string;
+  rows: Record<string, string | number | null>[];
+  row_count: number;
+};
+
+export type DataQuality = { checked_at: string; failing: number; checks: DataQualityCheck[] };
