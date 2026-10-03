@@ -1304,3 +1304,35 @@ export type ReferralCodeInput = {
   apartment?: string | null;
   code?: string;
 };
+
+// ── Analytics (docs/08 batch 6.2) ────────────────────────────────────────
+export type MetricKey =
+  | "new_customers"
+  | "repeat_customers"
+  | "orders_per_customer"
+  | "acquisition_cost"
+  | "referrals"
+  | "apartments"
+  | "average_order_value"
+  | "contribution"
+  | "on_time"
+  | "feedback";
+
+export type MetricTile = {
+  key: MetricKey;
+  label: string;
+  restricted: boolean;
+  value?: number | null;
+  previous?: number | null;
+  trend?: { week: string; value: number | null }[];
+  [extra: string]: unknown;
+};
+
+export type WeeklyMetrics = { week_start: string; week_end: string; tiles: MetricTile[] };
+
+export type MetricRows = {
+  key: MetricKey;
+  label: string;
+  value: number | null;
+  rows: Record<string, string | number | null>[];
+};
