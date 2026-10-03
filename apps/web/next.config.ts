@@ -17,6 +17,34 @@ const nextConfig: NextConfig = {
   // hand: without this, GET /api/v1/orders/ 308-loops between Next
   // stripping the slash and Django's APPEND_SLASH re-adding it.
   skipTrailingSlashRedirect: true,
+  poweredByHeader: false,
+  // docs/06 §4 (Phase 7.4): browser hardening for every page. The proxied
+  // /api/v1 responses are left alone; Django sets the same headers on them
+  // itself (config/settings/prod.py). No Content-Security-Policy yet: Next's
+  // inline bootstrap scripts need nonces wired through middleware first,
+  // and a CSP that has to allow 'unsafe-inline' protects little.
+  async headers() {
+    return [
+      {
+        source: "/((?!api/).*)",
+        headers: [
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=31536000; includeSubDomains; preload",
+          },
+          // Camera for proof photos and bag scans in the field app; location
+          // only for the optional geotag on a proof (docs/06 §5). Nothing else.
+          {
+            key: "Permissions-Policy",
+            value: "camera=(self), geolocation=(self), microphone=(), payment=(), usb=()",
+          },
+        ],
+      },
+    ];
+  },
   // Console (Vercel) and API (Cloud Run) live on different registrable
   // domains, so every browser request is cross-site — a SameSite=None
   // session/CSRF cookie there is exactly the class of cookie mobile Safari

@@ -10,6 +10,7 @@ import {
   canEditPricing,
   canManageCashCustody,
   canManageOrders,
+  canViewAuditLog,
   canManageGrowthPartners,
   canManageMarketing,
   canManageStaff,
@@ -88,6 +89,12 @@ const NAV: NavItem[] = [
     label: "Notifications",
     icon: "bell",
     show: (roles) => canViewNotificationLog(roles),
+  },
+  {
+    href: "/console/audit",
+    label: "Audit log",
+    icon: "file-text",
+    show: (roles) => canViewAuditLog(roles),
   },
 ];
 

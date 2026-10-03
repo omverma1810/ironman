@@ -123,6 +123,11 @@ export function canManageStaff(roles: Role[] | undefined): boolean {
   return hasRole(roles, "ADMIN", "FOUNDER");
 }
 
+/** docs/06 §3.1 "View audit log" — Admin (own hubs) and Founder. */
+export function canViewAuditLog(roles: Role[] | undefined): boolean {
+  return hasRole(roles, "ADMIN", "FOUNDER");
+}
+
 // docs/04 §3.9 "[A][B]" on `/growth/partners` and `/growth/referral-codes`
 // — onboarding watchmen/influencers and issuing codes is founder/admin
 // config-and-correction territory, the same tier as pricing and commission

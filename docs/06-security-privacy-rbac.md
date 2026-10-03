@@ -112,6 +112,14 @@ handles every garment in the building and must not see what the business charges
 watchmen, or what it earns per order. `00 §3.3 M-6` flagged that SRC-B specified this in one
 sentence with a role list that did not even match its own personas.
 
+> **As built (Phase 7.4).** `apps/api/common/tests/test_rbac_matrix.py` asserts this table cell
+> by cell; `test_idor.py` probes every `{id}` route with a wrong-hub and wrong-customer actor; and
+> `test_security_sweep.py` refuses anonymous access to every route not on a short, reasoned public
+> list. The code is deliberately *stricter* than the table in three places, and never looser:
+> price lists and offers are founder-only (`04 §3.3`), stage scans are hub work (riders move bags
+> through their jobs), and "own cash balance" is the rider's ledger (Admin and Founder use
+> reconciliation).
+
 ### 3.2 Object scoping
 
 Enforced in DRF via a `ScopedQuerysetMixin`, not by remembering to add a filter:

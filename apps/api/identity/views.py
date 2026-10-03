@@ -1,11 +1,18 @@
 from __future__ import annotations
 
+import csv
+import io
+import json
+import uuid
+from datetime import date
+
 import pyotp
 from django.contrib.auth import login as django_login
 from django.contrib.auth import logout as django_logout
+from django.http import HttpResponse
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
-from rest_framework import status
+from rest_framework import generics, status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -18,6 +25,7 @@ from common.errors import ApiError
 from common.permissions import IsAdminOrFounder
 from common.throttles import ScopedRateThrottle
 from identity.models import (
+    AuditEvent,
     EmailVerificationToken,
     OtpChallenge,
     PasswordResetToken,
@@ -29,6 +37,7 @@ from identity.models import (
 )
 from identity.notify import get_otp_sender
 from identity.serializers import (
+    AuditEventSerializer,
     DeleteAccountSerializer,
     EmailVerifyConfirmSerializer,
     MeSerializer,
@@ -471,3 +480,83 @@ class StaffInviteAcceptView(APIView):
 
         audit.record(action="user.invited_and_created", object_type="User", object_id=str(user.id))
         return Response({"created": True, "email": user.email}, status=status.HTTP_201_CREATED)
+
+
+def _audit_queryset(request):
+    """docs/06 §3.3: admins see their own hubs' events, the founder all of
+    them. Events with no hub (sign-ins, account changes) are founder-only."""
+    qs = AuditEvent.objects.select_related("actor").order_by("-created_at")
+    user = request.user
+    if not (user.is_superuser or user.is_unrestricted):
+        qs = qs.filter(hub_id__in=user.hub_scope)
+    params = request.query_params
+    if params.get("action"):
+        qs = qs.filter(action__icontains=params["action"].strip())
+    if params.get("object_type"):
+        qs = qs.filter(object_type=params["object_type"])
+    if params.get("object_id"):
+        qs = qs.filter(object_id=params["object_id"].strip())
+    if params.get("actor"):
+        try:
+            qs = qs.filter(actor_id=uuid.UUID(params["actor"]))
+        except ValueError:
+            return qs.none()
+    for key, lookup in (("from", "created_at__date__gte"), ("to", "created_at__date__lte")):
+        if params.get(key):
+            try:
+                qs = qs.filter(**{lookup: date.fromisoformat(params[key])})
+            except ValueError:
+                raise ApiError(f"'{key}' must be a date (YYYY-MM-DD).", status_code=400) from None
+    return qs
+
+
+@extend_schema(responses={200: AuditEventSerializer(many=True)})
+class AuditLogView(generics.ListAPIView):
+    """GET /identity/audit — docs/06 §3.3, "viewable in the console,
+    filterable by object and by actor, exportable". Filters: action
+    (contains), object_type, object_id, actor, from, to."""
+
+    permission_classes = [IsAdminOrFounder]
+    serializer_class = AuditEventSerializer
+    queryset = AuditEvent.objects.none()
+
+    def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return AuditEvent.objects.none()
+        return _audit_queryset(self.request)
+
+
+@extend_schema(responses={200: OpenApiResponse(description="CSV of the filtered audit log")})
+class AuditLogExportView(APIView):
+    """GET /identity/audit/export.csv — the same filters, as a file."""
+
+    permission_classes = [IsAdminOrFounder]
+    LIMIT = 10_000
+
+    def get(self, request):
+        buffer = io.StringIO()
+        writer = csv.writer(buffer)
+        writer.writerow(
+            ["when", "who", "role", "action", "object_type", "object_id", "before", "after", "ip"]
+        )
+        for event in _audit_queryset(request)[: self.LIMIT]:
+            writer.writerow(
+                [
+                    timezone.localtime(event.created_at).isoformat(),
+                    AuditEventSerializer().get_actor_name(event),
+                    event.actor_role,
+                    event.action,
+                    event.object_type,
+                    event.object_id,
+                    json.dumps(event.before, ensure_ascii=False) if event.before else "",
+                    json.dumps(event.after, ensure_ascii=False) if event.after else "",
+                    event.ip or "",
+                ]
+            )
+        audit.record(
+            action="audit.exported", object_type="AuditEvent", object_id="-", actor=request.user
+        )
+        response = HttpResponse(buffer.getvalue(), content_type="text/csv; charset=utf-8")
+        stamp = timezone.localdate().isoformat()
+        response["Content-Disposition"] = f'attachment; filename="audit-log-{stamp}.csv"'
+        return response

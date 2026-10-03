@@ -83,11 +83,12 @@ def _resolve_hub(request):
     return territory_services.resolve_hub(request)
 
 
-class FeedbackViewSet(viewsets.ModelViewSet):
+class FeedbackViewSet(ScopedQuerysetMixin, viewsets.ModelViewSet):
     """`[C]` a customer submits feedback for their own delivered order;
-    `[A][B]` admin/founder see and moderate all of it (docs/04 — growth).
-    No hub scoping for staff: a founder's "are customers happy" view is
-    explicitly cross-hub (docs/07 §"Customer Feedback")."""
+    `[A][B]` admin/founder see and moderate it (docs/04 — growth). The
+    founder's "are customers happy" view is cross-hub (docs/07 §"Customer
+    Feedback"); an admin sees their own hubs' feedback, like every other
+    hub-scoped record (docs/06 §3.2)."""
 
     queryset = Feedback.objects.filter(deleted_at__isnull=True).select_related("order", "customer")
     serializer_class = FeedbackSerializer
@@ -100,7 +101,9 @@ class FeedbackViewSet(viewsets.ModelViewSet):
         return [IsAdminOrFounder()]
 
     def get_queryset(self):
-        return Feedback.objects.filter(deleted_at__isnull=True).select_related("order", "customer")
+        return self.scope_to_hub(
+            Feedback.objects.filter(deleted_at__isnull=True).select_related("order", "customer")
+        )
 
     def create(self, request, *args, **kwargs):
         serializer = FeedbackCreateSerializer(data=request.data)

@@ -3,7 +3,7 @@ from __future__ import annotations
 from django.contrib.auth import password_validation
 from rest_framework import serializers
 
-from identity.models import Role, User
+from identity.models import AuditEvent, Role, User
 
 
 class RoleSerializer(serializers.ModelSerializer):
@@ -115,3 +115,29 @@ class StaffInviteAcceptSerializer(serializers.Serializer):
     def validate_password(self, value):
         password_validation.validate_password(value)
         return value
+
+
+class AuditEventSerializer(serializers.ModelSerializer):
+    actor_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AuditEvent
+        fields = [
+            "id",
+            "created_at",
+            "actor",
+            "actor_name",
+            "actor_role",
+            "action",
+            "object_type",
+            "object_id",
+            "hub",
+            "before",
+            "after",
+            "ip",
+        ]
+
+    def get_actor_name(self, obj) -> str:
+        if obj.actor is None:
+            return "System"
+        return obj.actor.full_name or obj.actor.email or obj.actor.phone or ""
