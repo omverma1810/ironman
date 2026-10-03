@@ -8,6 +8,11 @@ router.register("growth/feedback", views.FeedbackViewSet, basename="feedback")
 router.register("growth/partners", views.ReferralPartnerViewSet, basename="referral-partner")
 router.register("growth/attributions", views.AttributionViewSet, basename="attribution")
 router.register("growth/referral-codes", views.ReferralCodeViewSet, basename="referral-code")
+router.register("growth/commission-rules", views.CommissionRuleViewSet, basename="commission-rule")
+router.register(
+    "growth/commission-accruals", views.CommissionAccrualViewSet, basename="commission-accrual"
+)
+router.register("growth/settlements", views.SettlementViewSet, basename="settlement")
 
 urlpatterns = [
     path(

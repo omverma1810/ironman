@@ -354,3 +354,45 @@ def test_apply_offline_op_rejects_unknown_op_type(field_user):
         client_ts=timezone.now(),
     )
     assert op.status == OfflineOpStatus.REJECTED
+
+
+def test_complete_delivery_accrues_the_referring_partners_commission(
+    delivery_job, ready_order, ready_order_bag, admin_user, founder_user
+):
+    """docs/08 batch 5.3: a referred customer's delivered order earns the
+    partner who brought them in, with no one having to remember to."""
+    from datetime import date
+
+    from billing.models import OrderCost
+    from growth import commission
+    from growth import services as growth_services
+    from growth.models import Attribution, ChannelCode, CommissionAccrual, PartnerKind
+
+    partner = growth_services.onboard_partner(
+        hub=ready_order.hub, kind=PartnerKind.WATCHMAN, name="Ramesh", phone="9876500003"
+    )
+    Attribution.objects.create(
+        hub=ready_order.hub,
+        customer=ready_order.customer,
+        order=ready_order,
+        channel=growth_services.get_channel(ChannelCode.WATCHMAN),
+        partner=partner,
+        is_first_touch=True,
+        basis="CODE",
+    )
+    commission.create_rule(
+        hub=ready_order.hub,
+        name="Std",
+        basis="PERCENT_OF_ORDER",
+        value=1000,
+        effective_from=date(2026, 1, 1),
+        is_default=True,
+    )
+
+    services.start_job(delivery_job)
+    services.complete_job(delivery_job, bag_codes=[ready_order_bag.code])
+
+    accrual = CommissionAccrual.objects.get(order=ready_order)
+    assert accrual.partner_id == partner.id
+    assert accrual.amount_minor == 300  # 10% of the ₹30 invoice
+    assert OrderCost.objects.filter(order=ready_order, kind="COMMISSION").exists()

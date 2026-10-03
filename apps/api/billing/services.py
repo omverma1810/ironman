@@ -40,6 +40,10 @@ from territory.models import Hub, OrderCostSettings, TaxSettings
 logger = logging.getLogger("ironman.billing")
 
 
+def get_invoice_for_order(order) -> Invoice | None:
+    return Invoice.objects.filter(order=order).first()
+
+
 def get_invoice(ref: str) -> Invoice:
     try:
         return Invoice.objects.get(ref=ref)
@@ -544,6 +548,14 @@ def record_order_cost(
         return None
     return OrderCost.objects.create(
         order=order, kind=kind, amount_minor=amount_minor, source_ref=source_ref
+    )
+
+
+def reverse_order_cost(order, *, kind: str, amount_minor: int, source_ref: str = "") -> OrderCost:
+    """The signed-opposite correction `record_order_cost`'s docstring
+    promises: a negative row, so the waterfall nets the original out."""
+    return OrderCost.objects.create(
+        order=order, kind=kind, amount_minor=-abs(amount_minor), source_ref=source_ref
     )
 
 

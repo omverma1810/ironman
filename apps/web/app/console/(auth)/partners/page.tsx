@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
+import { CommissionRulesPanel } from "@/components/partners/commission-rules-panel";
+import { PartnerCommissionDialog } from "@/components/partners/partner-commission-dialog";
 import { PartnerDialog } from "@/components/partners/partner-dialog";
+import { SettlementsPanel } from "@/components/partners/settlements-panel";
 import { ReferralCodeDialog } from "@/components/partners/referral-code-dialog";
 import { AsyncBoundary } from "@/components/patterns/async-boundary";
 import { DataTable } from "@/components/patterns/data-table";
@@ -20,16 +23,18 @@ import {
   useSetPartnerStatus,
   useSetReferralCodeActive,
 } from "@/lib/api/hooks";
-import { canManageGrowthPartners } from "@/lib/permissions";
-import { formatDate } from "@/lib/format";
+import { canManageCommission, canManageGrowthPartners } from "@/lib/permissions";
+import { formatDate, formatMoneyMinor } from "@/lib/format";
 import type { ReferralCode, ReferralPartner } from "@/lib/api/types";
 
 export default function PartnersPage() {
   const me = useMe();
   const canManage = canManageGrowthPartners(me.data?.roles);
+  const canManageMoney = canManageCommission(me.data?.roles);
 
   const [partnerDialog, setPartnerDialog] = useState<ReferralPartner | "new" | null>(null);
   const [codeDialogPartnerId, setCodeDialogPartnerId] = useState<string | "new" | null>(null);
+  const [commissionPartnerId, setCommissionPartnerId] = useState<string | null>(null);
 
   const partnersQuery = usePartners();
   const codesQuery = useReferralCodes();
@@ -39,6 +44,8 @@ export default function PartnersPage() {
   const partners = partnersQuery.data?.results ?? [];
   const codes = codesQuery.data?.results ?? [];
   const activePartners = partners.filter((p) => p.status === "ACTIVE");
+  // Looked up by id so the dialog follows refetches (a rule change, a settlement).
+  const commissionPartner = partners.find((p) => p.id === commissionPartnerId) ?? null;
 
   if (!canManage) {
     return (
@@ -82,6 +89,20 @@ export default function PartnersPage() {
       ),
     },
     {
+      accessorKey: "payable_minor",
+      header: "Commission",
+      cell: ({ row }) => (
+        <div className="flex flex-col">
+          <span className="text-text-primary tabular-nums">
+            {formatMoneyMinor(row.original.payable_minor)} unpaid
+          </span>
+          <span className="text-xs text-text-muted">
+            {row.original.commission_rule_name || "Hub default rule"}
+          </span>
+        </div>
+      ),
+    },
+    {
       accessorKey: "status",
       header: "Status",
       cell: ({ row }) =>
@@ -102,6 +123,16 @@ export default function PartnersPage() {
         const partner = row.original;
         return (
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                setCommissionPartnerId(partner.id);
+              }}
+            >
+              <Icon name="wallet" /> Commission
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -210,13 +241,15 @@ export default function PartnersPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Partners"
-        description="Watchmen, influencers and other referral partners — and the codes they hand out."
+        description="Watchmen, influencers and other referral partners — their codes, commission and payouts."
       />
 
       <Tabs defaultValue="partners">
         <TabsList>
           <TabsTrigger value="partners">Partners</TabsTrigger>
           <TabsTrigger value="codes">Referral codes</TabsTrigger>
+          <TabsTrigger value="rules">Commission rules</TabsTrigger>
+          <TabsTrigger value="settlements">Settlements</TabsTrigger>
         </TabsList>
 
         <TabsContent value="partners" className="flex flex-col gap-4">
@@ -275,6 +308,21 @@ export default function PartnersPage() {
                     <div className="flex items-center justify-between text-xs text-text-secondary">
                       <span>{row.kind.toLowerCase()}</span>
                       <span>{row.apartment_name || "—"}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-text-primary tabular-nums">
+                        {formatMoneyMinor(row.payable_minor)} unpaid
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCommissionPartnerId(row.id);
+                        }}
+                      >
+                        Commission
+                      </Button>
                     </div>
                   </div>
                 )}
@@ -346,12 +394,26 @@ export default function PartnersPage() {
             )}
           </AsyncBoundary>
         </TabsContent>
+
+        <TabsContent value="rules" className="flex flex-col gap-4">
+          <CommissionRulesPanel canManage={canManageMoney} />
+        </TabsContent>
+
+        <TabsContent value="settlements" className="flex flex-col gap-4">
+          <SettlementsPanel canManage={canManageMoney} />
+        </TabsContent>
       </Tabs>
 
       <PartnerDialog
         partner={partnerDialog === "new" || partnerDialog === null ? null : partnerDialog}
         open={partnerDialog !== null}
         onOpenChange={(open) => !open && setPartnerDialog(null)}
+      />
+      <PartnerCommissionDialog
+        partner={commissionPartner}
+        canManage={canManageMoney}
+        open={commissionPartner !== null}
+        onOpenChange={(open) => !open && setCommissionPartnerId(null)}
       />
       <ReferralCodeDialog
         partners={activePartners}

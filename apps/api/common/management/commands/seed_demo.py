@@ -356,13 +356,16 @@ class Command(BaseCommand):
         self.stdout.write("Seeding cash custody...")
         handover_count = self._seed_cash_custody(hub, field_staff)
 
+        self.stdout.write("Seeding partner commission...")
+        accrual_count = self._seed_commission(hub, founder)
+
         self.stdout.write(
             self.style.SUCCESS(
                 f"Seed complete: 1 hub, 2 clusters, {len(apartments)} apartments, "
                 f"{len(customers)} customers, {created_count} orders, "
                 f"{exception_count} exceptions, {invoice_count} invoices, "
                 f"{handover_count} cash handovers, {credit_count} credit grants, "
-                "4 staff accounts"
+                f"{accrual_count} commission accruals, 4 staff accounts"
                 + (
                     "."
                     if os.environ.get("DEMO_PASSWORD")
@@ -395,6 +398,86 @@ class Command(BaseCommand):
         return create_referral_code(
             hub=hub, owner_partner=partner, code="DEMOWATCH", actor=admin
         ).code
+
+    def _seed_commission(self, hub, founder) -> int:
+        """docs/08 batches 5.3/5.4: the client's decided default (D-01) — a
+        flat ₹30 on a referred customer's first order — as the hub rule,
+        then commission for the demo watchman's delivered referrals, and one
+        settlement left awaiting payment so a Founder can walk the payout
+        end to end.
+        Idempotent: the rule, accruals and settlement are each created once.
+        """
+        from datetime import date
+
+        from growth import commission
+        from growth.models import CommissionRule, ReferralPartner, Settlement
+
+        if not CommissionRule.objects.filter(hub=hub).exists():
+            commission.create_rule(
+                hub=hub,
+                name="Watchman — first order",
+                basis="PER_ORDER",
+                value=3000,
+                applies_to="FIRST_ORDER_ONLY",
+                effective_from=date(2026, 1, 1),
+                is_default=True,
+                actor=founder,
+            )
+        partner = ReferralPartner.objects.filter(hub=hub, name="Ramesh (demo watchman)").first()
+        if partner and partner.commission_rule_id is None:
+            # The demo watchman is on a per-partner override (₹15 on every
+            # order his customers place) so the console shows both kinds of
+            # rule — and so his referrals have earned something to settle.
+            special = commission.create_rule(
+                hub=hub,
+                name="Ramesh — every order",
+                basis="PER_ORDER",
+                value=1500,
+                applies_to="ALL_ORDERS",
+                effective_from=date(2026, 1, 1),
+                actor=founder,
+            )
+            commission.assign_rule(partner, special, actor=founder)
+        if partner and not partner.accruals.exists():
+            self._attach_demo_referrals(hub, partner)
+        commission.backfill_accruals(hub, actor=founder)
+
+        if partner and not Settlement.objects.filter(partner=partner).exists():
+            if commission.partner_balance(partner)["accrued_minor"] > 0:
+                commission.create_settlement(partner, actor=founder)
+        return partner.accruals.count() if partner else 0
+
+    def _attach_demo_referrals(self, hub, partner, count: int = 3) -> None:
+        """Which seeded customers end up with a delivered order is down to
+        the random states above, so the demo watchman may have no delivered
+        referral at all. Record his code on a few delivered orders instead,
+        exactly as `capture_attribution` does when a returning customer
+        types a code at booking (a non-first-touch row)."""
+        from growth.models import Attribution, ChannelCode, ReferralCode
+        from growth.services import get_channel
+
+        code = ReferralCode.objects.filter(owner_partner=partner).first()
+        attributed = Attribution.objects.filter(partner__isnull=False).values_list(
+            "order_id", flat=True
+        )
+        orders = (
+            Order.objects.filter(hub=hub, status__in=[OrderStatus.DELIVERED, OrderStatus.CLOSED])
+            .exclude(pk__in=attributed)
+            .order_by("created_at")[:count]
+        )
+        channel = get_channel(ChannelCode.WATCHMAN)
+        for order in orders:
+            Attribution.objects.create(
+                hub=hub,
+                customer=order.customer,
+                order=order,
+                channel=channel,
+                apartment=order.apartment,
+                partner=partner,
+                referral_code=code,
+                is_first_touch=False,
+                basis="CODE",
+            )
 
     def _seed_customer_credit(self, customers, founder) -> int:
         """docs/08 batch 3.6: gives the credit ledger real rows on first

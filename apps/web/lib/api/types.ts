@@ -1028,6 +1028,99 @@ export type ReferralPartner = {
   onboarded_by: string | null;
   onboarded_by_name: string;
   notes: string;
+  commission_rule: string | null;
+  commission_rule_name: string;
+  /** Earned, not yet in a settlement (paise). */
+  accrued_minor: number;
+  /** Earned and not yet paid, including amounts in a pending settlement. */
+  payable_minor: number;
+  created_at: string;
+};
+
+// ── Commission (docs/08 batches 5.3/5.4) ─────────────────────────────────
+export type CommissionBasis = "PER_ORDER" | "PER_ITEM" | "PERCENT_OF_ORDER" | "FLAT_FIRST_ORDER";
+export type CommissionAppliesTo = "FIRST_ORDER_ONLY" | "ALL_ORDERS" | "FIRST_N_ORDERS";
+
+export type CommissionRule = {
+  id: string;
+  hub: string;
+  name: string;
+  basis: CommissionBasis;
+  /** Paise for fixed bases; basis points (1/100 %) for PERCENT_OF_ORDER. */
+  value: number;
+  applies_to: CommissionAppliesTo;
+  first_n: number | null;
+  cap_minor: number | null;
+  effective_from: string;
+  effective_to: string | null;
+  is_default: boolean;
+  partner_count: number;
+  has_accruals: boolean;
+  created_at: string;
+};
+
+export type CommissionRuleInput = {
+  hub: string;
+  name: string;
+  basis: CommissionBasis;
+  value: number;
+  applies_to: CommissionAppliesTo;
+  first_n?: number | null;
+  cap_minor?: number | null;
+  effective_from?: string;
+  effective_to?: string | null;
+  is_default?: boolean;
+};
+
+export type AccrualStatus = "ACCRUED" | "APPROVED" | "SETTLED" | "VOID";
+
+export type CommissionAccrual = {
+  id: string;
+  hub: string;
+  partner: string;
+  partner_name: string;
+  order: string;
+  order_ref: string;
+  rule: string;
+  rule_name: string;
+  rule_terms: Record<string, unknown>;
+  amount_minor: number;
+  status: AccrualStatus;
+  settlement: string | null;
+  settlement_ref: string;
+  accrued_at: string;
+  void_reason: string;
+};
+
+export type PartnerBalance = {
+  partner: string;
+  accrued_minor: number;
+  in_settlement_minor: number;
+  payable_minor: number;
+  paid_minor: number;
+  void_minor: number;
+};
+
+export type SettlementStatus = "PENDING" | "PAID" | "CANCELLED";
+export type PayoutMethod = "UPI" | "CASH" | "BANK";
+
+export type Settlement = {
+  id: string;
+  hub: string;
+  ref: string;
+  partner: string;
+  partner_name: string;
+  partner_upi_id: string;
+  period_start: string | null;
+  period_end: string;
+  total_minor: number;
+  status: SettlementStatus;
+  paid_at: string | null;
+  payment_method: string;
+  payment_ref: string;
+  approved_by: string | null;
+  approved_by_name: string;
+  accrual_count: number;
   created_at: string;
 };
 

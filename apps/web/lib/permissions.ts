@@ -131,6 +131,17 @@ export function canManageGrowthPartners(roles: Role[] | undefined): boolean {
   return hasRole(roles, ...MONEY_ROLES);
 }
 
+// docs/06 §2: Admin and Founder can see commission rules, balances and
+// settlements; only a Founder edits rules, runs a settlement, marks one
+// paid or voids commission.
+export function canViewCommission(roles: Role[] | undefined): boolean {
+  return hasRole(roles, "ADMIN", "FOUNDER");
+}
+
+export function canManageCommission(roles: Role[] | undefined): boolean {
+  return hasRole(roles, "FOUNDER");
+}
+
 // docs/06 §3.1 "[A]" tag on route-day planning — Operator is not in this
 // row, unlike most ops-console screens (deliberately narrower than
 // canManageOrders).
