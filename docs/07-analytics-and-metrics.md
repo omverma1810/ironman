@@ -216,6 +216,14 @@ Rationale (ADR-011): every founder query then reads a table with a few thousand 
 returns them in single-digit milliseconds, the dashboard has no cold path, and there is no second
 data store to operate. At ~36k orders/year a warehouse would be equipment for its own sake.
 
+> **Pilot implementation (docs/08 batch 6.2):** the ten numbers are computed live for any
+> window by `apps/api/analytics/metrics.py` rather than read from these tables. At pilot volume
+> a week is a few hundred rows (the full weekly dashboard with eight-week trends is ~230 queries,
+> well under a second), production has no background worker to run nightly jobs, and live
+> figures are never a night stale. Each metric computes its tile and its drill-down rows from the
+> same queryset, so they cannot disagree. The window functions are the seam a rollup can cache
+> behind once volume calls for it, without changing any caller.
+
 **Backfill and correction:** rollups are idempotent per date and re-runnable. Late-arriving facts
 (an offline sync landing next morning, a customer merge, a credit note) trigger a re-run of the
 affected dates. A metric that silently disagrees with its own drill-down is worse than no metric,

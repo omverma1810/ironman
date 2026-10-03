@@ -20,6 +20,7 @@ import {
   referralProgramApi,
   marketingApi,
   reengagementApi,
+  analyticsApi,
   attributionsApi,
   referralCodesApi,
   requotesApi,
@@ -61,6 +62,7 @@ import type {
   ReferralProgramInput,
   CampaignInput,
   SpendInput,
+  MetricKey,
   PayoutMethod,
   SetPriceLinesInput,
   StockAdjustmentInput,
@@ -1763,5 +1765,23 @@ export function useSendReengagement() {
       );
     },
     onError: (err) => errorToast(err, "Couldn't send the messages."),
+  });
+}
+
+// ── Analytics: founders' weekly numbers (docs/08 batch 6.2) ──────────────
+export function useWeeklyMetrics(params: { week: string; hub?: string }) {
+  return useQuery({
+    queryKey: ["analytics-weekly", params],
+    queryFn: () => analyticsApi.weekly(params),
+    enabled: !!params.hub,
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useMetricRows(key: MetricKey | null, params: { week: string; hub?: string }) {
+  return useQuery({
+    queryKey: ["analytics-rows", key, params],
+    queryFn: () => analyticsApi.rows(key as MetricKey, params),
+    enabled: !!key && !!params.hub,
   });
 }

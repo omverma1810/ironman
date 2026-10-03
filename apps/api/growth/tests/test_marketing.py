@@ -7,6 +7,7 @@ from datetime import date, timedelta
 
 import pytest
 from django.utils import timezone
+from freezegun import freeze_time
 
 from common.errors import ApiError
 from customers.models import Customer
@@ -17,7 +18,17 @@ from ordering.models import Order, OrderStatus
 
 pytestmark = pytest.mark.django_db
 
-TODAY = timezone.localdate()
+# A fixed midday-IST instant: "today" must not move under a test, and a
+# run that straddles IST midnight would otherwise compare windows built on
+# two different days.
+NOW = "2026-10-07 06:30:00+00:00"
+TODAY = date(2026, 10, 7)
+
+
+@pytest.fixture(autouse=True)
+def frozen_clock():
+    with freeze_time(NOW):
+        yield
 
 
 def _customer(hub, n):

@@ -68,6 +68,9 @@ import type {
   ReferralPartner,
   ReferralPartnerInput,
   AcquisitionCost,
+  MetricKey,
+  MetricRows,
+  WeeklyMetrics,
   LapsedCustomer,
   ReengagementResult,
   Campaign,
@@ -679,4 +682,15 @@ export const platformApi = {
     apiFetch<{ roles: { code: string; label: string }[]; currency: string }>(
       "/platform/config"
     ),
+};
+
+export const analyticsApi = {
+  weekly: (params: { week?: string; hub?: string }) =>
+    apiFetch<WeeklyMetrics>("/analytics/weekly", { params }),
+  rows: (key: MetricKey, params: { week?: string; hub?: string }) =>
+    apiFetch<MetricRows>(`/analytics/weekly/${key}/rows`, { params }),
+  excelUrl: (params: { week?: string; hub?: string }) =>
+    buildApiUrl("/analytics/weekly/export.xlsx", params),
+  csvUrl: (key: MetricKey, params: { week?: string; hub?: string }) =>
+    buildApiUrl(`/analytics/weekly/${key}/export.csv`, params),
 };

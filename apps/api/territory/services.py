@@ -61,6 +61,34 @@ def default_hub():
     return Hub.objects.order_by("created_at").first()
 
 
+def resolve_hub(request):
+    """The hub a request is about: `?hub=` if given and the caller may see
+    it (else not-found, never forbidden — no probing), otherwise the
+    caller's own hub; founders, who span every hub, get the first one."""
+    import uuid
+
+    from common.errors import ApiError
+
+    user = request.user
+    unrestricted = user.is_superuser or user.is_unrestricted
+    hub_id = request.query_params.get("hub")
+    if hub_id:
+        try:
+            hub_id = uuid.UUID(hub_id)
+        except ValueError as exc:
+            raise ApiError("Not found.", code="not_found", status_code=404) from exc
+        if not (unrestricted or hub_id in user.hub_scope):
+            raise ApiError("Not found.", code="not_found", status_code=404)
+        hub = Hub.objects.filter(pk=hub_id).first()
+    elif unrestricted or not user.hub_scope:
+        hub = default_hub()
+    else:
+        hub = Hub.objects.filter(pk=sorted(user.hub_scope, key=str)[0]).first()
+    if hub is None:
+        raise ApiError("No hub is set up yet.", code="not_found", status_code=404)
+    return hub
+
+
 def get_apartment(apartment_id):
     return Apartment.objects.get(pk=apartment_id) if apartment_id else None
 

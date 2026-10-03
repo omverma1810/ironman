@@ -1,4 +1,3 @@
-import uuid
 from datetime import timedelta
 
 from django.db.models import Q, Sum
@@ -81,24 +80,7 @@ def _check_hub_access(user, hub_id) -> None:
 
 
 def _resolve_hub(request):
-    """`?hub=` if given (and the caller may see it), else the caller's own
-    hub — founders, who span every hub, get the first one."""
-    hub_id = request.query_params.get("hub")
-    if hub_id:
-        try:
-            hub_id = uuid.UUID(hub_id)
-        except ValueError as exc:
-            raise ApiError("Not found.", code="not_found", status_code=404) from exc
-        _check_hub_access(request.user, hub_id)
-        return territory_services.get_hub(hub_id)
-    hub_ids = request.user.hub_scope
-    if request.user.is_superuser or request.user.is_unrestricted or not hub_ids:
-        hub = territory_services.default_hub()
-    else:
-        hub = territory_services.get_hub(sorted(hub_ids, key=str)[0])
-    if hub is None:
-        raise ApiError("No hub is set up yet.", code="not_found", status_code=404)
-    return hub
+    return territory_services.resolve_hub(request)
 
 
 class FeedbackViewSet(viewsets.ModelViewSet):
