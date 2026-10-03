@@ -4,13 +4,13 @@ import { Icon } from "@/components/icons/icon";
 /**
  * Privacy notice (docs/08 batch 4.7; docs/00 G-13 — the system collects
  * phone numbers, home addresses and doorstep photos, which the India DPDP
- * Act 2023 requires be disclosed). This is the disclosure half of G-13
- * only: consent capture, retention jobs and self-serve account deletion
- * are Phase 7.5's scope, not built yet — this page says so plainly rather
- * than implying a request tool that doesn't exist.
+ * Act 2023 requires be disclosed). The retention periods below are the
+ * ones `privacy.retention` enforces nightly, and the self-serve export and
+ * deletion live under My account → Privacy (docs/08 batch 7.5) — keep the
+ * three in step.
  */
 
-const LAST_UPDATED = "17 September 2026";
+const LAST_UPDATED = "3 October 2026";
 
 export default function PrivacyPage() {
   return (
@@ -47,13 +47,12 @@ export default function PrivacyPage() {
             </Li>
             <Li>
               Order details: the service and garments booked, counts declared and verified at
-              intake, pickup/delivery time slots, and any notes or exceptions raised about an
-              order.
+              intake, pickup/delivery time slots, and any notes or exceptions raised about an order.
             </Li>
             <Li>
               Billing information: invoice amounts, GST details where applicable, and the payment
-              method and amount you pay at the door (cash or UPI today — no card or bank details
-              are collected by us).
+              method and amount you pay at the door (cash or UPI today — no card or bank details are
+              collected by us).
             </Li>
             <Li>
               Delivery proof, such as a photo at your doorstep or an OTP confirming handover, kept
@@ -74,7 +73,10 @@ export default function PrivacyPage() {
             <Li>Send you the right update on the right channel at each stage of your order.</Li>
             <Li>Issue invoices and keep the financial records the law requires us to keep.</Li>
             <Li>Investigate and resolve a lost, damaged or disputed order.</Li>
-            <Li>Improve the service — for example, understanding a low rating quickly enough to fix it.</Li>
+            <Li>
+              Improve the service — for example, understanding a low rating quickly enough to fix
+              it.
+            </Li>
           </ul>
         </Section>
 
@@ -90,37 +92,59 @@ export default function PrivacyPage() {
 
         <Section title="How long we keep it">
           <p>
-            Order and invoice records are kept for as long as applicable tax and business-record
-            law requires. Delivery-proof photos and messaging logs are kept against the order they
-            belong to, for as long as we may reasonably need them to resolve a dispute about that
-            order. We are still building the automated retention and deletion jobs that will
-            enforce these periods precisely (see the &ldquo;Your rights&rdquo; section below in the
-            meantime).
+            Order, invoice and payment records are kept for eight years, as Indian tax law requires.
+            Everything else is removed automatically every night once its period ends:
           </p>
+          <ul className="flex flex-col gap-2">
+            <Li>
+              Delivery-proof photos: 180 days (longer only while a complaint about that order is
+              still open).
+            </Li>
+            <Li>
+              The content of messages we sent you: 90 days. The record that a message was sent
+              stays.
+            </Li>
+            <Li>One-time sign-in codes: 30 days.</Li>
+          </ul>
         </Section>
 
         <Section title="Your rights">
           <p>
-            Under the Digital Personal Data Protection Act, 2023, you can ask us what personal
-            data we hold about you, ask us to correct it, or ask us to delete it (subject to
-            records we are legally required to keep, such as invoices). A self-serve request tool
-            is planned but not live yet — until then, reach us using the contact details below and
-            we will handle your request by hand.
+            Under the Digital Personal Data Protection Act, 2023, you can see the personal data we
+            hold about you, correct it, and delete it. Sign in to{" "}
+            <Link href="/account" className="underline underline-offset-2 hover:text-text-primary">
+              My account
+            </Link>
+            :
+          </p>
+          <ul className="flex flex-col gap-2">
+            <Li>Profile and Addresses let you correct your details.</Li>
+            <Li>Privacy → Download my data gives you a copy of everything we hold about you.</Li>
+            <Li>
+              Privacy → Delete my account closes your account at once and removes your name, phone
+              number, flat number and delivery photos after 7 days. Until then you can change your
+              mind by signing in again. Invoices and payments are kept, without your name, for as
+              long as the law requires.
+            </Li>
+          </ul>
+          <p>
+            An account can&rsquo;t be deleted while an order is in progress, a bill is unpaid or a
+            complaint is open; the screen tells you which one to settle first.
           </p>
         </Section>
 
         <Section title="Security">
           <p>
             Access to your data inside IronMan is role-based: only the staff whose job needs it can
-            see it, sensitive actions are logged, and every operational record is scoped to the
-            hub that serves you.
+            see it, sensitive actions are logged, and every operational record is scoped to the hub
+            that serves you.
           </p>
         </Section>
 
         <Section title="Changes to this notice">
           <p>
-            If we change what we collect or why, we will update this page and change the date at
-            the top.
+            If we change what we collect or why, we will update this page and change the date at the
+            top.
           </p>
         </Section>
 
@@ -141,7 +165,10 @@ export default function PrivacyPage() {
       <footer className="flex flex-col items-center gap-3 border-t border-border-default p-6 text-xs text-text-muted sm:flex-row sm:justify-between sm:px-10">
         <span>&copy; {new Date().getFullYear()} IronMan. All rights reserved.</span>
         <div className="flex items-center gap-4">
-          <Link href="/terms" className="underline-offset-2 hover:text-text-secondary hover:underline">
+          <Link
+            href="/terms"
+            className="underline-offset-2 hover:text-text-secondary hover:underline"
+          >
             Terms of service
           </Link>
           <Link href="/" className="underline-offset-2 hover:text-text-secondary hover:underline">

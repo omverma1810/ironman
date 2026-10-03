@@ -16,6 +16,9 @@ class Customer(HubScopedModel):
         ACTIVE = "ACTIVE", "Active"
         LAPSED = "LAPSED", "Lapsed"
         BLOCKED = "BLOCKED", "Blocked"
+        # Anonymised after an account deletion (docs/06 §6): the row stays
+        # so orders and invoices keep pointing somewhere.
+        DELETED = "DELETED", "Deleted"
 
     user = models.OneToOneField(
         "identity.User",

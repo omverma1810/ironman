@@ -1420,3 +1420,19 @@ export type DataQualityCheck = {
 };
 
 export type DataQuality = { checked_at: string; failing: number; checks: DataQualityCheck[] };
+
+// ── Privacy (docs/06 §5–6) ─────────────────────────────────────────────
+
+export type DeletionBlocker = { code: string; message: string; refs: string[] };
+
+export type DeletionCheck = {
+  can_delete: boolean;
+  blockers: DeletionBlocker[];
+  grace_days: number;
+};
+
+export type DeletionScheduled = {
+  status: "PENDING" | "CANCELLED" | "COMPLETED";
+  requested_at: string;
+  scheduled_for: string;
+};

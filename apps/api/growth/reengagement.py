@@ -43,7 +43,7 @@ def lapsed_customers(hub, *, days: int | None = None, one_time_only: bool = Fals
     cutoff = timezone.now() - timedelta(days=days)
     customers = (
         Customer.objects.filter(hub=hub, deleted_at__isnull=True)
-        .exclude(status=Customer.Status.BLOCKED)
+        .exclude(status__in=[Customer.Status.BLOCKED, Customer.Status.DELETED])
         .annotate(
             delivered_orders=Count("orders", filter=Q(orders__status__in=_DONE)),
             open_orders=Count(

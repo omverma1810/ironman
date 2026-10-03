@@ -56,6 +56,7 @@ LOCAL_APPS = [
     "notifications",
     "growth",
     "analytics",
+    "privacy",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -291,6 +292,18 @@ IRONMAN = {
     # Only `config.settings.test` turns it on; every other environment
     # doesn't even route the URL.
     "EXPOSE_OTP_DEBUG_ENDPOINT": False,
+    # docs/06 §6: a deleted account is deactivated at once and anonymised
+    # after this grace period, during which the customer can change their
+    # mind by signing in again or following the link we send them.
+    "DELETION_GRACE_DAYS": 7,
+    # docs/06 §5 retention, enforced by `privacy.retention.run` nightly.
+    # Audit (7 years) and financial records (8 years) outlive the pilot, so
+    # nothing purges them yet.
+    "RETENTION_DAYS": {
+        "proof_photos": 180,
+        "notification_payloads": 90,
+        "otp_records": 30,
+    },
 }
 
 LOGGING = {

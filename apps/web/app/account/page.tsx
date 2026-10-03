@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { PrivacyPanel } from "@/components/account/privacy-panel";
 import { Icon } from "@/components/icons/icon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -92,9 +93,18 @@ function LoginForm() {
   async function handleVerify() {
     setVerifying(true);
     try {
-      await auth.verifyOtp(normalizedPhone(phone), code, fullName || undefined);
-    } catch {
-      toast.error("That code is incorrect or has expired.");
+      const { restored } = await auth.verifyOtp(
+        normalizedPhone(phone),
+        code,
+        fullName || undefined
+      );
+      if (restored) toast.success("Welcome back. Your account will not be deleted.");
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError && err.code === "account_disabled"
+          ? err.message
+          : "That code is incorrect or has expired."
+      );
     } finally {
       setVerifying(false);
     }
@@ -145,11 +155,12 @@ function Dashboard() {
   const auth = useCustomerAuth();
   return (
     <Tabs defaultValue="orders">
-      <TabsList>
+      <TabsList className="max-w-full justify-start overflow-x-auto">
         <TabsTrigger value="orders">Orders</TabsTrigger>
         <TabsTrigger value="addresses">Addresses</TabsTrigger>
         <TabsTrigger value="refer">Refer &amp; earn</TabsTrigger>
         <TabsTrigger value="profile">Profile</TabsTrigger>
+        <TabsTrigger value="privacy">Privacy</TabsTrigger>
       </TabsList>
       <TabsContent value="orders">
         <OrdersTab accessToken={auth.accessToken as string} />
@@ -162,6 +173,9 @@ function Dashboard() {
       </TabsContent>
       <TabsContent value="profile">
         <ProfileTab />
+      </TabsContent>
+      <TabsContent value="privacy">
+        <PrivacyPanel />
       </TabsContent>
     </Tabs>
   );

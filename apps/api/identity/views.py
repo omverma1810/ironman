@@ -12,6 +12,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
 import customers.services as customers_services
+import privacy.services as privacy_services
 from common import audit
 from common.errors import ApiError
 from common.permissions import IsAdminOrFounder
@@ -28,6 +29,7 @@ from identity.models import (
 )
 from identity.notify import get_otp_sender
 from identity.serializers import (
+    DeleteAccountSerializer,
     EmailVerifyConfirmSerializer,
     MeSerializer,
     MeUpdateSerializer,
@@ -103,6 +105,21 @@ class OtpVerifyView(APIView):
                 "phone_verified_at": timezone.now(),
             },
         )
+        # docs/06 §6: signing in during the deletion grace period is how a
+        # customer changes their mind. Any other deactivated account stays out.
+        restored = False
+        if not user.is_active:
+            pending = privacy_services.pending_request(user)
+            if not pending:
+                raise ApiError(
+                    "This account has been closed. Contact IronMan support if this is a mistake.",
+                    code="account_disabled",
+                    status_code=403,
+                )
+            privacy_services.cancel_deletion(pending, via="sign_in")
+            user.refresh_from_db()
+            restored = True
+
         if not created and not user.phone_verified_at:
             user.phone_verified_at = timezone.now()
             user.save(update_fields=["phone_verified_at"])
@@ -127,7 +144,9 @@ class OtpVerifyView(APIView):
         customers_services.link_existing_customer(user)
 
         tokens = _issue_jwt_pair(user)
-        return Response({**tokens, "user": MeSerializer(user).data, "created": created})
+        return Response(
+            {**tokens, "user": MeSerializer(user).data, "created": created, "restored": restored}
+        )
 
 
 @extend_schema(exclude=True)
@@ -234,6 +253,12 @@ class RefreshView(APIView):
     get=extend_schema(responses={200: MeSerializer}),
     patch=extend_schema(request=MeUpdateSerializer, responses={200: MeSerializer}),
 )
+@extend_schema_view(
+    delete=extend_schema(
+        request=DeleteAccountSerializer,
+        responses={202: OpenApiResponse(description="Deletion scheduled")},
+    )
+)
 class MeView(APIView):
     def get(self, request):
         return Response(MeSerializer(request.user).data)
@@ -243,6 +268,25 @@ class MeView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(MeSerializer(request.user).data)
+
+    def delete(self, request):
+        """DELETE /me — docs/06 §6. Needs a fresh OTP (`code`); refuses with
+        the reasons while an order, unpaid invoice or open issue remains."""
+        serializer = DeleteAccountSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        deletion = privacy_services.request_deletion(
+            request.user,
+            code=serializer.validated_data["code"],
+            reason=serializer.validated_data.get("reason", ""),
+        )
+        return Response(
+            {
+                "status": deletion.status,
+                "requested_at": deletion.requested_at,
+                "scheduled_for": deletion.scheduled_for,
+            },
+            status=status.HTTP_202_ACCEPTED,
+        )
 
 
 @extend_schema(responses={200: StaffSerializer(many=True)})

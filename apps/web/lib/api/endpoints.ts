@@ -24,6 +24,8 @@ import type {
   Customer,
   CustomerCredit,
   CustomerDetail,
+  DeletionCheck,
+  DeletionScheduled,
   Feedback,
   FeedbackInput,
   GarmentLine,
@@ -130,7 +132,7 @@ export const authApi = {
       body: { phone, purpose },
     }),
   otpVerify: (phone: string, code: string, full_name?: string) =>
-    apiFetch<{ access: string; refresh: string; user: Me; created: boolean }>(
+    apiFetch<{ access: string; refresh: string; user: Me; created: boolean; restored?: boolean }>(
       "/auth/otp/verify",
       { method: "POST", body: { phone, code, full_name } }
     ),
@@ -718,4 +720,15 @@ export const analyticsApi = {
     buildApiUrl("/analytics/weekly/export.xlsx", params),
   csvUrl: (key: MetricKey, params: { week?: string; hub?: string }) =>
     buildApiUrl(`/analytics/weekly/${key}/export.csv`, params),
+};
+
+// ── Privacy (docs/06 §5–6) ─────────────────────────────────────────────
+export const privacyApi = {
+  deletionCheck: (accessToken: string) =>
+    apiFetch<DeletionCheck>("/me/deletion", { accessToken }),
+  deleteAccount: (input: { code: string; reason?: string }, accessToken: string) =>
+    apiFetch<DeletionScheduled>("/me", { method: "DELETE", body: input, accessToken }),
+  exportData: (accessToken: string) => apiFetch<unknown>("/me/export", { accessToken }),
+  restore: (token: string) =>
+    apiFetch<{ restored: boolean }>("/privacy/restore", { method: "POST", body: { token } }),
 };

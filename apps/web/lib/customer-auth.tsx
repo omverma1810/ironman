@@ -16,7 +16,7 @@ type CustomerAuthState = {
   accessToken: string | null;
   isLoading: boolean;
   requestOtp: (phone: string) => Promise<void>;
-  verifyOtp: (phone: string, code: string, fullName?: string) => Promise<void>;
+  verifyOtp: (phone: string, code: string, fullName?: string) => Promise<{ restored: boolean }>;
   refreshMe: () => Promise<void>;
   logout: () => void;
 };
@@ -51,6 +51,7 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
     setSession({ access: response.access, refresh: response.refresh }, response.user);
     setUser(response.user);
     setAccessToken(response.access);
+    return { restored: Boolean(response.restored) };
   }
 
   async function refreshMe() {

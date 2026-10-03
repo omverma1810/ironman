@@ -125,6 +125,10 @@ def reward_for_order(order, *, actor=None) -> CustomerReferralReward | None:
         return None
     if prior_order_count(order) != 0:
         return None  # only the friend's first order qualifies
+    from privacy import services as privacy_services
+
+    if privacy_services.was_deleted(referee.phone):
+        return None  # deleted and re-registered: not a new friend (docs/06 §6)
     program = get_program(order.hub)
     if not program.is_active or order_value_minor(order) < program.min_order_minor:
         return None

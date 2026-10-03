@@ -1,0 +1,48 @@
+name: Nightly maintenance
+
+# docs/06 §5: "a nightly job enforces retention; retention is code, not
+# policy prose". The pilot runs no worker or scheduler process, so GitHub
+# Actions is the clock: it calls POST /internal/maintenance, which applies
+# the retention windows and completes account deletions whose 7-day grace
+# period has ended (privacy/retention.py).
+#
+# No extra credential to provision: the request carries
+# HMAC(DJANGO_SECRET_KEY, "ironman-maintenance:<UTC date>"), which the API
+# recomputes. A failed run fails this job, and GitHub emails the repo owner.
+on:
+  schedule:
+    - cron: "47 20 * * *" # 02:17 IST, the quietest hour
+  workflow_dispatch: {}
+
+concurrency:
+  group: nightly-maintenance
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  maintenance:
+    name: Retention and account deletions
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 10
+    steps:
+      - name: Call the maintenance endpoint
+        env:
+          SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+          # The console's own /api/v1 proxy (next.config.ts rewrites), unless
+          # a repo variable points somewhere else.
+          API_BASE: ${{ vars.MAINTENANCE_API_BASE_URL || 'https://console.ironmanindia.co/api/v1' }}
+        run: |
+          if [ -z "$SECRET_KEY" ]; then
+            echo "::error::DJANGO_SECRET_KEY is not available to this workflow."
+            exit 1
+          fi
+          DAY=$(date -u +%F)
+          SIGNATURE=$(printf 'ironman-maintenance:%s' "$DAY" \
+            | openssl dgst -sha256 -hmac "$SECRET_KEY" -r | cut -d' ' -f1)
+          curl --fail-with-body --silent --show-error --retry 3 --retry-delay 20 \
+            --max-time 120 -X POST \
+            -H "X-Maintenance-Signature: $SIGNATURE" \
+            "$API_BASE/internal/maintenance"
