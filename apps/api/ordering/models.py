@@ -53,9 +53,9 @@ class Channel(models.TextChoices):
 
 
 def _order_ref() -> str:
-    now = timezone.localtime()
-    seq = Order.objects.filter(created_at__year=now.year, created_at__month=now.month).count() + 1
-    return f"ORD-{now:%y%m}-{seq:04d}"
+    from common.sequences import next_ref
+
+    return next_ref("ORD", Order)
 
 
 class Order(HubScopedModel):

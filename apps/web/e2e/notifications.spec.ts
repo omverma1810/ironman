@@ -40,9 +40,13 @@ test.describe("Notification delivery log", () => {
     await expect(page.getByText("recipient_not_allowlisted").first()).toBeVisible();
 
     await page.getByPlaceholder("Search by order ref…").fill(seeded.order_ref);
-    await expect(page.getByRole("cell", { name: seeded.order_ref })).toBeVisible();
+    await expect(page.getByRole("cell", { name: seeded.order_ref }).first()).toBeVisible();
+    // Every row left is that order's. Not a fixed count: the newest log entry
+    // can belong to an order another parallel test just created, which may
+    // pick up a second message (scheduled, then assigned) while this runs.
     const rows = page.locator("table tbody tr");
-    await expect(rows).toHaveCount(1);
+    await expect(rows.filter({ hasNotText: seeded.order_ref })).toHaveCount(0);
+    expect(await rows.count()).toBeGreaterThan(0);
   });
 
   test("field staff see the ops-only restricted state, not the real log", async ({ page }) => {

@@ -53,9 +53,9 @@ class HandoverStatus(models.TextChoices):
 
 
 def _invoice_ref() -> str:
-    now = timezone.localtime()
-    seq = Invoice.objects.filter(created_at__year=now.year, created_at__month=now.month).count() + 1
-    return f"INV-{now:%y%m}-{seq:04d}"
+    from common.sequences import next_ref
+
+    return next_ref("INV", Invoice)
 
 
 def _invoice_pdf_path(instance: "Invoice", filename: str) -> str:

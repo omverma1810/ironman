@@ -6,6 +6,11 @@ from django.urls import include, path, re_path
 from django.views.static import serve as serve_static
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
+# docs/06 §4: Django Admin is for superusers only. Every console account is
+# also `is_staff` (Django's flag for "may log in to admin"), so without this
+# any invited rider could sign in to /admin.
+admin.site.has_permission = lambda request: (request.user.is_active and request.user.is_superuser)
+
 api_v1_patterns = [
     path("", include("identity.urls")),
     path("", include("platform_core.urls")),

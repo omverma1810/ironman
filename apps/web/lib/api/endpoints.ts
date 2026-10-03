@@ -106,6 +106,8 @@ import type {
   Service,
   SetPriceLinesInput,
   Staff,
+  StaffInvite,
+  StaffRole,
   StageEvent,
   StockAdjustmentInput,
   StockItem,
@@ -113,6 +115,8 @@ import type {
   StockLevel,
   StockMovement,
   StockReceiptInput,
+  Team,
+  TeamMember,
   WipSummary,
   UninvoicedDelivery,
 } from "./types";
@@ -159,6 +163,23 @@ export const identityApi = {
   audit: (params?: AuditLogParams) =>
     apiFetch<Paginated<AuditEventRow>>("/identity/audit", { params }),
   auditCsvUrl: (params?: AuditLogParams) => buildApiUrl("/identity/audit/export.csv", params),
+  team: () => apiFetch<Team>("/identity/team"),
+  invite: (input: { email: string; role: StaffRole; hub: string | null }) =>
+    apiFetch<StaffInvite>("/identity/team/invites", { method: "POST", body: input }),
+  revokeInvite: (id: string) =>
+    apiFetch<void>(`/identity/team/invites/${id}`, { method: "DELETE" }),
+  changeRole: (userId: string, input: { role: StaffRole; hub: string | null }) =>
+    apiFetch<TeamMember>(`/identity/team/${userId}/role`, { method: "POST", body: input }),
+  setActive: (userId: string, active: boolean, reason?: string) =>
+    apiFetch<TeamMember>(`/identity/team/${userId}/${active ? "reactivate" : "deactivate"}`, {
+      method: "POST",
+      body: { reason },
+    }),
+  acceptInvite: (input: { token: string; full_name: string; password: string }) =>
+    apiFetch<{ created: boolean; email: string }>("/auth/invite/accept", {
+      method: "POST",
+      body: input,
+    }),
 };
 
 // ── Territory ──────────────────────────────────────────────────────────

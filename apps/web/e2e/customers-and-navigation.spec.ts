@@ -35,16 +35,14 @@ test.describe("Navigation & error states", () => {
     await page.waitForURL("**/console");
   });
 
-  test("phase-2+ stub pages render an honest coming-soon state, not a dead link", async ({
+  test("staff management is admin-only, with its own restricted state for anyone else", async ({
     page,
   }) => {
     await loginAs(page, DEMO_USERS.operator);
     // Staff's nav link is admin/founder-only (lib/permissions.ts's
-    // canManageStaff), but the page itself carries no RBAC guard of its
-    // own — go straight there rather than via a link an operator can't see.
+    // canManageStaff); go straight to the page to check its own guard.
     await page.goto("/console/staff");
-    await expect(page.getByText(/staff management/i)).toBeVisible();
-    await expect(page.getByText(/phase 2 —/i)).toBeVisible();
+    await expect(page.getByText("Admin and Founder only")).toBeVisible();
   });
 
   test("pricing is founder-only, with its own restricted state for anyone else", async ({

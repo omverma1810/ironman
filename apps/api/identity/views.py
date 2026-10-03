@@ -11,7 +11,12 @@ from django.contrib.auth import login as django_login
 from django.contrib.auth import logout as django_logout
 from django.http import HttpResponse
 from django.utils import timezone
-from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
+from drf_spectacular.utils import (
+    OpenApiResponse,
+    extend_schema,
+    extend_schema_view,
+    inline_serializer,
+)
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -24,6 +29,7 @@ from common import audit
 from common.errors import ApiError
 from common.permissions import IsAdminOrFounder
 from common.throttles import ScopedRateThrottle
+from identity import team
 from identity.models import (
     AuditEvent,
     EmailVerificationToken,
@@ -47,8 +53,14 @@ from identity.serializers import (
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
     StaffInviteAcceptSerializer,
+    StaffInviteCreatedSerializer,
+    StaffInviteCreateSerializer,
+    StaffInviteSerializer,
     StaffLoginSerializer,
     StaffSerializer,
+    TeamActiveSerializer,
+    TeamMemberSerializer,
+    TeamRoleChangeSerializer,
 )
 
 
@@ -463,20 +475,20 @@ class StaffInviteAcceptView(APIView):
                 status_code=400,
             )
 
+        # Accepting a single-use invite an admin sent to this person counts as
+        # verifying the address. Staff login requires a verified email, and
+        # with no email provider connected a separate verification mail would
+        # never arrive, leaving every invited account unable to sign in.
         user = User.objects.create_user(
             email=invite.email,
             password=serializer.validated_data["password"],
             full_name=serializer.validated_data["full_name"],
             is_staff=True,
+            email_verified_at=timezone.now(),
         )
         UserRole.objects.create(user=user, role=invite.role, hub=invite.hub)
         invite.accepted_at = timezone.now()
         invite.save(update_fields=["accepted_at"])
-
-        token = EmailVerificationToken.objects.create(
-            user=user, expires_at=timezone.now() + timezone.timedelta(hours=72)
-        )
-        get_otp_sender().send(phone=user.email, code=token.token, purpose="EMAIL_VERIFY")
 
         audit.record(action="user.invited_and_created", object_type="User", object_id=str(user.id))
         return Response({"created": True, "email": user.email}, status=status.HTTP_201_CREATED)
@@ -560,3 +572,119 @@ class AuditLogExportView(APIView):
         stamp = timezone.localdate().isoformat()
         response["Content-Disposition"] = f'attachment; filename="audit-log-{stamp}.csv"'
         return response
+
+
+# ----------------------------------------------------------- staff management
+
+
+def _hub_or_none(hub_id):
+    if not hub_id:
+        return None
+    from territory import services as territory_services
+
+    try:
+        return territory_services.get_hub(hub_id)
+    except Exception:  # noqa: BLE001 — Hub.DoesNotExist, without importing territory.models
+        raise ApiError(
+            "That hub doesn't exist.", code="validation_error", status_code=400
+        ) from None
+
+
+@extend_schema(
+    responses={
+        200: inline_serializer(
+            "Team",
+            fields={
+                "members": TeamMemberSerializer(many=True),
+                "invites": StaffInviteSerializer(many=True),
+            },
+        )
+    }
+)
+class TeamView(APIView):
+    """GET /identity/team — staff and open invites the caller can manage."""
+
+    permission_classes = [IsAdminOrFounder]
+
+    def get(self, request):
+        return Response(
+            {
+                "members": TeamMemberSerializer(team.members(request.user), many=True).data,
+                "invites": StaffInviteSerializer(
+                    team.pending_invites(request.user), many=True
+                ).data,
+            }
+        )
+
+
+@extend_schema(request=StaffInviteCreateSerializer, responses={201: StaffInviteCreatedSerializer})
+class TeamInviteView(APIView):
+    """POST /identity/team/invites — the response carries the invite token
+    once; the console turns it into a link to send the new staff member."""
+
+    permission_classes = [IsAdminOrFounder]
+
+    def post(self, request):
+        serializer = StaffInviteCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        created = team.invite(
+            request.user,
+            email=data["email"],
+            role_code=data["role"],
+            hub=_hub_or_none(data.get("hub")),
+        )
+        return Response(StaffInviteCreatedSerializer(created).data, status=status.HTTP_201_CREATED)
+
+
+@extend_schema(request=None, responses={204: None})
+class TeamInviteRevokeView(APIView):
+    permission_classes = [IsAdminOrFounder]
+
+    def delete(self, request, invite_id):
+        team.revoke_invite(request.user, team.find_invite(request.user, invite_id))
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@extend_schema(request=TeamRoleChangeSerializer, responses={200: TeamMemberSerializer})
+class TeamRoleView(APIView):
+    permission_classes = [IsAdminOrFounder]
+
+    def post(self, request, user_id):
+        serializer = TeamRoleChangeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        target = team.find_member(request.user, user_id)
+        team.change_role(
+            request.user,
+            target,
+            role_code=serializer.validated_data["role"],
+            hub=_hub_or_none(serializer.validated_data.get("hub")),
+        )
+        return Response(TeamMemberSerializer(team.find_member(request.user, user_id)).data)
+
+
+@extend_schema(request=TeamActiveSerializer, responses={200: TeamMemberSerializer})
+class TeamDeactivateView(APIView):
+    """POST /identity/team/{id}/deactivate — signs them out everywhere."""
+
+    permission_classes = [IsAdminOrFounder]
+    active = False
+
+    def post(self, request, user_id):
+        serializer = TeamActiveSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        target = team.find_member(request.user, user_id)
+        team.set_active(
+            request.user,
+            target,
+            active=self.active,
+            reason=serializer.validated_data.get("reason", ""),
+        )
+        target.refresh_from_db()
+        return Response(TeamMemberSerializer(target).data)
+
+
+class TeamReactivateView(TeamDeactivateView):
+    """POST /identity/team/{id}/reactivate"""
+
+    active = True
