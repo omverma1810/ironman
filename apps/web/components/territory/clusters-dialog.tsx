@@ -145,7 +145,7 @@ function NewClusterForm({ defaultHub }: { defaultHub: string | undefined }) {
       <div className="flex items-center gap-2">
         {hubs.length > 1 && (
           <Select value={hub || hubs[0]?.id} onValueChange={setHub}>
-            <SelectTrigger className="w-40">
+            <SelectTrigger aria-label="Hub" className="w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

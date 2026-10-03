@@ -79,7 +79,7 @@ export function ReferralCodeDialog({
           <div className="flex flex-col gap-1.5">
             <Label>Partner</Label>
             <Select value={ownerPartner} onValueChange={setOwnerPartner}>
-              <SelectTrigger>
+              <SelectTrigger aria-label="Partner">
                 <SelectValue placeholder="Select a partner" />
               </SelectTrigger>
               <SelectContent>
@@ -99,7 +99,7 @@ export function ReferralCodeDialog({
           <div className="flex flex-col gap-1.5">
             <Label>Apartment</Label>
             <Select value={apartment} onValueChange={setApartment}>
-              <SelectTrigger>
+              <SelectTrigger aria-label="Apartment">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

@@ -24,7 +24,13 @@ export function Testimonials() {
           </h2>
         </div>
 
-        <div className="mt-12 flex snap-x snap-mandatory gap-6 overflow-x-auto pb-4">
+        {/* Focusable so keyboard users can scroll it with the arrow keys (WCAG 2.1.1). */}
+        <div
+          className="mt-12 flex snap-x snap-mandatory gap-6 overflow-x-auto pb-4"
+          tabIndex={0}
+          role="region"
+          aria-label="Customer testimonials"
+        >
           {TESTIMONIALS.map((testimonial) => {
             const initials = testimonial.name
               .split(" ")

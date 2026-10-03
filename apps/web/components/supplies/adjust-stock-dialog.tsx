@@ -90,7 +90,7 @@ export function AdjustStockDialog({
           <div className="col-span-2 flex flex-col gap-1.5">
             <Label>Item</Label>
             <Select value={item} onValueChange={setItem}>
-              <SelectTrigger>
+              <SelectTrigger aria-label="Item">
                 <SelectValue placeholder="Choose a stock item" />
               </SelectTrigger>
               <SelectContent>
@@ -105,7 +105,7 @@ export function AdjustStockDialog({
           <div className="flex flex-col gap-1.5">
             <Label>Reason</Label>
             <Select value={kind} onValueChange={(v) => setKind(v as AdjustmentKind)}>
-              <SelectTrigger>
+              <SelectTrigger aria-label="Adjustment type">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

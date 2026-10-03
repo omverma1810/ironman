@@ -106,7 +106,7 @@ export function ReportExceptionDialog({
             <div className="flex flex-col gap-1.5">
               <Label>Kind</Label>
               <Select value={kind} onValueChange={(v) => setKind(v as OrderException["kind"])}>
-                <SelectTrigger>
+                <SelectTrigger aria-label="Kind">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -124,7 +124,7 @@ export function ReportExceptionDialog({
                 value={severity}
                 onValueChange={(v) => handleSeverityChange(v as OrderException["severity"])}
               >
-                <SelectTrigger>
+                <SelectTrigger aria-label="Severity">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

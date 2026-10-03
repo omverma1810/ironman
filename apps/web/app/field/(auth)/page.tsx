@@ -115,12 +115,16 @@ function JobCard({ job }: { job: Job }) {
   return (
     <Link
       href={`/field/jobs/${job.id}`}
-      className="flex items-center gap-3 rounded-xl border border-border-default bg-surface-raised p-4 shadow-xs active:bg-surface-sunken"
+      // Finished jobs recede by sitting on the sunken surface, not by fading
+      // their text: faded text failed the WCAG AA contrast check (e2e/a11y.spec.ts).
+      className={`flex items-center gap-3 rounded-xl border border-border-default p-4 active:bg-surface-sunken ${
+        isDone ? "bg-surface-sunken" : "bg-surface-raised shadow-xs"
+      }`}
     >
       <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-surface-sunken">
         <Icon name={job.kind === "PICKUP" ? "package-open" : "garment-bag"} className="size-5 text-text-secondary" />
       </div>
-      <div className={`flex min-w-0 flex-1 flex-col gap-0.5 ${isDone ? "opacity-60" : ""}`}>
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <div className="flex items-center gap-2">
           <span className="font-medium text-text-primary">{job.kind === "PICKUP" ? "Pickup" : "Delivery"}</span>
           <span className="truncate text-sm text-text-muted">{job.order_ref}</span>

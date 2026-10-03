@@ -110,7 +110,7 @@ export function ExceptionDetailDialog({
             <div className="flex flex-col gap-1.5">
               <Label>Status</Label>
               <Select value={status} onValueChange={(v) => setStatus(v as OrderException["status"])}>
-                <SelectTrigger>
+                <SelectTrigger aria-label="Status">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -130,7 +130,7 @@ export function ExceptionDetailDialog({
                   value={assignedTo || "unassigned"}
                   onValueChange={(v) => setAssignedTo(v === "unassigned" ? "" : v)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger aria-label="Assigned to">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

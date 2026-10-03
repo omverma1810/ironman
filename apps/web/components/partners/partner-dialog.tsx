@@ -100,7 +100,7 @@ export function PartnerDialog({
             <div className="flex flex-col gap-1.5">
               <Label>Kind</Label>
               <Select value={kind} onValueChange={(v) => setKind(v as PartnerKind)}>
-                <SelectTrigger>
+                <SelectTrigger aria-label="Partner type">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -123,7 +123,7 @@ export function PartnerDialog({
             <div className="flex flex-col gap-1.5">
               <Label>Apartment</Label>
               <Select value={apartment} onValueChange={setApartment}>
-                <SelectTrigger>
+                <SelectTrigger aria-label="Apartment">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
