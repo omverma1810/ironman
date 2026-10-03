@@ -3,6 +3,8 @@ with the founder above admins, and admins confined to their own hub."""
 
 from __future__ import annotations
 
+import secrets
+
 import pytest
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -54,7 +56,11 @@ def test_invite_then_accept(api_client, admin_user, hub):
     api_client.force_authenticate(user=None)
     accepted = api_client.post(
         "/api/v1/auth/invite/accept",
-        {"token": resp.data["token"], "full_name": "Ravi Rider", "password": "a-strong-pass-123"},
+        {
+            "token": resp.data["token"],
+            "full_name": "Ravi Rider",
+            "password": secrets.token_urlsafe(12),
+        },
     )
     assert accepted.status_code == 201
     rider = User.objects.get(email="new.rider@test.local")
