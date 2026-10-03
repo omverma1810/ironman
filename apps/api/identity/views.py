@@ -272,6 +272,7 @@ class MeView(APIView):
     def delete(self, request):
         """DELETE /me — docs/06 §6. Needs a fresh OTP (`code`); refuses with
         the reasons while an order, unpaid invoice or open issue remains."""
+        privacy_services.ensure_customer_account(request.user)
         serializer = DeleteAccountSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         deletion = privacy_services.request_deletion(
