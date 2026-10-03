@@ -21,7 +21,7 @@
 
   --text-primary: #17171b;
   --text-secondary: #54545c;
-  --text-muted: #84838c;
+  --text-muted: #6b6a73; /* ≥4.8:1 on base and sunken (WCAG AA) */
   --text-inverse: #f3f2ed;
   --text-on-brand: #0b0b0c;
 
@@ -102,7 +102,7 @@
 
   --text-primary: #edece7;
   --text-secondary: #adacb4;
-  --text-muted: #7c7b85;
+  --text-muted: #8e8d97; /* ≥5.2:1 on every dark surface */
   --text-inverse: #17171b;
   --text-on-brand: #0b0b0c;
 

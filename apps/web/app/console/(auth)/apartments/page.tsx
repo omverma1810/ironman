@@ -129,7 +129,7 @@ export default function ApartmentsPage() {
           />
         </div>
         <Select value={clusterFilter} onValueChange={setClusterFilter}>
-          <SelectTrigger className="w-full sm:w-48">
+          <SelectTrigger aria-label="Filter by cluster" className="w-full sm:w-48">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

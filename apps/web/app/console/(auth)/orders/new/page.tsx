@@ -113,7 +113,7 @@ export default function NewOrderPage() {
               <div className="flex flex-col gap-1.5">
                 <Label>Hub</Label>
                 <Select value={hubId} onValueChange={setHubId}>
-                  <SelectTrigger>
+                  <SelectTrigger aria-label="Hub">
                     <SelectValue placeholder="Select a hub" />
                   </SelectTrigger>
                   <SelectContent>
@@ -128,7 +128,7 @@ export default function NewOrderPage() {
               <div className="flex flex-col gap-1.5">
                 <Label>Customer</Label>
                 <Select value={customerId} onValueChange={setCustomerId}>
-                  <SelectTrigger>
+                  <SelectTrigger aria-label="Customer">
                     <SelectValue placeholder="Select a customer" />
                   </SelectTrigger>
                   <SelectContent>
@@ -143,7 +143,7 @@ export default function NewOrderPage() {
               <div className="flex flex-col gap-1.5">
                 <Label>Service</Label>
                 <Select value={serviceId} onValueChange={setServiceId}>
-                  <SelectTrigger>
+                  <SelectTrigger aria-label="Service">
                     <SelectValue placeholder="Select a service" />
                   </SelectTrigger>
                   <SelectContent>

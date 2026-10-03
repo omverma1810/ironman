@@ -220,7 +220,7 @@ function AssignJobsPanel({ routeDayId, hub }: { routeDayId: string; hub: string 
       <div className="flex flex-col gap-1.5">
         <Label>Job type</Label>
         <Select value={kind} onValueChange={(v) => { setKind(v as JobKind); setOrderId(""); }}>
-          <SelectTrigger className="w-36">
+          <SelectTrigger aria-label="Job type" className="w-36">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -233,7 +233,7 @@ function AssignJobsPanel({ routeDayId, hub }: { routeDayId: string; hub: string 
       <div className="flex flex-col gap-1.5">
         <Label>Order</Label>
         <Select value={orderId} onValueChange={setOrderId}>
-          <SelectTrigger className="w-64">
+          <SelectTrigger aria-label="Order" className="w-64">
             <SelectValue
               placeholder={
                 candidates.length === 0
@@ -257,7 +257,7 @@ function AssignJobsPanel({ routeDayId, hub }: { routeDayId: string; hub: string 
       <div className="flex flex-col gap-1.5">
         <Label>Assign to</Label>
         <Select value={staffId} onValueChange={setStaffId}>
-          <SelectTrigger className="w-48">
+          <SelectTrigger aria-label="Rider" className="w-48">
             <SelectValue placeholder={staff.length === 0 ? "No field staff" : "Choose a rider"} />
           </SelectTrigger>
           <SelectContent>

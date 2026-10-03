@@ -181,7 +181,7 @@ export default function ProductionBoardPage() {
             value={filters.hub || "all"}
             onValueChange={(v) => setFilters({ hub: v === "all" ? null : v })}
           >
-            <SelectTrigger className="w-48">
+            <SelectTrigger aria-label="Filter by hub" className="w-48">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -379,7 +379,7 @@ function BatchScanCard() {
         />
         <span className="text-xs text-text-muted">to</span>
         <Select value={toStage} onValueChange={(v) => setToStage(v as GarmentStage)}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger aria-label="Move to stage" className="w-40">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

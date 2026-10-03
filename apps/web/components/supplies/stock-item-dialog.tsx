@@ -173,7 +173,7 @@ export function StockItemDialog({
             <div className="flex flex-col gap-1.5">
               <Label>Category</Label>
               <Select value={category} onValueChange={(v) => setCategory(v as StockCategory)}>
-                <SelectTrigger>
+                <SelectTrigger aria-label="Category">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

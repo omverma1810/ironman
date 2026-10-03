@@ -136,7 +136,7 @@ export default function ExceptionsPage() {
         </Tabs>
         <div className="flex gap-2">
           <Select value={filters.kind} onValueChange={(v) => setFilters({ kind: v })}>
-            <SelectTrigger className="w-40">
+            <SelectTrigger aria-label="Filter by kind" className="w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -148,7 +148,7 @@ export default function ExceptionsPage() {
             </SelectContent>
           </Select>
           <Select value={filters.severity} onValueChange={(v) => setFilters({ severity: v })}>
-            <SelectTrigger className="w-40">
+            <SelectTrigger aria-label="Filter by severity" className="w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

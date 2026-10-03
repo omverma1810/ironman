@@ -239,6 +239,15 @@ The booking page budget is the strictest deliberately: it is opened from a Whats
 first-time customer on a mid-range Android phone on 4G, and it is the *only* moment where a slow
 page costs a customer.
 
+> **As measured (Phase 7.2, `apps/web/e2e/perf-budgets.spec.ts`, 4G + 4× CPU throttling).**
+> LCP: booking 0.56 s, console 0.92 s, field 1.18 s. CLS: 0 on all three. Both are within budget
+> and enforced on every PR. **Initial JS misses the targets:** booking 229 KB against 130, console
+> 363 against 300, field 235 against 180. React DOM and the Next runtime alone come to about
+> 100 KB gzip, so the 130 KB booking target leaves ~30 KB for the app. Meeting it means rebuilding
+> the booking wizard without Radix popovers and TanStack Query (an estimated 2–3 days). Until
+> then the spec enforces a ratchet at the measured size plus ~10%, so bundles can only shrink.
+> Lighthouse CI is not wired; INP and TTI are not yet measured.
+
 ## 9. Internationalisation
 
 v1 ships English. But `next-intl` is wired from the first commit with all user-facing strings in

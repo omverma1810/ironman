@@ -67,9 +67,11 @@ export function DataTable<TData>({
               <tr
                 key={row.id}
                 onClick={() => onRowClick?.(row.original)}
+                {...rowKeyboard(onRowClick && (() => onRowClick(row.original)))}
                 className={cn(
                   "border-b border-border-subtle last:border-0",
-                  onRowClick && "cursor-pointer hover:bg-surface-sunken"
+                  onRowClick &&
+                    "cursor-pointer hover:bg-surface-sunken focus-visible:bg-surface-sunken focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-border-focus"
                 )}
               >
                 {row.getVisibleCells().map((cell) => (
@@ -89,9 +91,11 @@ export function DataTable<TData>({
           <div
             key={getRowId ? getRowId(row) : JSON.stringify(row)}
             onClick={() => onRowClick?.(row)}
+            {...rowKeyboard(onRowClick && (() => onRowClick(row)))}
             className={cn(
               "rounded-lg border border-border-default bg-surface-raised p-4",
-              onRowClick && "cursor-pointer active:bg-surface-sunken"
+              onRowClick &&
+                "cursor-pointer focus-visible:outline-2 focus-visible:outline-border-focus active:bg-surface-sunken"
             )}
           >
             {mobileCard(row)}
@@ -128,4 +132,21 @@ export function SortableHeader({
       )}
     </button>
   );
+}
+
+/** A clickable row must work from the keyboard too (WCAG 2.1.1): focusable,
+ * and Enter or Space opens it. Keys pressed on a button or link inside the
+ * row are left to that control. */
+function rowKeyboard(open: (() => void) | undefined) {
+  if (!open) return {};
+  return {
+    tabIndex: 0,
+    onKeyDown: (e: React.KeyboardEvent) => {
+      if (e.target !== e.currentTarget) return;
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        open();
+      }
+    },
+  };
 }

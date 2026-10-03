@@ -40,7 +40,7 @@ export default function RouteDaysPage() {
         <div className="flex flex-col gap-1.5">
           <Label>Cluster</Label>
           <Select value={clusterId} onValueChange={setClusterId}>
-            <SelectTrigger className="w-56">
+            <SelectTrigger aria-label="Cluster" className="w-56">
               <SelectValue placeholder="Choose a cluster" />
             </SelectTrigger>
             <SelectContent>

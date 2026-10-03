@@ -108,7 +108,7 @@ export function ApartmentDialog({
             <div className="flex flex-col gap-1.5">
               <Label>Cluster</Label>
               <Select value={cluster} onValueChange={setCluster}>
-                <SelectTrigger>
+                <SelectTrigger aria-label="Cluster">
                   <SelectValue placeholder="Choose a cluster" />
                 </SelectTrigger>
                 <SelectContent>
@@ -260,7 +260,7 @@ function ContactsSection({ apartment }: { apartment: Apartment }) {
 
       <div className="flex items-center gap-2">
         <Select value={kind} onValueChange={(v) => setKind(v as ApartmentContact["kind"])}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger aria-label="Contact type" className="w-40">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

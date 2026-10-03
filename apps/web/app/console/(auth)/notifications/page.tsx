@@ -159,7 +159,7 @@ export default function NotificationsLogPage() {
           />
         </div>
         <Select value={filters.channel} onValueChange={(v) => setFilters({ channel: v })}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger aria-label="Filter by channel" className="w-40">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -171,7 +171,7 @@ export default function NotificationsLogPage() {
           </SelectContent>
         </Select>
         <Select value={filters.status} onValueChange={(v) => setFilters({ status: v })}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger aria-label="Filter by status" className="w-40">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

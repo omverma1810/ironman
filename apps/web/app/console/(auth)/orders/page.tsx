@@ -150,13 +150,14 @@ export default function OrdersListPage() {
           />
           <Input
             placeholder="Search by order ref, customer name or phone…"
+            aria-label="Search orders"
             className="pl-9"
             value={filters.search}
             onChange={(e) => setFilters({ search: e.target.value || null })}
           />
         </div>
         <Select value={filters.status} onValueChange={(v) => setFilters({ status: v })}>
-          <SelectTrigger className="w-full sm:w-48">
+          <SelectTrigger className="w-full sm:w-48" aria-label="Filter by status">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -168,7 +169,7 @@ export default function OrdersListPage() {
           </SelectContent>
         </Select>
         <Select value={filters.channel} onValueChange={(v) => setFilters({ channel: v })}>
-          <SelectTrigger className="w-full sm:w-40">
+          <SelectTrigger className="w-full sm:w-40" aria-label="Filter by channel">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

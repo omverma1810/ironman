@@ -77,7 +77,7 @@ export function ReceiveStockDialog({
           <div className="col-span-2 flex flex-col gap-1.5">
             <Label>Item</Label>
             <Select value={item} onValueChange={setItem}>
-              <SelectTrigger>
+              <SelectTrigger aria-label="Item">
                 <SelectValue placeholder="Choose a stock item" />
               </SelectTrigger>
               <SelectContent>
