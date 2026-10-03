@@ -119,3 +119,18 @@ class AppendOnlyModel(models.Model):
 
     def delete(self, *args, **kwargs):
         raise RuntimeError(f"{self.__class__.__name__} is append-only; rows cannot be deleted.")
+
+
+class RefSequence(models.Model):
+    """One counter per human-readable reference series ("ORD-2610",
+    "INV-2610"). See `common.sequences.next_ref` — counting existing rows
+    to number the next one handed two concurrent orders the same ref."""
+
+    key = models.CharField(max_length=32, primary_key=True)
+    value = models.PositiveIntegerField()
+
+    class Meta:
+        db_table = "common_ref_sequence"
+
+    def __str__(self) -> str:
+        return f"{self.key}: {self.value}"

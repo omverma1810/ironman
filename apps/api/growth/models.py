@@ -277,12 +277,9 @@ class SettlementStatus(models.TextChoices):
 
 
 def _settlement_ref() -> str:
-    now = timezone.localtime()
-    seq = (
-        Settlement.objects.filter(created_at__year=now.year, created_at__month=now.month).count()
-        + 1
-    )
-    return f"SET-{now:%y%m}-{seq:04d}"
+    from common.sequences import next_ref
+
+    return next_ref("SET", Settlement)
 
 
 def _statement_pdf_path(instance: "Settlement", filename: str) -> str:
