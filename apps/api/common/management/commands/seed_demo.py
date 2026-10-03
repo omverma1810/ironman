@@ -359,6 +359,12 @@ class Command(BaseCommand):
         self.stdout.write("Seeding partner commission...")
         accrual_count = self._seed_commission(hub, founder)
 
+        self.stdout.write("Seeding campaigns and spend...")
+        self._seed_marketing(hub, apartments, founder)
+
+        self.stdout.write("Seeding lapsed customers...")
+        self._seed_lapsed(hub)
+
         self.stdout.write("Seeding a customer referral...")
         self._seed_customer_referral(
             hub, customers[0], service, garment_types, founder, field_staff
@@ -451,6 +457,79 @@ class Command(BaseCommand):
             if commission.partner_balance(partner)["accrued_minor"] > 0:
                 commission.create_settlement(partner, actor=founder)
         return partner.accruals.count() if partner else 0
+
+    def _seed_marketing(self, hub, apartments, founder) -> None:
+        """docs/08 batch 5.6: a flyer drop at one apartment and an
+        influencer post, each with spend entered, so the Marketing page
+        shows cost per new customer from real rows. Idempotent: skipped once
+        the hub has any campaign."""
+        from datetime import timedelta
+
+        from growth import marketing
+        from growth.models import Campaign
+
+        if Campaign.objects.filter(hub=hub).exists():
+            return
+        today = timezone.localdate()
+        flyers = marketing.create_campaign(
+            hub=hub,
+            name=f"Flyers — {apartments[0].name}" if apartments else "Flyers",
+            channel="FLYER",
+            apartment=apartments[0] if apartments else None,
+            start_on=today - timedelta(days=28),
+            objective="20 first orders from the building",
+            actor=founder,
+        )
+        marketing.record_spend(
+            flyers,
+            amount_minor=180000,
+            category="PRINT",
+            spent_on=today - timedelta(days=28),
+            note="600 flyers, printed and distributed",
+            actor=founder,
+        )
+        reel = marketing.create_campaign(
+            hub=hub,
+            name="Instagram reel — local food blogger",
+            channel="INFLUENCER",
+            start_on=today - timedelta(days=12),
+            objective="Awareness across Barkatpura and Kacheguda",
+            actor=founder,
+        )
+        marketing.record_spend(
+            reel,
+            amount_minor=400000,
+            category="INFLUENCER",
+            spent_on=today - timedelta(days=12),
+            note="One reel + two stories",
+            actor=founder,
+        )
+
+    def _seed_lapsed(self, hub, count: int = 4) -> None:
+        """docs/08 batch 5.7: every demo order is delivered "today", so
+        nobody would ever look lapsed. Move a few customers' deliveries back
+        five to seven weeks — customers with nothing still in progress — so
+        the Lapsed customers page has people to win back. Idempotent: picks
+        no one once enough customers already look lapsed."""
+        from datetime import timedelta
+
+        from growth.reengagement import lapsed_customers
+
+        missing = count - len(lapsed_customers(hub, days=30))
+        if missing <= 0:
+            return
+        done = [OrderStatus.DELIVERED, OrderStatus.CLOSED]
+        settled = done + [OrderStatus.CANCELLED]
+        candidates = (
+            Customer.objects.filter(hub=hub, orders__status__in=done)
+            .exclude(orders__status__in=[s for s in OrderStatus.values if s not in settled])
+            .distinct()
+            .order_by("phone")[:missing]
+        )
+        for weeks, customer in enumerate(candidates, start=5):
+            Order.objects.filter(customer=customer, status__in=done).update(
+                delivered_at=timezone.now() - timedelta(weeks=weeks)
+            )
 
     def _seed_customer_referral(
         self, hub, referrer, service, garment_types, founder, field_staff

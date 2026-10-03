@@ -217,6 +217,9 @@ SPECTACULAR_SETTINGS = {
         # `CommissionRule.basis` (how commission is computed) share a name.
         "AttributionBasisEnum": "growth.models.AttributionBasis",
         "CommissionBasisEnum": "growth.models.CommissionBasis",
+        # `StockItem.category` and `Spend.category`.
+        "StockCategoryEnum": "supplies.models.StockCategory",
+        "SpendCategoryEnum": "growth.models.SpendCategory",
     },
 }
 
@@ -269,6 +272,13 @@ IRONMAN = {
     "ON_TIME_GRACE_MINUTES": 15,
     # 07 §2②: days within which a second order counts as "repeat".
     "REPEAT_CUSTOMER_WINDOW_DAYS": 30,
+    # docs/08 batch 5.7 (A-06): a customer with no delivered order in this
+    # many days, and nothing in progress, is "lapsed"; one re-engagement
+    # message per customer per cooldown at most.
+    "LAPSED_AFTER_DAYS": 30,
+    "REENGAGEMENT_COOLDOWN_DAYS": 14,
+    # Where customer messages link to (booking page lives on the landing site).
+    "PUBLIC_SITE_URL": env("PUBLIC_SITE_URL", default="https://ironmanindia.co"),
     # docs/03 §3.3: outside prod, the notification router refuses to send
     # to anyone not on this allowlist — a staging environment must never
     # message a real customer's phone. `prod.py` turns the guard off.

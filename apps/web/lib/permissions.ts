@@ -142,6 +142,12 @@ export function canManageCommission(roles: Role[] | undefined): boolean {
   return hasRole(roles, "FOUNDER");
 }
 
+// docs/06 §2 "Enter marketing spend": Founder only — campaigns, spend and
+// cost per new customer are the cost side of unit economics.
+export function canManageMarketing(roles: Role[] | undefined): boolean {
+  return hasRole(roles, "FOUNDER");
+}
+
 // docs/06 §3.1 "[A]" tag on route-day planning — Operator is not in this
 // row, unlike most ops-console screens (deliberately narrower than
 // canManageOrders).

@@ -11,7 +11,10 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Icon } from "@/components/icons/icon";
-import { useCustomers } from "@/lib/api/hooks";
+import { useCustomers, useMe } from "@/lib/api/hooks";
+import { canSeeMoney } from "@/lib/permissions";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import { formatDate } from "@/lib/format";
 import { useState } from "react";
 import type { Customer } from "@/lib/api/types";
@@ -25,6 +28,7 @@ const STATUS_VARIANT: Record<Customer["status"], "success" | "warning" | "neutra
 
 export default function CustomersPage() {
   const router = useRouter();
+  const me = useMe();
   const [search, setSearch] = useState("");
   const customersQuery = useCustomers({ search: search || undefined });
 
@@ -76,7 +80,19 @@ export default function CustomersPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Customers" description="Everyone who's booked or is registered with IronMan." />
+      <PageHeader
+        title="Customers"
+        description="Everyone who's booked or is registered with IronMan."
+        actions={
+          canSeeMoney(me.data?.roles) ? (
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/console/customers/lapsed">
+                <Icon name="refresh" /> Lapsed customers
+              </Link>
+            </Button>
+          ) : undefined
+        }
+      />
 
       <div className="relative">
         <Icon

@@ -10,6 +10,7 @@ import {
   canEditPricing,
   canManageCashCustody,
   canManageGrowthPartners,
+  canManageMarketing,
   canManageStaff,
   canManageSupplies,
   canPlanRouteDays,
@@ -62,6 +63,12 @@ const NAV: NavItem[] = [
     label: "Partners",
     icon: "watchman",
     show: (roles) => canManageGrowthPartners(roles),
+  },
+  {
+    href: "/console/marketing",
+    label: "Marketing",
+    icon: "sparkles",
+    show: (roles) => canManageMarketing(roles),
   },
   {
     href: "/console/analytics",

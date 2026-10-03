@@ -18,6 +18,8 @@ import {
   commissionAccrualsApi,
   settlementsApi,
   referralProgramApi,
+  marketingApi,
+  reengagementApi,
   attributionsApi,
   referralCodesApi,
   requotesApi,
@@ -57,6 +59,8 @@ import type {
   ReferralPartnerInput,
   CommissionRuleInput,
   ReferralProgramInput,
+  CampaignInput,
+  SpendInput,
   PayoutMethod,
   SetPriceLinesInput,
   StockAdjustmentInput,
@@ -1647,5 +1651,117 @@ export function useCustomerReferralRewards() {
     queryKey: ["customer-referral-rewards"],
     queryFn: () => referralProgramApi.rewards(),
     staleTime: 30_000,
+  });
+}
+
+// ── Growth: campaigns, spend, CAC (docs/08 batch 5.6) ────────────────────
+function invalidateMarketing(queryClient: ReturnType<typeof useQueryClient>) {
+  queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+  queryClient.invalidateQueries({ queryKey: ["spend"] });
+  queryClient.invalidateQueries({ queryKey: ["acquisition-cost"] });
+}
+
+export function useCampaigns() {
+  return useQuery({ queryKey: ["campaigns"], queryFn: () => marketingApi.campaigns() });
+}
+
+export function useSpend() {
+  return useQuery({ queryKey: ["spend"], queryFn: () => marketingApi.spend() });
+}
+
+export function useAcquisitionCost(params: { from?: string; to?: string; hub?: string }) {
+  return useQuery({
+    queryKey: ["acquisition-cost", params],
+    queryFn: () => marketingApi.acquisitionCost(params),
+    enabled: !!params.hub,
+  });
+}
+
+export function useCreateCampaign() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CampaignInput) => marketingApi.createCampaign(input),
+    onSuccess: (campaign) => {
+      invalidateMarketing(queryClient);
+      toast.success(`Campaign "${campaign.name}" created`);
+    },
+    onError: (err) => errorToast(err, "Couldn't create the campaign."),
+  });
+}
+
+export function useEndCampaign() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, endOn }: { id: string; endOn: string }) =>
+      marketingApi.updateCampaign(id, { end_on: endOn }),
+    onSuccess: (campaign) => {
+      invalidateMarketing(queryClient);
+      toast.success(`"${campaign.name}" ended`);
+    },
+    onError: (err) => errorToast(err, "Couldn't end the campaign."),
+  });
+}
+
+export function useRecordSpend() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: SpendInput) => marketingApi.recordSpend(input),
+    onSuccess: (spend) => {
+      invalidateMarketing(queryClient);
+      toast.success(`Spend added to "${spend.campaign_name}"`);
+    },
+    onError: (err) => errorToast(err, "Couldn't record the spend."),
+  });
+}
+
+export function useRemoveSpend() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      marketingApi.removeSpend(id, reason),
+    onSuccess: () => {
+      invalidateMarketing(queryClient);
+      toast.success("Spend removed");
+    },
+    onError: (err) => errorToast(err, "Couldn't remove the spend."),
+  });
+}
+
+// ── Growth: lapsed customers & re-engagement (docs/08 batch 5.7) ─────────
+export function useLapsedCustomers(params: { hub?: string; days: number; oneTimeOnly: boolean }) {
+  return useQuery({
+    queryKey: ["lapsed-customers", params],
+    queryFn: () =>
+      reengagementApi.lapsed({
+        hub: params.hub,
+        days: params.days,
+        one_time_only: params.oneTimeOnly,
+      }),
+    enabled: !!params.hub,
+  });
+}
+
+export function useSendReengagement() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      hub,
+      ...input
+    }: {
+      hub?: string;
+      days: number;
+      one_time_only: boolean;
+      customers?: string[];
+      offer?: string;
+    }) => reengagementApi.send(hub, input),
+    onSuccess: (r) => {
+      queryClient.invalidateQueries({ queryKey: ["lapsed-customers"] });
+      const skipped = r.recently_contacted + r.opted_out + r.not_sent;
+      toast.success(
+        `Sent to ${r.sent} customer${r.sent === 1 ? "" : "s"}` +
+          (skipped ? ` · ${skipped} skipped (recently messaged, opted out or no channel)` : "")
+      );
+    },
+    onError: (err) => errorToast(err, "Couldn't send the messages."),
   });
 }

@@ -67,6 +67,13 @@ import type {
   ReferralCodeInput,
   ReferralPartner,
   ReferralPartnerInput,
+  AcquisitionCost,
+  LapsedCustomer,
+  ReengagementResult,
+  Campaign,
+  CampaignInput,
+  Spend,
+  SpendInput,
   CommissionAccrual,
   CommissionRule,
   CustomerReferralReward,
@@ -359,6 +366,35 @@ export const partnersApi = {
   balance: (id: string) => apiFetch<PartnerBalance>(`/growth/partners/${id}/balance/`),
   accruals: (id: string) =>
     apiFetch<Paginated<CommissionAccrual>>(`/growth/partners/${id}/accruals/`),
+};
+
+export const marketingApi = {
+  campaigns: () => apiFetch<Paginated<Campaign>>("/growth/campaigns/"),
+  createCampaign: (input: CampaignInput) =>
+    apiFetch<Campaign>("/growth/campaigns/", { method: "POST", body: input }),
+  updateCampaign: (id: string, patch: Partial<Omit<CampaignInput, "hub" | "channel">>) =>
+    apiFetch<Campaign>(`/growth/campaigns/${id}/`, { method: "PATCH", body: patch }),
+  spend: () => apiFetch<Paginated<Spend>>("/growth/spend/"),
+  recordSpend: (input: SpendInput) =>
+    apiFetch<Spend>("/growth/spend/", { method: "POST", body: input }),
+  removeSpend: (id: string, reason: string) =>
+    apiFetch<Spend>(`/growth/spend/${id}/remove/`, { method: "POST", body: { reason } }),
+  acquisitionCost: (params: { from?: string; to?: string; hub?: string }) =>
+    apiFetch<AcquisitionCost>("/growth/acquisition-cost", { params }),
+};
+
+export const reengagementApi = {
+  lapsed: (params: { hub?: string; days?: number; one_time_only?: boolean }) =>
+    apiFetch<LapsedCustomer[]>("/growth/lapsed-customers", { params }),
+  send: (
+    hub: string | undefined,
+    input: { days?: number; one_time_only?: boolean; customers?: string[]; offer?: string }
+  ) =>
+    apiFetch<ReengagementResult>("/growth/campaigns/lapsed/send", {
+      method: "POST",
+      params: { hub },
+      body: input,
+    }),
 };
 
 export const commissionRulesApi = {

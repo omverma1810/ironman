@@ -13,6 +13,8 @@ router.register(
     "growth/commission-accruals", views.CommissionAccrualViewSet, basename="commission-accrual"
 )
 router.register("growth/settlements", views.SettlementViewSet, basename="settlement")
+router.register("growth/campaigns", views.CampaignViewSet, basename="campaign")
+router.register("growth/spend", views.SpendViewSet, basename="spend")
 router.register(
     "growth/customer-referral-rewards",
     views.CustomerReferralRewardViewSet,
@@ -20,6 +22,17 @@ router.register(
 )
 
 urlpatterns = [
+    path("growth/lapsed-customers", views.LapsedCustomersView.as_view(), name="lapsed-customers"),
+    path(
+        "growth/campaigns/lapsed/send",
+        views.ReengagementSendView.as_view(),
+        name="reengagement-send",
+    ),
+    path(
+        "growth/acquisition-cost",
+        views.AcquisitionCostView.as_view(),
+        name="acquisition-cost",
+    ),
     path("growth/my-referral", views.MyReferralView.as_view(), name="my-referral"),
     path("growth/referral-program", views.ReferralProgramView.as_view(), name="referral-program"),
     path(
