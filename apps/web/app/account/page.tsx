@@ -27,6 +27,7 @@ import {
   requotesApi,
 } from "@/lib/api/endpoints";
 import { resolveMediaUrl } from "@/lib/api/client";
+import { ApiError } from "@/lib/api/errors";
 import { formatDate, formatMoneyMinor } from "@/lib/format";
 import { useCustomerAuth } from "@/lib/customer-auth";
 import type { Address, AddressInput, OrderListItem } from "@/lib/api/types";
@@ -147,6 +148,7 @@ function Dashboard() {
       <TabsList>
         <TabsTrigger value="orders">Orders</TabsTrigger>
         <TabsTrigger value="addresses">Addresses</TabsTrigger>
+        <TabsTrigger value="refer">Refer &amp; earn</TabsTrigger>
         <TabsTrigger value="profile">Profile</TabsTrigger>
       </TabsList>
       <TabsContent value="orders">
@@ -155,10 +157,133 @@ function Dashboard() {
       <TabsContent value="addresses">
         <AddressesTab accessToken={auth.accessToken as string} />
       </TabsContent>
+      <TabsContent value="refer">
+        <ReferTab accessToken={auth.accessToken as string} />
+      </TabsContent>
       <TabsContent value="profile">
         <ProfileTab />
       </TabsContent>
     </Tabs>
+  );
+}
+
+function ReferTab({ accessToken }: { accessToken: string }) {
+  const referral = useQuery({
+    queryKey: ["my-referral"],
+    queryFn: () => growthApi.myReferral(accessToken),
+    // A 404 just means "no booking yet" — don't retry it.
+    retry: false,
+  });
+
+  if (referral.isPending) return <Skeleton className="h-56 w-full" />;
+  if (referral.isError || !referral.data) {
+    const notYet = referral.error instanceof ApiError && referral.error.status === 404;
+    return (
+      <Card>
+        <CardContent className="py-6 text-sm text-text-muted">
+          {notYet
+            ? "Your referral code appears after your first booking."
+            : "Couldn't load your referral code. Please try again in a moment."}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const r = referral.data;
+  const link = `${window.location.origin}/book?ref=${encodeURIComponent(r.code)}`;
+  const giveText = r.referee_reward_minor
+    ? `get ${formatMoneyMinor(r.referee_reward_minor)} off their next order`
+    : "try IronMan";
+  const message = `I use IronMan for ironing and laundry pickup. Book with my code ${r.code} and ${giveText}: ${link}`;
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(link);
+      toast.success("Link copied");
+    } catch {
+      toast.error("Couldn't copy — long-press the link to copy it.");
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Refer a friend</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        {r.is_active ? (
+          <p className="text-sm text-text-secondary">
+            When a friend books with your code and their first order is delivered, you get{" "}
+            <strong className="text-text-primary">
+              {formatMoneyMinor(r.referrer_reward_minor)}
+            </strong>{" "}
+            in IronMan credit
+            {r.referee_reward_minor ? (
+              <>
+                {" "}
+                and they get{" "}
+                <strong className="text-text-primary">
+                  {formatMoneyMinor(r.referee_reward_minor)}
+                </strong>
+              </>
+            ) : null}
+            .
+            {r.min_order_minor
+              ? ` Their first order needs to be at least ${formatMoneyMinor(r.min_order_minor)}.`
+              : ""}
+          </p>
+        ) : (
+          <p className="text-sm text-text-muted">
+            Referral rewards are paused right now — your code still works for friends booking.
+          </p>
+        )}
+
+        <div className="flex flex-col items-center gap-1 rounded-lg border border-dashed border-border-strong py-4">
+          <span className="text-xs tracking-wide text-text-muted uppercase">Your code</span>
+          <span className="font-mono text-2xl font-semibold tracking-widest text-text-primary">
+            {r.code}
+          </span>
+        </div>
+
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button asChild className="sm:flex-1">
+            <a
+              href={`https://wa.me/?text=${encodeURIComponent(message)}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <Icon name="chat" /> Share on WhatsApp
+            </a>
+          </Button>
+          <Button variant="secondary" className="sm:flex-1" onClick={copyLink}>
+            <Icon name="link" /> Copy link
+          </Button>
+        </div>
+
+        <Separator />
+
+        <dl className="grid grid-cols-3 gap-2 text-center">
+          <div>
+            <dt className="text-xs text-text-muted">Friends joined</dt>
+            <dd className="text-lg font-semibold text-text-primary tabular-nums">
+              {r.friends_joined}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs text-text-muted">Rewards earned</dt>
+            <dd className="text-lg font-semibold text-text-primary tabular-nums">
+              {formatMoneyMinor(r.rewards_earned_minor)}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs text-text-muted">Your credit</dt>
+            <dd className="text-lg font-semibold text-text-primary tabular-nums">
+              {formatMoneyMinor(r.credit_balance_minor)}
+            </dd>
+          </div>
+        </dl>
+      </CardContent>
+    </Card>
   );
 }
 

@@ -1,3 +1,5 @@
+import uuid
+
 from django.db.models import Q, Sum
 from django.db.models.functions import Coalesce
 from django.http import HttpResponse
@@ -15,12 +17,13 @@ import territory.services as territory_services
 from common.errors import ApiError
 from common.permissions import IsAdminOrFounder, IsFounder, IsOpsStaff, ScopedQuerysetMixin
 from common.permissions import is_customer_only as _is_customer_only
-from growth import commission, services
+from growth import commission, referrals, services
 from growth.models import (
     AccrualStatus,
     Attribution,
     CommissionAccrual,
     CommissionRule,
+    CustomerReferralReward,
     Feedback,
     ReferralCode,
     ReferralPartner,
@@ -33,9 +36,11 @@ from growth.serializers import (
     CommissionRuleCreateSerializer,
     CommissionRuleSerializer,
     CommissionRuleUpdateSerializer,
+    CustomerReferralRewardSerializer,
     FeedbackCreateSerializer,
     FeedbackModerateSerializer,
     FeedbackSerializer,
+    MyReferralSerializer,
     PartnerBalanceSerializer,
     PartnerCommissionRuleSerializer,
     ReferralCodeCreateSerializer,
@@ -45,6 +50,8 @@ from growth.serializers import (
     ReferralPartnerCreateSerializer,
     ReferralPartnerSerializer,
     ReferralPartnerStatusSerializer,
+    ReferralProgramSerializer,
+    ReferralProgramUpdateSerializer,
     SettlementCreateSerializer,
     SettlementMarkPaidSerializer,
     SettlementSerializer,
@@ -414,3 +421,80 @@ class SettlementViewSet(ScopedQuerysetMixin, viewsets.ModelViewSet):
         response = HttpResponse(render_statement_bytes(settlement), content_type="application/pdf")
         response["Content-Disposition"] = f'inline; filename="{settlement.ref}.pdf"'
         return response
+
+
+class MyReferralView(APIView):
+    """`[C]` docs/08 batch 5.5 — the signed-in customer's own share code,
+    issued on first request, with what their referrals have earned."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses={200: MyReferralSerializer})
+    def get(self, request):
+        customer = getattr(request.user, "customer_profile", None)
+        if customer is None:
+            # A signed-in phone number becomes a customer at its first
+            # booking (docs/04 §3.1) — staff never do.
+            raise ApiError(
+                "Your referral code appears after your first booking.",
+                code="not_found",
+                status_code=404,
+            )
+        return Response(referrals.summary(customer))
+
+
+class ReferralProgramView(APIView):
+    """The hub's refer-a-friend terms. Admin and Founder see them; only a
+    Founder changes them — it's money given away, the same tier as offers
+    and commission rules (docs/06 §2)."""
+
+    def get_permissions(self):
+        if self.request.method == "PATCH":
+            return [IsFounder()]
+        return [IsAdminOrFounder()]
+
+    def _hub(self, request):
+        hub_id = request.query_params.get("hub")
+        if hub_id:
+            try:
+                hub_id = uuid.UUID(hub_id)
+            except ValueError as exc:
+                raise ApiError("Not found.", code="not_found", status_code=404) from exc
+            _check_hub_access(request.user, hub_id)
+            return territory_services.get_hub(hub_id)
+        hub_ids = request.user.hub_scope
+        if request.user.is_superuser or request.user.is_unrestricted or not hub_ids:
+            hub = territory_services.default_hub()
+        else:
+            hub = territory_services.get_hub(sorted(hub_ids, key=str)[0])
+        if hub is None:
+            raise ApiError("No hub is set up yet.", code="not_found", status_code=404)
+        return hub
+
+    @extend_schema(responses={200: ReferralProgramSerializer})
+    def get(self, request):
+        return Response(ReferralProgramSerializer(referrals.get_program(self._hub(request))).data)
+
+    @extend_schema(
+        request=ReferralProgramUpdateSerializer, responses={200: ReferralProgramSerializer}
+    )
+    def patch(self, request):
+        serializer = ReferralProgramUpdateSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        program = referrals.update_program(
+            referrals.get_program(self._hub(request)),
+            changes=dict(serializer.validated_data),
+            actor=request.user,
+        )
+        return Response(ReferralProgramSerializer(program).data)
+
+
+class CustomerReferralRewardViewSet(ScopedQuerysetMixin, viewsets.ReadOnlyModelViewSet):
+    """Every referral reward paid — written only by `growth.referrals`."""
+
+    queryset = CustomerReferralReward.objects.select_related(
+        "referrer", "referee", "referral_code", "order"
+    ).order_by("-created_at")
+    serializer_class = CustomerReferralRewardSerializer
+    permission_classes = [IsAdminOrFounder]
+    filterset_fields = ["referrer", "referee"]

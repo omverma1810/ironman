@@ -13,8 +13,15 @@ router.register(
     "growth/commission-accruals", views.CommissionAccrualViewSet, basename="commission-accrual"
 )
 router.register("growth/settlements", views.SettlementViewSet, basename="settlement")
+router.register(
+    "growth/customer-referral-rewards",
+    views.CustomerReferralRewardViewSet,
+    basename="customer-referral-reward",
+)
 
 urlpatterns = [
+    path("growth/my-referral", views.MyReferralView.as_view(), name="my-referral"),
+    path("growth/referral-program", views.ReferralProgramView.as_view(), name="referral-program"),
     path(
         "growth/referral-codes/validate",
         views.ReferralCodeValidateView.as_view(),
