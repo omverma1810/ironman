@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { EmptyState } from "@/components/patterns/empty-state";
+import { ErrorState } from "@/components/patterns/error-state";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,7 +12,7 @@ import {
   useChannelPerformance,
   useCheckpoint,
   useDataQuality,
-  useHubs,
+  useDefaultHub,
   useOperationsDaily,
   useUnitEconomics,
 } from "@/lib/api/hooks";
@@ -24,8 +25,27 @@ const money = (v: number | null | undefined) =>
   v === null || v === undefined ? "—" : formatMoneyMinor(v);
 const pct = (v: number | null | undefined) => (v === null || v === undefined ? "—" : `${v}%`);
 
+/** Panels wait on the default hub; a failure loading it, or the panel's own
+ * report, is shown as an error with a retry, never as an empty report. */
 function useHub() {
-  return useHubs().data?.results[0]?.id;
+  return useDefaultHub();
+}
+
+function failure(
+  hub: ReturnType<typeof useHub>,
+  query: { error: unknown; refetch: () => unknown }
+) {
+  const error = hub.hubsQuery.error ?? query.error;
+  if (!error) return null;
+  return (
+    <ErrorState
+      error={error}
+      onRetry={() => {
+        if (hub.hubsQuery.error) hub.hubsQuery.refetch();
+        else query.refetch();
+      }}
+    />
+  );
 }
 
 function Table({
@@ -98,7 +118,8 @@ function Toolbar({
 // 6.3 ---------------------------------------------------------------------------
 
 export function ApartmentsPanel({ showMargin }: { showMargin: boolean }) {
-  const hub = useHub();
+  const hubState = useHub();
+  const hub = hubState.hubId;
   const [days, setDays] = useState("30");
   const query = useApartmentPerformance({ hub, ...periodRange(days) });
   const rows = query.data?.rows ?? [];
@@ -109,51 +130,52 @@ export function ApartmentsPanel({ showMargin }: { showMargin: boolean }) {
         setDays={setDays}
         note="Ranked by orders per customer per week live — a building launched last week isn't judged on raw volume against one live for months."
       />
-      {query.isLoading ? (
-        <Skeleton className="h-40" />
-      ) : (
-        <Table
-          headers={[
-            "Apartment",
-            "Live for",
-            "Customers",
-            "New",
-            "Orders",
-            "Orders / customer",
-            "Repeat",
-            "Avg order",
-            ...(showMargin ? ["Money made"] : []),
-            "Rating",
-          ]}
-          align={[
-            "l",
-            "r",
-            "r",
-            "r",
-            "r",
-            "r",
-            "r",
-            "r",
-            ...(showMargin ? ["r" as const] : []),
-            "r",
-          ]}
-          rows={rows.map((r) => [
-            <div key="n" className="flex flex-col">
-              <span className="font-medium text-text-primary">{r.name}</span>
-              <span className="text-xs text-text-muted">{r.cluster}</span>
-            </div>,
-            r.days_since_launch === null ? "—" : `${r.days_since_launch} days`,
-            r.customers,
-            r.new_customers,
-            r.orders,
-            r.orders_per_customer ?? "—",
-            pct(r.repeat_rate),
-            money(r.aov_minor),
-            ...(showMargin ? [money(r.margin_minor)] : []),
-            r.avg_rating === null ? "—" : `${r.avg_rating} ★`,
-          ])}
-        />
-      )}
+      {failure(hubState, query) ??
+        (!query.data ? (
+          <Skeleton className="h-40" />
+        ) : (
+          <Table
+            headers={[
+              "Apartment",
+              "Live for",
+              "Customers",
+              "New",
+              "Orders",
+              "Orders / customer",
+              "Repeat",
+              "Avg order",
+              ...(showMargin ? ["Money made"] : []),
+              "Rating",
+            ]}
+            align={[
+              "l",
+              "r",
+              "r",
+              "r",
+              "r",
+              "r",
+              "r",
+              "r",
+              ...(showMargin ? ["r" as const] : []),
+              "r",
+            ]}
+            rows={rows.map((r) => [
+              <div key="n" className="flex flex-col">
+                <span className="font-medium text-text-primary">{r.name}</span>
+                <span className="text-xs text-text-muted">{r.cluster}</span>
+              </div>,
+              r.days_since_launch === null ? "—" : `${r.days_since_launch} days`,
+              r.customers,
+              r.new_customers,
+              r.orders,
+              r.orders_per_customer ?? "—",
+              pct(r.repeat_rate),
+              money(r.aov_minor),
+              ...(showMargin ? [money(r.margin_minor)] : []),
+              r.avg_rating === null ? "—" : `${r.avg_rating} ★`,
+            ])}
+          />
+        ))}
     </div>
   );
 }
@@ -161,7 +183,8 @@ export function ApartmentsPanel({ showMargin }: { showMargin: boolean }) {
 // 6.4 ---------------------------------------------------------------------------
 
 export function ChannelsPanel() {
-  const hub = useHub();
+  const hubState = useHub();
+  const hub = hubState.hubId;
   const [days, setDays] = useState("90");
   const query = useChannelPerformance({ hub, ...periodRange(days) });
   const rows = query.data?.rows ?? [];
@@ -172,39 +195,40 @@ export function ChannelsPanel() {
         setDays={setDays}
         note="For customers acquired in the period: what they cost, whether they came back, and what they spent in their first 60 days."
       />
-      {query.isLoading ? (
-        <Skeleton className="h-40" />
-      ) : rows.length === 0 ? (
-        <EmptyState
-          icon="chart"
-          title="No new customers in this period"
-          body="Try a longer period."
-        />
-      ) : (
-        <Table
-          headers={[
-            "Channel",
-            "New customers",
-            "Spend",
-            "Commission",
-            "Cost per customer",
-            "Came back",
-            "60-day revenue / customer",
-          ]}
-          align={["l", "r", "r", "r", "r", "r", "r"]}
-          rows={rows.map((r) => [
-            <span key="c" className="font-medium text-text-primary">
-              {r.channel_name}
-            </span>,
-            r.new_customers,
-            money(r.spend_minor),
-            money(r.commission_minor),
-            money(r.cac_minor),
-            pct(r.repeat_rate),
-            money(r.revenue_60d_per_customer_minor),
-          ])}
-        />
-      )}
+      {failure(hubState, query) ??
+        (!query.data ? (
+          <Skeleton className="h-40" />
+        ) : rows.length === 0 ? (
+          <EmptyState
+            icon="chart"
+            title="No new customers in this period"
+            body="Try a longer period."
+          />
+        ) : (
+          <Table
+            headers={[
+              "Channel",
+              "New customers",
+              "Spend",
+              "Commission",
+              "Cost per customer",
+              "Came back",
+              "60-day revenue / customer",
+            ]}
+            align={["l", "r", "r", "r", "r", "r", "r"]}
+            rows={rows.map((r) => [
+              <span key="c" className="font-medium text-text-primary">
+                {r.channel_name}
+              </span>,
+              r.new_customers,
+              money(r.spend_minor),
+              money(r.commission_minor),
+              money(r.cac_minor),
+              pct(r.repeat_rate),
+              money(r.revenue_60d_per_customer_minor),
+            ])}
+          />
+        ))}
     </div>
   );
 }
@@ -212,7 +236,8 @@ export function ChannelsPanel() {
 // 6.5 ---------------------------------------------------------------------------
 
 export function UnitEconomicsPanel() {
-  const hub = useHub();
+  const hubState = useHub();
+  const hub = hubState.hubId;
   const [days, setDays] = useState("30");
   const query = useUnitEconomics({ hub, ...periodRange(days) });
   const data = query.data;
@@ -224,59 +249,60 @@ export function UnitEconomicsPanel() {
         setDays={setDays}
         note="Revenue less the direct costs of each order. Rent, salaries and the press itself aren't included — this is contribution, not profit."
       />
-      {query.isLoading || !data ? (
-        <Skeleton className="h-56" />
-      ) : data.orders === 0 ? (
-        <EmptyState
-          icon="chart"
-          title="No invoiced deliveries in this period"
-          body="Try a longer period."
-        />
-      ) : (
-        <Card>
-          <CardContent className="flex flex-col gap-3 pt-6">
-            {data.steps.map((s) => {
-              const isTotal = s.step === "Revenue" || s.step === "Contribution";
-              const share = revenue ? Math.abs(s.total_minor) / revenue : 0;
-              return (
-                <div key={s.step} className="flex items-center gap-3">
-                  <span
-                    className={cn(
-                      "w-36 shrink-0 text-sm",
-                      isTotal ? "font-semibold text-text-primary" : "text-text-secondary"
-                    )}
-                  >
-                    {s.step}
-                  </span>
-                  <div className="h-3 flex-1 rounded-sm bg-surface-sunken">
-                    <div
+      {failure(hubState, query) ??
+        (!data ? (
+          <Skeleton className="h-56" />
+        ) : data.orders === 0 ? (
+          <EmptyState
+            icon="chart"
+            title="No invoiced deliveries in this period"
+            body="Try a longer period."
+          />
+        ) : (
+          <Card>
+            <CardContent className="flex flex-col gap-3 pt-6">
+              {data.steps.map((s) => {
+                const isTotal = s.step === "Revenue" || s.step === "Contribution";
+                const share = revenue ? Math.abs(s.total_minor) / revenue : 0;
+                return (
+                  <div key={s.step} className="flex items-center gap-3">
+                    <span
                       className={cn(
-                        "h-3 rounded-sm",
-                        s.step === "Contribution"
-                          ? "bg-status-success"
-                          : isTotal
-                            ? "bg-brand-yellow"
-                            : "bg-status-danger"
+                        "w-36 shrink-0 text-sm",
+                        isTotal ? "font-semibold text-text-primary" : "text-text-secondary"
                       )}
-                      style={{ width: `${Math.max(share * 100, s.total_minor ? 1 : 0)}%` }}
-                    />
+                    >
+                      {s.step}
+                    </span>
+                    <div className="h-3 flex-1 rounded-sm bg-surface-sunken">
+                      <div
+                        className={cn(
+                          "h-3 rounded-sm",
+                          s.step === "Contribution"
+                            ? "bg-status-success"
+                            : isTotal
+                              ? "bg-brand-yellow"
+                              : "bg-status-danger"
+                        )}
+                        style={{ width: `${Math.max(share * 100, s.total_minor ? 1 : 0)}%` }}
+                      />
+                    </div>
+                    <span className="w-28 shrink-0 text-right text-sm tabular-nums">
+                      {money(s.total_minor)}
+                    </span>
+                    <span className="hidden w-28 shrink-0 text-right text-xs text-text-muted tabular-nums sm:inline">
+                      {money(s.per_order_minor)} / order
+                    </span>
                   </div>
-                  <span className="w-28 shrink-0 text-right text-sm tabular-nums">
-                    {money(s.total_minor)}
-                  </span>
-                  <span className="hidden w-28 shrink-0 text-right text-xs text-text-muted tabular-nums sm:inline">
-                    {money(s.per_order_minor)} / order
-                  </span>
-                </div>
-              );
-            })}
-            <p className="text-xs text-text-muted">
-              {data.orders} delivered orders · {pct(data.margin_pct)} margin. Labour is an estimate
-              from the configured rate.
-            </p>
-          </CardContent>
-        </Card>
-      )}
+                );
+              })}
+              <p className="text-xs text-text-muted">
+                {data.orders} delivered orders · {pct(data.margin_pct)} margin. Labour is an
+                estimate from the configured rate.
+              </p>
+            </CardContent>
+          </Card>
+        ))}
     </div>
   );
 }
@@ -284,10 +310,13 @@ export function UnitEconomicsPanel() {
 // 6.7 ---------------------------------------------------------------------------
 
 export function OperationsPanel() {
-  const hub = useHub();
+  const hubState = useHub();
+  const hub = hubState.hubId;
   const query = useOperationsDaily(hub);
   const data = query.data;
-  if (query.isLoading || !data) return <Skeleton className="h-56" />;
+  const failed = failure(hubState, query);
+  if (failed) return failed;
+  if (!data) return <Skeleton className="h-56" />;
   const exceptions = data.open_exceptions;
   const tiles: [string, string, string?][] = [
     ["On time today", pct(data.on_time.value), `${data.on_time.jobs} jobs`],
@@ -390,10 +419,13 @@ export function OperationsPanel() {
 // 6.6 ---------------------------------------------------------------------------
 
 export function CheckpointPanel() {
-  const hub = useHub();
+  const hubState = useHub();
+  const hub = hubState.hubId;
   const query = useCheckpoint({ hub });
   const cp = query.data;
-  if (query.isLoading || !cp) return <Skeleton className="h-56" />;
+  const failed = failure(hubState, query);
+  if (failed) return failed;
+  if (!cp) return <Skeleton className="h-56" />;
   if (!cp.launched_on) {
     return (
       <EmptyState
@@ -491,11 +523,14 @@ export function CheckpointPanel() {
 // 6.9 ---------------------------------------------------------------------------
 
 export function DataQualityPanel() {
-  const hub = useHub();
+  const hubState = useHub();
+  const hub = hubState.hubId;
   const query = useDataQuality(hub);
   const [open, setOpen] = useState<string | null>(null);
   const data = query.data;
-  if (query.isLoading || !data) return <Skeleton className="h-56" />;
+  const failed = failure(hubState, query);
+  if (failed) return failed;
+  if (!data) return <Skeleton className="h-56" />;
   return (
     <div className="flex flex-col gap-3">
       <p className="text-sm text-text-muted">
