@@ -10,9 +10,18 @@ import { NextResponse, type NextRequest } from "next/server";
  * assets keep working unchanged on either host. The field app (/field) is
  * passed through too, so riders can use the same console address. */
 const CONSOLE_HOST = "console.ironmanindia.co";
+const PUBLIC_HOST = "ironmanindia.co";
+
+/** Vercel's own address for the production deployment. It serves the same
+ * app, but the API only trusts the real domains (its allowed hosts and
+ * CSRF origins come from CORS_ALLOWED_ORIGINS), so a login there failed
+ * with a bare "Bad Request (400)" whatever the credentials. Send visitors
+ * to the real domain instead of half-working on this one. */
+const VERCEL_PRODUCTION_HOST = "ironman-console.vercel.app";
 
 export function middleware(request: NextRequest) {
   const host = request.headers.get("host") ?? "";
+  if (host === VERCEL_PRODUCTION_HOST) return toCanonicalDomain(request);
   if (host !== CONSOLE_HOST) return NextResponse.next();
 
   const { pathname } = request.nextUrl;
@@ -32,6 +41,20 @@ export function middleware(request: NextRequest) {
   const url = request.nextUrl.clone();
   url.pathname = `/console${pathname}`;
   return NextResponse.rewrite(url);
+}
+
+function toCanonicalDomain(request: NextRequest) {
+  const { pathname, search } = request.nextUrl;
+  // API calls follow the page: once the page is on the real domain, its
+  // requests are too. Redirecting a POST here would only trade one failure
+  // for a cross-origin one.
+  if (pathname.startsWith("/api") || pathname.startsWith("/_next")) {
+    return NextResponse.next();
+  }
+  const staff =
+    pathname.startsWith("/console") || pathname === "/field" || pathname.startsWith("/field/");
+  const target = new URL(`${pathname}${search}`, `https://${staff ? CONSOLE_HOST : PUBLIC_HOST}`);
+  return NextResponse.redirect(target, 308);
 }
 
 export const config = {
