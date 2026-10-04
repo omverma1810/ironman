@@ -156,6 +156,18 @@ jobs:
       - name: Show deployed URL
         run: gcloud run services describe "${{ env.SERVICE }}" --region "${{ env.REGION }}" --format "value(status.url)"
 
+      # A green deploy used to mean "the image was handed to Cloud Run", not
+      # "the API answers". Ask the public address (the same path customers
+      # and staff use, through the console's /api/v1 proxy) and fail the run
+      # if it doesn't come back healthy, so a broken release shows up here
+      # rather than as a login page that silently stops working.
+      - name: Check the live API answers
+        env:
+          API_BASE: ${{ vars.MAINTENANCE_API_BASE_URL || 'https://console.ironmanindia.co/api/v1' }}
+        run: |
+          curl --fail --silent --show-error --retry 6 --retry-delay 10 --retry-all-errors \
+            --max-time 30 "$API_BASE/healthz"
+
   cleanup-old-images:
     name: Keep only the latest 3 images
     needs: deploy
