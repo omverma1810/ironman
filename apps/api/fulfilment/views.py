@@ -20,6 +20,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema
 from rest_framework import viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -29,6 +30,7 @@ from fulfilment import services
 from fulfilment.models import Job, RouteDay
 from fulfilment.serializers import (
     JobAttemptSerializer,
+    JobCardSerializer,
     JobCompleteSerializer,
     JobFailSerializer,
     JobSerializer,
@@ -120,11 +122,17 @@ class JobViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=False, methods=["get"], permission_classes=[IsFieldStaff])
     def mine(self, request):
-        qs = self.get_queryset().filter(assigned_to=request.user)
+        qs = (
+            self.get_queryset()
+            .filter(assigned_to=request.user)
+            .select_related("order__customer", "order__apartment", "order__address__apartment")
+            .prefetch_related("order__lines__garment_type")
+            .annotate(bag_count=Count("order__bags", distinct=True))
+        )
         date_param = request.query_params.get("date")
         if date_param:
             qs = qs.filter(route_day__date=date_param)
-        return Response(JobSerializer(qs, many=True).data)
+        return Response(JobCardSerializer(qs, many=True).data)
 
     @action(detail=True, methods=["post"])
     def start(self, request, pk=None):
@@ -188,7 +196,9 @@ class ProofCreateView(APIView):
         serializer = ProofCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-        job = Job.objects.get(pk=data["job"])
+        job = services.job_for_actor(data["job"], request.user)
+        if job is None:
+            raise NotFound("No such job.")
         proof = services.record_proof(
             job,
             kind=data["kind"],

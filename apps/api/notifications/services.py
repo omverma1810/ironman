@@ -125,6 +125,25 @@ def active_device_tokens(user) -> list[str]:
     )
 
 
+def push_to_user(user, *, title: str, body: str, data: dict | None = None) -> int:
+    """A short push to one staff member's phones (a rider's new jobs). No
+    template, no fallback channel and no request row: it is a nudge, and the
+    work itself is on the app's day list whether or not the nudge lands.
+    Never raises. Returns how many devices accepted it."""
+    tokens = active_device_tokens(user)
+    if not tokens:
+        return 0
+    try:
+        results = push.get_push_sender().send(tokens, title=title, body=body, data=data or {})
+    except Exception:
+        logger.exception("push to %s failed", user.pk)
+        return 0
+    for result in results:
+        if result.unregistered:
+            DeviceToken.objects.filter(token=result.token).update(is_active=False)
+    return sum(1 for r in results if r.ok)
+
+
 def _is_allowed_recipient(phone: str) -> bool:
     cfg = settings.IRONMAN
     if not cfg["NOTIFICATIONS_ENFORCE_RECIPIENT_ALLOWLIST"]:

@@ -2,6 +2,7 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+import ordering.services as ordering_services
 from fulfilment.models import (
     Job,
     JobAttempt,
@@ -11,6 +12,8 @@ from fulfilment.models import (
     ProofKind,
     RouteDay,
 )
+
+MAX_PROOF_BYTES = 10 * 1024 * 1024
 
 
 class JobSerializer(serializers.ModelSerializer):
@@ -37,6 +40,68 @@ class JobSerializer(serializers.ModelSerializer):
             "attempt_no",
         ]
         read_only_fields = [f for f in fields if f != "sequence"]
+
+
+class JobCardLineSerializer(serializers.Serializer):
+    garment_type = serializers.UUIDField()
+    garment_type_name = serializers.CharField()
+    declared_qty = serializers.IntegerField()
+
+
+class JobCardSerializer(JobSerializer):
+    """What a rider needs on the doorstep, in one payload, so the field app
+    can keep the whole day on the phone and work with no signal (docs/08
+    batch 9.1). Only `GET /fulfilment/jobs/mine` uses it — the console's
+    route-day views keep the lighter `JobSerializer`."""
+
+    date = serializers.DateField(source="route_day.date", read_only=True)
+    order_status = serializers.CharField(source="order.status", read_only=True)
+    payment_status = serializers.CharField(source="order.payment_status", read_only=True)
+    customer_name = serializers.CharField(source="order.customer.name", read_only=True)
+    customer_phone = serializers.CharField(source="order.customer.phone", read_only=True)
+    apartment_name = serializers.SerializerMethodField()
+    address = serializers.SerializerMethodField()
+    special_instructions = serializers.CharField(
+        source="order.special_instructions", read_only=True
+    )
+    lines = serializers.SerializerMethodField()
+    # How many bags go to this door: the rider scans each one, and the app can
+    # say "2 of 3" without being told the codes themselves.
+    bag_count = serializers.IntegerField(read_only=True)
+
+    class Meta(JobSerializer.Meta):
+        fields = JobSerializer.Meta.fields + [
+            "date",
+            "bag_count",
+            "order_status",
+            "payment_status",
+            "customer_name",
+            "customer_phone",
+            "apartment_name",
+            "address",
+            "special_instructions",
+            "lines",
+        ]
+        read_only_fields = fields
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_apartment_name(self, obj) -> str:
+        return obj.order.apartment.name if obj.order.apartment_id else ""
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_address(self, obj) -> str:
+        return ordering_services.address_text(obj.order.address) or ""
+
+    @extend_schema_field(JobCardLineSerializer(many=True))
+    def get_lines(self, obj):
+        return [
+            {
+                "garment_type": line.garment_type_id,
+                "garment_type_name": line.garment_type.name,
+                "declared_qty": line.declared_qty,
+            }
+            for line in obj.order.lines.all()
+        ]
 
 
 class RouteDayListSerializer(serializers.ModelSerializer):
@@ -154,6 +219,16 @@ class ProofCreateSerializer(serializers.Serializer):
     geo_lng = serializers.DecimalField(
         max_digits=9, decimal_places=6, required=False, allow_null=True
     )
+
+    def validate_file(self, file):
+        # A phone photo is a few MB; anything past this is not a proof photo.
+        if file is not None:
+            if file.size > MAX_PROOF_BYTES:
+                raise serializers.ValidationError("That file is too large (10 MB at most).")
+            content_type = getattr(file, "content_type", "") or ""
+            if not content_type.startswith("image/"):
+                raise serializers.ValidationError("A proof must be an image.")
+        return file
 
     def validate(self, attrs):
         if attrs["kind"] in (ProofKind.PHOTO, ProofKind.SIGNATURE) and not attrs.get("file"):

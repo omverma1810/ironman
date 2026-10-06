@@ -58,6 +58,7 @@ from identity.serializers import (
     StaffInviteSerializer,
     StaffLoginSerializer,
     StaffSerializer,
+    StaffTokenSerializer,
     TeamActiveSerializer,
     TeamMemberSerializer,
     TeamRoleChangeSerializer,
@@ -193,6 +194,58 @@ class OtpDebugView(APIView):
         return Response({"code": code})
 
 
+def _verified_staff(request) -> tuple[User, StaffLoginSerializer]:
+    """The shared credential check behind both staff sign-ins (console
+    cookie, field-app token): password, verified email, and TOTP where the
+    account requires it. Failures are audited and never say which part of
+    the email/password pair was wrong."""
+    serializer = StaffLoginSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    email = serializer.validated_data["email"].lower()
+    password = serializer.validated_data["password"]
+
+    try:
+        user = User.objects.get(email=email)
+    except User.DoesNotExist:
+        user = None
+
+    if not user or not user.check_password(password) or not user.is_active:
+        audit.record(action="login.failed", object_type="User", object_id=email)
+        raise ApiError(
+            "That email or password is incorrect.", code="invalid_credentials", status_code=401
+        )
+
+    if not user.email_verified_at:
+        raise ApiError(
+            "Verify your email before logging in. Check your inbox for the link.",
+            code="email_not_verified",
+            status_code=403,
+        )
+
+    if user.requires_mfa():
+        totp_code = serializer.validated_data.get("totp_code")
+        if not user.mfa_enabled:
+            raise ApiError(
+                "Two-factor authentication is required for this account. "
+                "Set it up before logging in.",
+                code="mfa_setup_required",
+                status_code=403,
+            )
+        if not totp_code or not pyotp.TOTP(user.mfa_secret).verify(totp_code, valid_window=1):
+            raise ApiError(
+                "That authentication code is incorrect.",
+                code="invalid_mfa_code",
+                status_code=401,
+            )
+    return user, serializer
+
+
+def _record_login(user: User) -> None:
+    user.last_login = timezone.now()
+    user.save(update_fields=["last_login"])
+    audit.record(action="login.success", object_type="User", object_id=str(user.id), actor=user)
+
+
 @extend_schema(request=StaffLoginSerializer, responses={200: MeSerializer})
 class StaffLoginView(APIView):
     """POST /auth/login — session-cookie auth for console users
@@ -205,50 +258,35 @@ class StaffLoginView(APIView):
     throttle_scope = "login"
 
     def post(self, request):
-        serializer = StaffLoginSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        email = serializer.validated_data["email"].lower()
-        password = serializer.validated_data["password"]
+        user, _ = _verified_staff(request)
+        django_login(request, user)
+        _record_login(user)
+        return Response({"user": MeSerializer(user).data})
 
-        try:
-            user = User.objects.get(email=email)
-        except User.DoesNotExist:
-            user = None
 
-        if not user or not user.check_password(password) or not user.is_active:
-            audit.record(action="login.failed", object_type="User", object_id=email)
+@extend_schema(request=StaffLoginSerializer, responses={200: StaffTokenSerializer})
+class StaffTokenView(APIView):
+    """POST /auth/staff/token — the field app's sign-in (docs/08 batch 9.1).
+    Same checks as the console login, but a native app has no cookie jar, so
+    it gets the bearer pair customers already use (15-minute access, 30-day
+    rotating refresh). Field staff only: the app is built for riders and
+    nothing else, and a console role has no business holding a long-lived
+    token on a phone."""
+
+    permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "login"
+
+    def post(self, request):
+        user, _ = _verified_staff(request)
+        if "FIELD" not in user.role_codes:
             raise ApiError(
-                "That email or password is incorrect.", code="invalid_credentials", status_code=401
-            )
-
-        if not user.email_verified_at:
-            raise ApiError(
-                "Verify your email before logging in. Check your inbox for the link.",
-                code="email_not_verified",
+                "This app is for field staff. Use the console on a computer.",
+                code="permission_denied",
                 status_code=403,
             )
-
-        if user.requires_mfa():
-            totp_code = serializer.validated_data.get("totp_code")
-            if not user.mfa_enabled:
-                raise ApiError(
-                    "Two-factor authentication is required for this account. "
-                    "Set it up before logging in.",
-                    code="mfa_setup_required",
-                    status_code=403,
-                )
-            if not totp_code or not pyotp.TOTP(user.mfa_secret).verify(totp_code, valid_window=1):
-                raise ApiError(
-                    "That authentication code is incorrect.",
-                    code="invalid_mfa_code",
-                    status_code=401,
-                )
-
-        django_login(request, user)
-        user.last_login = timezone.now()
-        user.save(update_fields=["last_login"])
-        audit.record(action="login.success", object_type="User", object_id=str(user.id), actor=user)
-        return Response({"user": MeSerializer(user).data})
+        _record_login(user)
+        return Response({**_issue_jwt_pair(user), "user": MeSerializer(user).data})
 
 
 @extend_schema(request=None, responses={204: OpenApiResponse(description="Logged out")})

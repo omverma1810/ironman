@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 
 import ordering.services as ordering_services
 from common.errors import ApiError
-from common.permissions import IsCustomer, IsOpsStaff, ScopedQuerysetMixin
+from common.permissions import HasRole, IsCustomer, IsOpsStaff, ScopedQuerysetMixin
 from notifications import services
 from notifications.models import (
     NotificationChannel,
@@ -80,10 +80,11 @@ class NotificationPreferenceView(APIView):
     delete=extend_schema(request=DeviceRemovalSerializer, responses={204: None}),
 )
 class DeviceView(APIView):
-    """POST/DELETE /notifications/devices — docs/08 batch 8.4 [C]: the customer
-    app registers its push token after sign-in and removes it at sign-out."""
+    """POST/DELETE /notifications/devices — docs/08 batch 8.4 [C], 9.1 [F]: the
+    customer app and the field app register their push token after sign-in
+    and remove it at sign-out."""
 
-    permission_classes = [IsCustomer]
+    permission_classes = [HasRole.any("CUSTOMER", "FIELD")]
 
     def post(self, request):
         serializer = DeviceRegistrationSerializer(data=request.data)

@@ -90,6 +90,12 @@ class StaffLoginSerializer(serializers.Serializer):
     totp_code = serializers.CharField(required=False, allow_blank=True)
 
 
+class StaffTokenSerializer(serializers.Serializer):
+    access = serializers.CharField()
+    refresh = serializers.CharField()
+    user = MeSerializer()
+
+
 class PasswordResetRequestSerializer(serializers.Serializer):
     email = serializers.EmailField()
 

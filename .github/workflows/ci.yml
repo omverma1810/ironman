@@ -143,6 +143,10 @@ jobs:
       - run: npm run typecheck --workspace=apps/mobile
       - run: npm test --workspace=apps/mobile
       - run: npm run export:web --workspace=apps/mobile
+      # The field app (docs/08 Phase 9), same gates.
+      - run: npm run typecheck --workspace=apps/field
+      - run: npm test --workspace=apps/field
+      - run: npm run export:web --workspace=apps/field
 
   # ── End-to-end ─────────────────────────────────────────────────────────
   e2e:
@@ -172,9 +176,9 @@ jobs:
       CELERY_BROKER_URL: redis://localhost:6379/1
       DJANGO_SECRET_KEY: ci-test-secret
       NEXT_PUBLIC_API_BASE_URL: http://localhost:8000/api/v1
-      # The console's origin, and the customer app's web build (served on 8081
-      # for its own end-to-end tests below).
-      CORS_ALLOWED_ORIGINS: http://localhost:3000,http://localhost:8081
+      # The console's origin, and the customer and field apps' web builds
+      # (served on 8081 and 8082 for their own end-to-end tests below).
+      CORS_ALLOWED_ORIGINS: http://localhost:3000,http://localhost:8081,http://localhost:8082
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -246,6 +250,17 @@ jobs:
         env:
           EXPO_PUBLIC_API_BASE_URL: http://localhost:8000/api/v1
 
+      # The field app: sign-in, a day's jobs, and the offline queue, against
+      # the same live API. Runs after the console suite, which uses the seeded
+      # rider jobs; this suite books and assigns its own.
+      - name: Run field app E2E suite
+        working-directory: apps/field
+        run: |
+          npm run export:web
+          npx playwright test
+        env:
+          EXPO_PUBLIC_API_BASE_URL: http://localhost:8000/api/v1
+
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v4
@@ -254,6 +269,7 @@ jobs:
           path: |
             apps/web/playwright-report/
             apps/mobile/playwright-report/
+            apps/field/playwright-report/
           retention-days: 14
 
       - name: Upload service logs on failure

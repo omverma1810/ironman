@@ -30,6 +30,26 @@ def get_order(order_id):
     return Order.objects.get(pk=order_id)
 
 
+def address_text(addr) -> str | None:
+    """A saved `Address` as the text a rider needs to find the door (or a
+    maps deep link): flat and block, the apartment and its street address,
+    or the typed address, then the landmark."""
+    if not addr:
+        return None
+    parts: list[str] = []
+    if addr.flat_no:
+        parts.append(f"Flat {addr.flat_no}" + (f", Block {addr.block}" if addr.block else ""))
+    if addr.apartment:
+        parts.append(addr.apartment.name)
+        if addr.apartment.address:
+            parts.append(addr.apartment.address)
+    elif addr.free_text_address:
+        parts.append(addr.free_text_address)
+    if addr.landmark:
+        parts.append(f"Near {addr.landmark}")
+    return ", ".join(parts) if parts else None
+
+
 @transaction.atomic
 def create_order(
     *,

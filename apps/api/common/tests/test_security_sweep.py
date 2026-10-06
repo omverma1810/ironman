@@ -26,6 +26,7 @@ PUBLIC = {
     "api/v1/auth/otp/request": "customer sign-in starts signed out (throttled)",
     "api/v1/auth/otp/verify": "customer sign-in (throttled, 5 attempts per code)",
     "api/v1/auth/login": "staff sign-in (throttled)",
+    "api/v1/auth/staff/token": "field app sign-in: same checks as staff sign-in, field staff only (throttled)",
     "api/v1/auth/refresh": "exchanges a refresh token, which is itself the credential",
     "api/v1/auth/password/reset/request": "forgotten password; same reply for any email",
     "api/v1/auth/password/reset/confirm": "needs the single-use reset token",
