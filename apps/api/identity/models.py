@@ -304,7 +304,11 @@ class AuditEvent(AppendOnlyModel):
 
     class Meta:
         db_table = "identity_audit_event"
-        indexes = [models.Index(fields=["object_type", "object_id", "-created_at"])]
+        indexes = [
+            models.Index(fields=["object_type", "object_id", "-created_at"]),
+            # The audit screen lists newest first across everything.
+            models.Index(fields=["-created_at"], name="audit_created_idx"),
+        ]
 
     def __str__(self) -> str:
         return f"{self.action} on {self.object_type}:{self.object_id} by {self.actor_id}"

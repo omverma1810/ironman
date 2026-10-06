@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 
+from django.db.models import Count, Q
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema
@@ -45,7 +46,11 @@ _CAN_ACT_ON_JOB = HasRole.any("FIELD", "ADMIN", "FOUNDER")
 
 
 class RouteDayViewSet(viewsets.ModelViewSet):
-    queryset = RouteDay.objects.filter(deleted_at__isnull=True).select_related("cluster", "hub")
+    queryset = (
+        RouteDay.objects.filter(deleted_at__isnull=True)
+        .select_related("cluster", "hub")
+        .annotate(annotated_job_count=Count("jobs", filter=Q(jobs__deleted_at__isnull=True)))
+    )
     permission_classes = [IsAdminOrFounder]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["cluster", "date", "status"]

@@ -7,7 +7,7 @@ blocks rather than restating any formula.
 
 from __future__ import annotations
 
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 from datetime import date, timedelta
 
 from django.db.models import Avg, Count, Sum
@@ -41,15 +41,17 @@ NOT_DONE = WIP + [
 ]
 
 
-def _per_order_margin(order_ids) -> dict:
-    """{order_id: (revenue, margin)} for orders with an issued invoice."""
-    revenue = metrics._order_revenue(order_ids)
+def _per_order_margin(orders) -> dict:
+    """{order_id: (revenue, margin)} for orders with an issued invoice.
+    `orders` is a queryset, matched by subquery: a year of orders as a list of
+    ids runs into the database's parameter limit."""
     from billing.models import OrderCost
 
+    revenue = metrics._order_revenue(orders)
     costs: dict = defaultdict(int)
-    for order_id, amount in OrderCost.objects.filter(order_id__in=list(revenue)).values_list(
-        "order_id", "amount_minor"
-    ):
+    for order_id, amount in OrderCost.objects.filter(
+        order_id__in=orders.order_by().values("id")
+    ).values_list("order_id", "amount_minor"):
         costs[order_id] += amount
     return {oid: (rev, rev - costs[oid]) for oid, rev in revenue.items()}
 
@@ -57,12 +59,17 @@ def _per_order_margin(order_ids) -> dict:
 # 6.3 Apartment performance ----------------------------------------------------
 
 
+_Delivery = namedtuple("_Delivery", "id customer_id apartment_id")
+
+
 def apartment_performance(hub, start: date, end: date) -> list[dict]:
     """docs/07 ⑥ — ranked by orders per active customer per week since
     launch, so a building live for 5 days isn't compared on raw volume
     with one live for 60."""
-    orders = list(metrics.delivered_orders(hub, start, end).select_related("apartment"))
-    margins = _per_order_margin([o.id for o in orders])
+    orders_qs = metrics.delivered_orders(hub, start, end)
+    # Three columns, not whole Order objects: a window since launch is every delivery.
+    orders = [_Delivery(*row) for row in orders_qs.values_list("id", "customer_id", "apartment_id")]
+    margins = _per_order_margin(orders_qs)
     firsts = marketing.first_deliveries(hub, start, end)
     first_order_ids = {oid for oid, _ in firsts.values()}
 
@@ -74,7 +81,7 @@ def apartment_performance(hub, start: date, end: date) -> list[dict]:
     )
     ratings = defaultdict(list)
     for apartment_id, rating in Feedback.objects.filter(
-        order_id__in=[o.id for o in orders]
+        order_id__in=orders_qs.order_by().values("id")
     ).values_list("order__apartment_id", "rating"):
         ratings[apartment_id].append(rating)
 
@@ -140,6 +147,18 @@ def channel_performance(hub, start: date, end: date) -> list[dict]:
         touch = touches.get(customer_id)
         groups[touch.channel.code if touch else "ORGANIC"].append(customer_id)
 
+    # Every delivery by the cohort and its net revenue, fetched once: asking
+    # per customer made a year-long window thousands of queries.
+    cohort_orders = Order.objects.filter(
+        customer_id__in=list(firsts),
+        status__in=metrics.DELIVERED,
+        delivered_at__isnull=False,
+    )
+    revenue = metrics._order_revenue(cohort_orders)
+    delivered: dict = defaultdict(list)
+    for oid, customer_id, at in cohort_orders.values_list("id", "customer_id", "delivered_at"):
+        delivered[customer_id].append((oid, at))
+
     rows = []
     for code in sorted(set(groups) | set(cac)):
         customers = groups.get(code, [])
@@ -148,16 +167,10 @@ def channel_performance(hub, start: date, end: date) -> list[dict]:
         for customer_id in customers:
             first_order_id, first_day = firsts[customer_id]
             lo, hi = metrics._day_range(first_day, first_day + timedelta(days=59))
-            later = Order.objects.filter(
-                customer_id=customer_id,
-                status__in=metrics.DELIVERED,
-                delivered_at__gte=lo,
-                delivered_at__lt=hi,
-            )
-            ids = list(later.values_list("id", flat=True))
+            ids = [oid for oid, at in delivered[customer_id] if lo <= at < hi]
             if len(ids) > 1:
                 repeaters += 1
-            revenue_60 += sum(metrics._order_revenue(ids).values())
+            revenue_60 += sum(revenue.get(oid, 0) for oid in ids)
         info = cac.get(code, {})
         rows.append(
             {
@@ -290,6 +303,11 @@ def launch_date(hub) -> date | None:
 def checkpoint(hub, as_of: date | None = None) -> dict:
     """docs/07 §3 — answers the founders' Day 30/60/90 questions for the
     period from launch (first delivery) to `as_of`."""
+    with marketing.first_delivery_memo():
+        return _checkpoint(hub, as_of)
+
+
+def _checkpoint(hub, as_of: date | None) -> dict:
     as_of = as_of or timezone.localdate()
     start = launch_date(hub) or as_of
     days = (as_of - start).days + 1

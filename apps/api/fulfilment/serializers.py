@@ -1,3 +1,5 @@
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from fulfilment.models import (
@@ -39,7 +41,14 @@ class JobSerializer(serializers.ModelSerializer):
 
 class RouteDayListSerializer(serializers.ModelSerializer):
     cluster_name = serializers.CharField(source="cluster.name", read_only=True)
-    job_count = serializers.IntegerField(source="jobs.count", read_only=True)
+    job_count = serializers.SerializerMethodField()
+
+    @extend_schema_field(OpenApiTypes.INT)
+    def get_job_count(self, obj) -> int:
+        # The list view annotates the count in its query; a single route day
+        # (create, detail) just counts.
+        annotated = getattr(obj, "annotated_job_count", None)
+        return annotated if annotated is not None else obj.jobs.count()
 
     class Meta:
         model = RouteDay

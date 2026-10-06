@@ -100,7 +100,11 @@ class NotificationRequest(HubScopedModel):
 
     class Meta:
         db_table = "notifications_request"
-        indexes = [models.Index(fields=["order", "-created_at"])]
+        indexes = [
+            models.Index(fields=["order", "-created_at"]),
+            # The notification log: newest first (docs/08 7.6 load test).
+            models.Index(fields=["-created_at"], name="notification_created_idx"),
+        ]
 
     def __str__(self) -> str:
         return f"{self.template.code} -> {self.recipient_kind}:{self.recipient_id} ({self.status})"

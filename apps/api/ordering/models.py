@@ -146,6 +146,21 @@ class Order(HubScopedModel):
             models.Index(fields=["hub", "status", "pickup_slot_start"]),
             models.Index(fields=["apartment", "-created_at"]),
             models.Index(fields=["customer", "-created_at"]),
+            # The console's order list, newest first. Plain created_at, not
+            # (hub, created_at): the founder's list isn't filtered by hub.
+            models.Index(fields=["-created_at"], name="order_created_idx"),
+            # The analytics windows ("delivered this week") and "has this
+            # customer been delivered to before" (docs/08 7.6 load test).
+            models.Index(
+                fields=["hub", "delivered_at"],
+                name="order_hub_delivered_idx",
+                condition=models.Q(delivered_at__isnull=False),
+            ),
+            models.Index(
+                fields=["customer", "delivered_at"],
+                name="order_cust_delivered_idx",
+                condition=models.Q(delivered_at__isnull=False),
+            ),
         ]
 
     def save(self, *args, **kwargs):

@@ -18,7 +18,7 @@ Replaces SRC-B §5's unmeasurable criteria (`00 §3.3 M-9`) with numbers a test 
 | NFR-08 | Scan-to-confirmation | < 500 ms perceived (optimistic UI) | Manual + instrumentation |
 | NFR-09 | Dashboard render (rollup-backed) | < 800 ms | Load test |
 | NFR-10 | Export generation | < 30 s for 90 days of data | Celery task duration |
-| NFR-11 | Capacity headroom | 3× expected peak (300 orders/day) with no target breached | Load test in Phase 7.6 |
+| NFR-11 | Capacity headroom | 3× expected peak (300 orders/day) with no target breached | Load test in Phase 7.6 — results and gaps in `12-load-test.md` |
 
 ### 1.2 Reliability
 

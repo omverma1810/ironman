@@ -52,19 +52,27 @@ class OrderViewSet(ScopedQuerysetMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        qs = (
-            Order.objects.filter(deleted_at__isnull=True)
-            .select_related(
-                "customer",
-                "apartment",
-                "service",
-                "hub",
-                "address",
-                "address__apartment",
-                "feedback",
+        if self.action == "list":
+            # The list shows only what its serializer reads. Every join is
+            # planning time on each request (the full eight-table query took
+            # ~17 ms to plan and under 1 ms to run), so a list joins four.
+            qs = Order.objects.filter(deleted_at__isnull=True).select_related(
+                "customer", "apartment", "service", "feedback"
             )
-            .prefetch_related("lines")
-        )
+        else:
+            qs = (
+                Order.objects.filter(deleted_at__isnull=True)
+                .select_related(
+                    "customer",
+                    "apartment",
+                    "service",
+                    "hub",
+                    "address",
+                    "address__apartment",
+                    "feedback",
+                )
+                .prefetch_related("lines")
+            )
         if _is_customer_only(user):
             return qs.filter(customer__user=user)
         self.queryset = qs

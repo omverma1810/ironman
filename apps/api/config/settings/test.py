@@ -7,7 +7,11 @@ CELERY_TASK_EAGER_PROPAGATES = True
 
 # The booking wizard's E2E spec needs to read a real OTP code (docs/08
 # batch 4.3) — `identity.urls` only routes the debug endpoint this unlocks.
-IRONMAN = {**IRONMAN, "EXPOSE_OTP_DEBUG_ENDPOINT": True}  # noqa: F405
+IRONMAN = {  # noqa: F405
+    **IRONMAN,  # noqa: F405
+    "EXPOSE_OTP_DEBUG_ENDPOINT": True,
+    "ANALYTICS_PAST_WEEK_CACHE_SECONDS": 0,
+}
 
 # Tests never depend on MinIO/S3 being reachable, even if a developer's
 # .env has AWS_STORAGE_BUCKET_NAME set for running the app locally —
