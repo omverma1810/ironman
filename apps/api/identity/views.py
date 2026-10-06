@@ -288,6 +288,7 @@ class MeView(APIView):
         serializer = MeUpdateSerializer(request.user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        customers_services.sync_name_from_user(request.user)
         return Response(MeSerializer(request.user).data)
 
     def delete(self, request):

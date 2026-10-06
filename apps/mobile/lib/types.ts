@@ -7,6 +7,7 @@ export type Me = {
   id: string;
   full_name: string;
   phone: string | null;
+  preferred_language?: string;
   roles: Role[];
 };
 
@@ -38,16 +39,20 @@ export type OrderListItem = {
   ref: string;
   status: OrderStatus;
   payment_status: PaymentStatus;
+  service: string;
   service_name: string;
   apartment_name: string;
   pickup_slot_start: string | null;
+  pickup_slot_end: string | null;
   delivery_slot_start: string | null;
+  delivery_slot_end: string | null;
   total_minor: number;
   has_feedback: boolean;
 };
 
 export type OrderLine = {
   id: string;
+  garment_type: string;
   garment_type_name: string;
   verified_qty: number | null;
   declared_qty: number;
@@ -67,7 +72,50 @@ export type OrderDetail = OrderListItem & {
   address: string | null;
   notes: string;
   lines: OrderLine[];
+  tracking_token: string;
 };
+
+/** `/track/{token}` — the customer-safe view: no staff names, no internal notes. */
+export type TrackingEvent = {
+  event_type: string;
+  to_status: string;
+  stage: string | null;
+  created_at: string;
+};
+
+export type Tracking = {
+  ref: string;
+  status: OrderStatus;
+  stage: string;
+  stage_label: string;
+  payment_status: PaymentStatus;
+  address: string | null;
+  pickup_slot_start: string | null;
+  pickup_slot_end: string | null;
+  delivery_slot_start: string | null;
+  delivery_slot_end: string | null;
+  delivered_at: string | null;
+  total_minor: number;
+  lines: OrderLine[];
+  invoice: { ref: string; status: string; issued_at: string | null; total_minor: number; pdf_url: string | null } | null;
+  events: TrackingEvent[];
+};
+
+export type MyReferral = {
+  code: string;
+  is_active: boolean;
+  friends_joined: number;
+  rewards_count: number;
+  rewards_earned_minor: number;
+  referrer_reward_minor: number;
+  referee_reward_minor: number;
+  min_order_minor: number;
+  credit_balance_minor: number;
+};
+
+export type NotificationChannel = "WHATSAPP" | "SMS" | "EMAIL" | "PUSH";
+
+export type NotificationPref = { channel: NotificationChannel; opted_in: boolean };
 
 export type Paginated<T> = {
   next: string | null;

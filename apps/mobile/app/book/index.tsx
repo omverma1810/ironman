@@ -67,12 +67,18 @@ export default function AddressStep() {
   const [apartmentQuery, setApartmentQuery] = useState("");
   const apartments = useApartmentSearch(apartmentQuery, state.area?.clusterId ?? undefined);
 
-  // With nothing saved the form is the only option, so start on it.
+  // With nothing saved the form is the only option, so start on it; with some,
+  // start on the one used last so a repeat booking is a tap.
   useEffect(() => {
-    if (saved.isSuccess && addresses.length === 0 && !choice) {
-      dispatch({ type: "address", address: emptyNewAddress });
-    }
-  }, [saved.isSuccess, addresses.length, choice, dispatch]);
+    if (!saved.isSuccess || choice) return;
+    const last = addresses.find((a) => a.is_default) ?? addresses[0];
+    dispatch({
+      type: "address",
+      address: last
+        ? { kind: "saved", id: last.id, label: savedLabel(last), apartmentId: last.apartment }
+        : emptyNewAddress,
+    });
+  }, [saved.isSuccess, addresses, choice, dispatch]);
 
   function update(patch: Partial<NewAddress>) {
     dispatch({ type: "address", address: { ...newAddress, ...patch } });

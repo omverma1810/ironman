@@ -140,6 +140,16 @@ def link_existing_customer(user, *, hub=None) -> Customer | None:
     return customer
 
 
+def sync_name_from_user(user) -> None:
+    """A customer who changes their name in the app should be called that by
+    staff too. `Customer.name` is copied from the account when the customer
+    row is first made, so a later edit has to carry across."""
+    customer = getattr(user, "customer_profile", None)
+    if customer and customer.name != user.full_name:
+        customer.name = user.full_name
+        customer.save(update_fields=["name"])
+
+
 def get_or_create_customer_for_user(user, *, hub, channel: str = "", apartment=None) -> Customer:
     """The self-service booking path (docs/04 §3.4 `POST /orders` `[C]`):
     a JWT-authenticated customer's `id` claim is a User, not a Customer —

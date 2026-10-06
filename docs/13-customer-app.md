@@ -20,15 +20,35 @@ expo-router, NativeWind, and TanStack Query, in `apps/mobile`. It talks to the s
   of us. The order request carries an idempotency key so a retry after a dropped connection can't
   book twice.
 
-Later batches (8.2 onwards) are listed in `docs/08`.
+**Batch 8.2 — following an order, and the account**
+
+- **Order screen.** Progress through the seven stages (or a plain message when an order is cancelled,
+  on hold or failed), the pickup and delivery times, items and payment, the invoice, and a timeline in
+  the customer's words. The timeline comes from the tracking endpoint, which carries no staff names or
+  internal notes, and refreshes every 30 seconds while the screen is open.
+- **Changing an order.** *Cancel* (with a reason) while the clothes are still with the customer,
+  *change pickup time* while the order is only scheduled, *book these again* from any order (it starts
+  from the same items and the last address). The API's state machine is the real gate; the app only
+  offers what it will accept. It does allow a customer to cancel a few states later (for instance
+  once a delivery is assigned); the app doesn't offer that, so it stays a call to us.
+- **Name.** The app asks for a name once, at first sign-in. Staff see it on the customer's orders, and
+  editing it in the account tab now carries to the customer record (`PATCH /me` previously changed only
+  the login account, so a renamed customer kept their old name in the console).
+- **Account tab.** Name, referral code with copy and share, and the WhatsApp and text-message
+  switches (hidden until the customer has a first booking, since both depend on a customer record).
+- **Times** are shown in India Standard Time, whatever timezone the phone is in, to match the pickup
+  windows (which are Indian wall-clock times).
+
+Later batches are listed in `docs/08`.
 
 ## 2. How it is tested
 
 - **Unit tests** (`npm test --workspace=apps/mobile`): token renewal in every case above, the booking
-  rules and request building, phone and date formatting.
+  rules and request building, order rules and timeline wording, phone and date formatting.
 - **End-to-end tests** (`apps/mobile/e2e`, Playwright): the real screens, run as the app's web build
   against the live Django API: sign in, a first booking, a returning customer, an area we don't serve,
-  token renewal and a revoked session. In CI they run in the `e2e` job after the console's tests.
+  token renewal and a revoked session, tracking, cancelling, rescheduling, booking again, the name
+  reaching staff, and the referral code. In CI they run in the `e2e` job after the console's tests.
 - **Types and bundle** (`mobile-quality` job): `tsc`, and a full web bundle, which fails on anything
   Metro can't resolve.
 
