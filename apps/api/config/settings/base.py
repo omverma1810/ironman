@@ -272,6 +272,10 @@ IRONMAN = {
     "REQUOTE_VARIANCE_PCT": 0.15,
     # 07 §2⑨: grace period before a job counts as late.
     "ON_TIME_GRACE_MINUTES": 15,
+    # docs/08 7.6: how long the weekly dashboard keeps the headline figure of
+    # each earlier (already finished) week for its sparkline. The test
+    # settings set it to 0: figures there are always live.
+    "ANALYTICS_PAST_WEEK_CACHE_SECONDS": 300,
     # 07 §2②: days within which a second order counts as "repeat".
     "REPEAT_CUSTOMER_WINDOW_DAYS": 30,
     # docs/08 batch 5.7 (A-06): a customer with no delivered order in this

@@ -304,7 +304,7 @@ class AttributionViewSet(ScopedQuerysetMixin, viewsets.ReadOnlyModelViewSet):
     shows as "Acquired via"."""
 
     queryset = Attribution.objects.select_related(
-        "channel", "partner", "referral_code", "order", "apartment"
+        "customer", "channel", "partner", "referral_code", "order", "apartment"
     )
     serializer_class = AttributionSerializer
     permission_classes = [IsOpsStaff]

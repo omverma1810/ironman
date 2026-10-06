@@ -13,6 +13,8 @@ these same definitions.
 
 from __future__ import annotations
 
+from contextlib import contextmanager
+from contextvars import ContextVar
 from datetime import date
 
 from django.db import models, transaction
@@ -165,27 +167,52 @@ def remove_spend(spend: Spend, *, reason: str, actor=None) -> Spend:
 # ---------------------------------------------------------- new customers
 
 
-def first_deliveries(hub, start: date, end: date) -> dict:
-    """{customer_id: (first delivered order id, date)} for customers whose
-    first delivered order fell within [start, end]. One ordered pass over
-    the hub's delivered orders — the first row per customer is theirs."""
+_first_delivery_memo: ContextVar[dict | None] = ContextVar("first_delivery_memo", default=None)
+
+
+@contextmanager
+def first_delivery_memo():
+    """Within the block every `first_deliveries` call for the same hub shares
+    one lookup. The weekly dashboard asks the same question ~80 times (ten
+    tiles x nine windows); the answer doesn't change inside one request."""
+    token = _first_delivery_memo.set({})
+    try:
+        yield
+    finally:
+        _first_delivery_memo.reset(token)
+
+
+def _all_first_deliveries(hub) -> dict:
+    memo = _first_delivery_memo.get()
+    if memo is not None and hub.pk in memo:
+        return memo[hub.pk]
+    # DISTINCT ON: the database returns one row per customer (their first
+    # delivered order) instead of every delivered order for Python to sieve.
     rows = (
         Order.objects.filter(
             hub=hub, status__in=_DELIVERED, delivered_at__isnull=False, deleted_at__isnull=True
         )
         .order_by("customer_id", "delivered_at")
+        .distinct("customer_id")
         .values_list("customer_id", "id", "delivered_at")
     )
-    result: dict = {}
-    seen: set = set()
-    for customer_id, order_id, delivered_at in rows:
-        if customer_id in seen:
-            continue
-        seen.add(customer_id)
-        day = timezone.localdate(delivered_at)
-        if start <= day <= end:
-            result[customer_id] = (order_id, day)
+    result = {
+        customer_id: (order_id, timezone.localdate(delivered_at))
+        for customer_id, order_id, delivered_at in rows
+    }
+    if memo is not None:
+        memo[hub.pk] = result
     return result
+
+
+def first_deliveries(hub, start: date, end: date) -> dict:
+    """{customer_id: (first delivered order id, date)} for customers whose
+    first delivered order fell within [start, end]."""
+    return {
+        customer_id: first
+        for customer_id, first in _all_first_deliveries(hub).items()
+        if start <= first[1] <= end
+    }
 
 
 def _first_touch(customer_ids) -> dict:

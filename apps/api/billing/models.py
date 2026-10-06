@@ -120,7 +120,11 @@ class Invoice(BaseModel):
 
     class Meta:
         db_table = "billing_invoice"
-        indexes = [models.Index(fields=["hub", "-issued_at"])]
+        indexes = [
+            models.Index(fields=["hub", "-issued_at"]),
+            # The invoice list: newest first (docs/08 7.6 load test).
+            models.Index(fields=["-created_at"], name="invoice_created_idx"),
+        ]
 
     def __str__(self) -> str:
         return f"{self.ref} — {self.order.ref}"

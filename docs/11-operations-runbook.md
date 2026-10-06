@@ -121,4 +121,6 @@ phone with an open session):
 - [ ] GST details for invoices, if registered.
 - [ ] Decide on Supabase PITR (§1), turn on S3 versioning, set `SENTRY_DSN`, add the uptime check.
 - [ ] Rehearse a restore (§2) and record the time.
+- [ ] Re-run the load test on the real stack (`12-load-test.md` §6) and settle the database
+      connection-reuse question (§5 there: check whether `DATABASE_URL` uses port 5432 or 6543).
 - [ ] Staff walkthrough using the user manual (`docs/user-manual`).

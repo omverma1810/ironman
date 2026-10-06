@@ -19,10 +19,12 @@ from __future__ import annotations
 
 import statistics
 from collections import Counter, defaultdict
+from contextvars import ContextVar
 from datetime import date, timedelta
 
 from django.conf import settings
-from django.db.models import Sum
+from django.core.cache import cache
+from django.db.models import Count, Sum
 from django.utils import timezone
 
 from billing.models import CreditNote, Invoice, InvoiceStatus, OrderCost
@@ -43,6 +45,20 @@ from ordering.models import Order, OrderStatus
 DELIVERED = [OrderStatus.DELIVERED, OrderStatus.CLOSED]
 REFERRAL_CHANNELS = [ChannelCode.WATCHMAN, ChannelCode.CUSTOMER_REFERRAL]
 CUSTOMER_CAUSED_FAILURES = {"CUSTOMER_ABSENT", "CUSTOMER_RESCHEDULED"}
+
+
+# The dashboard asks every metric for ten windows (this week, the previous one
+# and an eight-week sparkline) but shows only each window's headline figure.
+# Building the drill-down rows for all of them was most of its cost, so
+# `weekly()` switches them off; `metric_rows()` (the drill-down) leaves them on.
+_WANT_ROWS: ContextVar[bool] = ContextVar("analytics_want_rows", default=True)
+
+
+_LIFETIME_MEMO: ContextVar[dict | None] = ContextVar("analytics_lifetime_memo", default=None)
+
+
+def _wants_rows() -> bool:
+    return _WANT_ROWS.get()
 
 
 def week_bounds(day: date) -> tuple[date, date]:
@@ -85,6 +101,8 @@ def _first_touch(customer_ids) -> dict:
 
 
 def _customer_rows(customer_ids, extra: dict | None = None) -> list[dict]:
+    if not _wants_rows():
+        return []
     touches = _first_touch(customer_ids)
     customers = Customer.objects.filter(pk__in=customer_ids).select_related("acquisition_apartment")
     rows = []
@@ -111,7 +129,9 @@ def new_customers(hub, start, end) -> dict:
     rows = _customer_rows(
         list(firsts), {cid: {"first_delivered_on": str(day)} for cid, (_, day) in firsts.items()}
     )
-    return {"value": len(rows), "rows": rows}
+    # Same count either way: customers that still exist.
+    value = len(rows) if _wants_rows() else Customer.objects.filter(pk__in=list(firsts)).count()
+    return {"value": value, "rows": rows}
 
 
 # ② Repeat customers --------------------------------------------------------
@@ -119,32 +139,34 @@ def new_customers(hub, start, end) -> dict:
 
 def repeat_customers(hub, start, end) -> dict:
     lo, _ = _day_range(start, end)
-    window_customers = set(delivered_orders(hub, start, end).values_list("customer_id", flat=True))
     returning = set(
         Order.objects.filter(
-            customer_id__in=window_customers,
+            customer_id__in=delivered_orders(hub, start, end).values("customer_id"),
             status__in=DELIVERED,
             delivered_at__lt=lo,
             deleted_at__isnull=True,
-        ).values_list("customer_id", flat=True)
+        )
+        .values_list("customer_id", flat=True)
+        .distinct()
     )
 
     # R2: of this week's new customers, who had a 2nd delivered order within N days.
+    # One query for every delivery by the cohort, then a pass in Python: asking
+    # per customer made a long window (the Day-90 checkpoint) thousands of queries.
     window_days = settings.IRONMAN["REPEAT_CUSTOMER_WINDOW_DAYS"]
     firsts = marketing.first_deliveries(hub, start, end)
+    deliveries = defaultdict(list)
+    for customer_id, delivered_at in Order.objects.filter(
+        customer_id__in=list(firsts), status__in=DELIVERED, delivered_at__isnull=False
+    ).values_list("customer_id", "delivered_at"):
+        deliveries[customer_id].append(delivered_at)
     repeated = set()
-    for customer_id, (order_id, _day) in firsts.items():
-        first = Order.objects.get(pk=order_id)
-        if (
-            Order.objects.filter(
-                customer_id=customer_id,
-                status__in=DELIVERED,
-                delivered_at__gt=first.delivered_at,
-                delivered_at__lte=first.delivered_at + timedelta(days=window_days),
-            )
-            .exclude(pk=order_id)
-            .exists()
-        ):
+    for customer_id in firsts:
+        times = sorted(deliveries[customer_id])
+        if not times:
+            continue
+        first_at = times[0]
+        if any(first_at < t <= first_at + timedelta(days=window_days) for t in times[1:]):
             repeated.add(customer_id)
     maturing = end + timedelta(days=window_days) > timezone.localdate()
     return {
@@ -161,12 +183,25 @@ def repeat_customers(hub, start, end) -> dict:
 # ③ Orders per customer -----------------------------------------------------
 
 
+def _lifetime_totals(hub) -> dict:
+    """Every delivered order and the customers behind them. It doesn't depend
+    on the window, so the dashboard's nine windows share one answer."""
+    memo = _LIFETIME_MEMO.get()
+    if memo is not None and hub.pk in memo:
+        return memo[hub.pk]
+    totals = Order.objects.filter(hub=hub, status__in=DELIVERED, deleted_at__isnull=True).aggregate(
+        orders=Count("id"), customers=Count("customer_id", distinct=True)
+    )
+    if memo is not None:
+        memo[hub.pk] = totals
+    return totals
+
+
 def orders_per_customer(hub, start, end) -> dict:
     orders = delivered_orders(hub, start, end)
     per_customer = Counter(orders.values_list("customer_id", flat=True))
-    lifetime = Order.objects.filter(hub=hub, status__in=DELIVERED, deleted_at__isnull=True)
-    lifetime_orders = lifetime.count()
-    lifetime_customers = lifetime.values("customer_id").distinct().count()
+    lifetime = _lifetime_totals(hub)
+    lifetime_orders, lifetime_customers = lifetime["orders"], lifetime["customers"]
     total = sum(per_customer.values())
     return {
         "value": round(total / len(per_customer), 2) if per_customer else None,
@@ -239,16 +274,20 @@ def referrals(hub, start, end) -> dict:
 
 
 def apartments(hub, start, end) -> dict:
-    orders = delivered_orders(hub, start, end).select_related("apartment")
-    stats: dict = defaultdict(lambda: {"orders": 0, "customers": set()})
-    for o in orders:
-        key = o.apartment.name if o.apartment else "No apartment"
-        stats[key]["orders"] += 1
-        stats[key]["customers"].add(o.customer_id)
+    grouped = (
+        delivered_orders(hub, start, end)
+        .order_by()
+        .values("apartment__name")
+        .annotate(orders=Count("id"), customers=Count("customer_id", distinct=True))
+    )
     rows = sorted(
         (
-            {"apartment": name, "orders": s["orders"], "customers": len(s["customers"])}
-            for name, s in stats.items()
+            {
+                "apartment": g["apartment__name"] or "No apartment",
+                "orders": g["orders"],
+                "customers": g["customers"],
+            }
+            for g in grouped
         ),
         key=lambda r: (-r["orders"], r["apartment"]),
     )
@@ -262,30 +301,36 @@ def apartments(hub, start, end) -> dict:
 # ⑦ Average order value -------------------------------------------------------
 
 
-def _order_revenue(order_ids) -> dict:
+def _order_revenue(orders) -> dict:
     """Net invoice value per order: total less credit notes. Orders without
-    an issued invoice are left out (no revenue recorded yet)."""
+    an issued invoice are left out (no revenue recorded yet). `orders` is a
+    queryset of the orders in question (matched by subquery, not a list of
+    ids: a busy week's id list made these two queries slow); a plain list of
+    ids still works for callers that already hold one."""
+    order_ids = orders.order_by().values("id") if hasattr(orders, "order_by") else list(orders)
     invoices = Invoice.objects.filter(
         order_id__in=order_ids, status__in=[InvoiceStatus.ISSUED, InvoiceStatus.PAID]
-    )
+    ).values_list("order_id", "total_minor")
     credited = dict(
         CreditNote.objects.filter(invoice__order_id__in=order_ids)
         .values_list("invoice__order_id")
         .annotate(t=Sum("amount_minor"))
         .values_list("invoice__order_id", "t")
     )
-    return {inv.order_id: inv.total_minor - (credited.get(inv.order_id) or 0) for inv in invoices}
+    return {oid: total - (credited.get(oid) or 0) for oid, total in invoices}
 
 
 def average_order_value(hub, start, end) -> dict:
     orders = delivered_orders(hub, start, end)
-    revenue = _order_revenue(list(orders.values_list("id", flat=True)))
+    revenue = _order_revenue(orders)
     values = list(revenue.values())
-    refs = dict(orders.values_list("id", "ref"))
-    rows = sorted(
-        ({"order": refs[oid], "net_minor": v} for oid, v in revenue.items()),
-        key=lambda r: r["order"],
-    )
+    rows = []
+    if _wants_rows():
+        refs = dict(orders.values_list("id", "ref"))
+        rows = sorted(
+            ({"order": refs[oid], "net_minor": v} for oid, v in revenue.items()),
+            key=lambda r: r["order"],
+        )
     return {
         "value": round(sum(values) / len(values)) if values else None,
         "median_minor": round(statistics.median(values)) if values else None,
@@ -303,36 +348,36 @@ COST_KINDS = ["CONSUMABLE", "COMMISSION", "LABOUR", "DELIVERY", "OTHER"]
 
 def contribution(hub, start, end) -> dict:
     orders = delivered_orders(hub, start, end)
-    order_ids = list(orders.values_list("id", flat=True))
-    revenue = _order_revenue(order_ids)
+    revenue = _order_revenue(orders)
     costs: dict = defaultdict(lambda: defaultdict(int))
-    for order_id, kind, amount in OrderCost.objects.filter(order_id__in=order_ids).values_list(
-        "order_id", "kind", "amount_minor"
-    ):
+    for order_id, kind, amount in OrderCost.objects.filter(
+        order_id__in=orders.order_by().values("id")
+    ).values_list("order_id", "kind", "amount_minor"):
         costs[order_id][kind] += amount
-    refs = dict(orders.values_list("id", "ref"))
+    per_order = {oid: {k: costs[oid].get(k, 0) for k in COST_KINDS} for oid in revenue}
+    margins = {oid: revenue[oid] - sum(per_order[oid].values()) for oid in revenue}
     rows = []
-    for oid in sorted(revenue, key=lambda i: refs[i]):
-        order_costs = {k: costs[oid].get(k, 0) for k in COST_KINDS}
-        margin = revenue[oid] - sum(order_costs.values())
-        rows.append(
+    if _wants_rows():
+        refs = dict(orders.values_list("id", "ref"))
+        rows = [
             {
                 "order": refs[oid],
                 "revenue_minor": revenue[oid],
-                **order_costs,
-                "margin_minor": margin,
+                **per_order[oid],
+                "margin_minor": margins[oid],
             }
-        )
-    total_revenue = sum(r["revenue_minor"] for r in rows)
-    total_margin = sum(r["margin_minor"] for r in rows)
-    waterfall = {k: sum(r[k] for r in rows) for k in COST_KINDS}
+            for oid in sorted(revenue, key=lambda i: refs[i])
+        ]
+    total_revenue = sum(revenue.values())
+    total_margin = sum(margins.values())
+    waterfall = {k: sum(c[k] for c in per_order.values()) for k in COST_KINDS}
     return {
-        "value": round(total_margin / len(rows)) if rows else None,
+        "value": round(total_margin / len(revenue)) if revenue else None,
         "margin_pct": _pct(total_margin, total_revenue),
         "revenue_minor": total_revenue,
         "margin_minor": total_margin,
         "costs_minor": waterfall,
-        "orders": len(rows),
+        "orders": len(revenue),
         "rows": rows,
     }
 
@@ -448,10 +493,40 @@ margins and acquisition cost (docs/06 §2 "Unit economics / margin")."""
 SPARK_WEEKS = 8
 
 
+def _headline(hub, key: str, fn, start: date):
+    """One earlier week's headline figure, for the sparkline. A week that has
+    fully elapsed rarely changes, so each is kept for a few minutes: opening
+    the dashboard again recomputes this week and nothing else. Late edits
+    (a credit note, a corrected delivery) show up when the entry expires; this
+    week's own tile and every drill-down stay live."""
+    seconds = settings.IRONMAN.get("ANALYTICS_PAST_WEEK_CACHE_SECONDS", 0)
+    end = start + timedelta(days=6)
+    if not seconds or end >= timezone.localdate():
+        return fn(hub, start, end)["value"]
+    cache_key = f"analytics:headline:{hub.pk}:{key}:{start}"
+    hit = cache.get(cache_key)
+    if hit is not None:
+        return hit[0]
+    value = fn(hub, start, end)["value"]
+    cache.set(cache_key, (value,), seconds)  # a tuple: None is a real answer
+    return value
+
+
 def weekly(hub, week_start: date, *, include_money: bool) -> dict:
     """All ten tiles for one week, each with last week's value and an
     eight-week trend of its headline figure. Drill-down rows are left out
     here — `metric_rows` serves them."""
+    rows_token = _WANT_ROWS.set(False)
+    lifetime_token = _LIFETIME_MEMO.set({})
+    try:
+        with marketing.first_delivery_memo():
+            return _weekly(hub, week_start, include_money=include_money)
+    finally:
+        _LIFETIME_MEMO.reset(lifetime_token)
+        _WANT_ROWS.reset(rows_token)
+
+
+def _weekly(hub, week_start: date, *, include_money: bool) -> dict:
     tiles = []
     for key, (label, fn, founder_only) in METRICS.items():
         if founder_only and not include_money:
@@ -462,7 +537,7 @@ def weekly(hub, week_start: date, *, include_money: bool) -> dict:
         trend = []
         for back in range(SPARK_WEEKS - 1, 0, -1):
             s = week_start - timedelta(weeks=back)
-            trend.append({"week": str(s), "value": fn(hub, s, s + timedelta(days=6))["value"]})
+            trend.append({"week": str(s), "value": _headline(hub, key, fn, s)})
         trend.append({"week": str(week_start), "value": current["value"]})
         previous = trend[-2]["value"] if len(trend) > 1 else None
         tile = {k: v for k, v in current.items() if k != "rows"}
