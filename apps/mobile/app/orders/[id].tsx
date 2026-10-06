@@ -40,7 +40,9 @@ export default function OrderDetailScreen() {
     <ScrollView className="flex-1 bg-white" contentContainerClassName="gap-6 p-4">
       <View className="gap-2">
         <View className="flex-row items-center justify-between">
-          <Text className="font-bold text-2xl text-brand-ink">{order.ref}</Text>
+          <Text testID="order-detail-ref" className="font-bold text-2xl text-brand-ink">
+            {order.ref}
+          </Text>
           <Text className="text-base font-semibold" style={{ color: statusColor(order.status) }}>
             {statusLabel(order.status)}
           </Text>

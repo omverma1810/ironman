@@ -90,3 +90,95 @@ export type FeedbackInput = {
   rating: number;
   comment?: string;
 };
+
+// ── Booking (docs/08 batch 8.1) ─────────────────────────────────────────
+
+export type Money = { amount_minor: number; currency: string };
+
+export type Serviceability = {
+  serviceable: boolean;
+  hub: { id: string; code: string; name: string } | null;
+  clusters: { id: string; name: string }[];
+};
+
+export type PublicApartment = { id: string; name: string; cluster: string };
+
+export type Service = {
+  id: string;
+  code: string;
+  name: string;
+  unit: "PER_ITEM" | "PER_KG" | "PER_PAIR";
+  sla_hours: number;
+  is_active: boolean;
+};
+
+export type GarmentType = {
+  id: string;
+  service: string;
+  code: string;
+  name: string;
+  is_active: boolean;
+};
+
+export type QuoteLine = {
+  garment_type: string;
+  garment_type_name: string;
+  qty: number;
+  unit_price: Money;
+  line_total: Money;
+};
+
+export type Quote = {
+  price_list_id: string;
+  price_list_version: number;
+  lines: QuoteLine[];
+  subtotal: Money;
+  discount: Money;
+  total: Money;
+  offers_applied: string[];
+};
+
+export type PickupSlot = {
+  id: string;
+  cluster: string;
+  date: string;
+  window_start: string;
+  window_end: string;
+  kind: "PICKUP" | "DELIVERY";
+  capacity: number;
+  booked_count: number;
+  available: number;
+};
+
+export type Address = {
+  id: string;
+  apartment: string | null;
+  apartment_name: string;
+  flat_no: string;
+  block: string;
+  landmark: string;
+  free_text_address: string;
+  label: string;
+  is_default: boolean;
+};
+
+export type Channel = "WEB" | "WHATSAPP" | "COUNTER" | "PHONE" | "APP";
+
+export type OrderLineInput = { garment_type: string; qty: number };
+
+export type CreateOrderInput = {
+  hub: string;
+  service: string;
+  channel: Channel;
+  address?: string;
+  flat_no?: string;
+  block?: string;
+  landmark?: string;
+  free_text_address?: string;
+  apartment?: string;
+  pickup_capacity?: string;
+  lines: OrderLineInput[];
+  notes?: string;
+  referral_code?: string;
+  acquisition_source?: string;
+};

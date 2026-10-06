@@ -1,10 +1,11 @@
 /**
  * The persistence + pub-sub layer under useAuth() (lib/auth.tsx). Kept
- * separate from the React context so lib/api.ts's `onUnauthorized`
- * callback — which fires from inside a plain fetch, not a component —
- * can clear tokens and notify listeners without importing React.
+ * separate from the React context so lib/api.ts's refresh and
+ * `onUnauthorized` callbacks — which fire from inside a plain fetch, not a
+ * component — can read tokens, clear them and notify listeners without
+ * importing React.
  */
-import * as SecureStore from "expo-secure-store";
+import { deleteItem, getItem, setItem } from "./storage";
 import type { Me } from "./types";
 
 const ACCESS_TOKEN_KEY = "ironman.accessToken";
@@ -24,32 +25,50 @@ export function subscribe(listener: Listener): () => void {
 }
 
 export async function getAccessToken(): Promise<string | null> {
-  return SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
+  return getItem(ACCESS_TOKEN_KEY);
+}
+
+export async function getRefreshToken(): Promise<string | null> {
+  return getItem(REFRESH_TOKEN_KEY);
 }
 
 export async function getStoredSession(): Promise<{ user: Me } | null> {
-  const [accessToken, userJson] = await Promise.all([
-    SecureStore.getItemAsync(ACCESS_TOKEN_KEY),
-    SecureStore.getItemAsync(USER_KEY),
-  ]);
+  const [accessToken, userJson] = await Promise.all([getItem(ACCESS_TOKEN_KEY), getItem(USER_KEY)]);
   if (!accessToken || !userJson) return null;
-  return { user: JSON.parse(userJson) as Me };
+  try {
+    return { user: JSON.parse(userJson) as Me };
+  } catch {
+    return null;
+  }
 }
 
 export async function setSession(tokens: { access: string; refresh: string }, user: Me) {
   await Promise.all([
-    SecureStore.setItemAsync(ACCESS_TOKEN_KEY, tokens.access),
-    SecureStore.setItemAsync(REFRESH_TOKEN_KEY, tokens.refresh),
-    SecureStore.setItemAsync(USER_KEY, JSON.stringify(user)),
+    setItem(ACCESS_TOKEN_KEY, tokens.access),
+    setItem(REFRESH_TOKEN_KEY, tokens.refresh),
+    setItem(USER_KEY, JSON.stringify(user)),
   ]);
+  notify();
+}
+
+/** Store a renewed token pair without notifying: the user hasn't changed. */
+export async function setTokens(tokens: { access: string; refresh: string }) {
+  await Promise.all([
+    setItem(ACCESS_TOKEN_KEY, tokens.access),
+    setItem(REFRESH_TOKEN_KEY, tokens.refresh),
+  ]);
+}
+
+export async function updateStoredUser(user: Me) {
+  await setItem(USER_KEY, JSON.stringify(user));
   notify();
 }
 
 export async function signOut() {
   await Promise.all([
-    SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY),
-    SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY),
-    SecureStore.deleteItemAsync(USER_KEY),
+    deleteItem(ACCESS_TOKEN_KEY),
+    deleteItem(REFRESH_TOKEN_KEY),
+    deleteItem(USER_KEY),
   ]);
   notify();
 }

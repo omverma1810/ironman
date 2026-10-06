@@ -128,6 +128,22 @@ jobs:
         env:
           NEXT_PUBLIC_API_BASE_URL: http://localhost:8000/api/v1
 
+  # The customer app (docs/08 Phase 8): types, unit tests, and a build of its
+  # web bundle (which catches anything Metro can't resolve).
+  mobile-quality:
+    name: Mobile — types, unit tests, bundle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck --workspace=apps/mobile
+      - run: npm test --workspace=apps/mobile
+      - run: npm run export:web --workspace=apps/mobile
+
   # ── End-to-end ─────────────────────────────────────────────────────────
   e2e:
     name: E2E — Playwright (API + web live)
@@ -156,6 +172,9 @@ jobs:
       CELERY_BROKER_URL: redis://localhost:6379/1
       DJANGO_SECRET_KEY: ci-test-secret
       NEXT_PUBLIC_API_BASE_URL: http://localhost:8000/api/v1
+      # The console's origin, and the customer app's web build (served on 8081
+      # for its own end-to-end tests below).
+      CORS_ALLOWED_ORIGINS: http://localhost:3000,http://localhost:8081
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -218,12 +237,23 @@ jobs:
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:3000
 
+      # The customer app, through its web build, against the same live API.
+      - name: Run mobile app E2E suite
+        working-directory: apps/mobile
+        run: |
+          npm run export:web
+          npx playwright test
+        env:
+          EXPO_PUBLIC_API_BASE_URL: http://localhost:8000/api/v1
+
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
-          path: apps/web/playwright-report/
+          path: |
+            apps/web/playwright-report/
+            apps/mobile/playwright-report/
           retention-days: 14
 
       - name: Upload service logs on failure

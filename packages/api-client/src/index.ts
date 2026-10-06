@@ -63,8 +63,19 @@ export type ApiClientConfig = {
   baseUrl: string;
   /** Called before every request; return null when signed out. */
   getAccessToken: () => string | null | Promise<string | null>;
-  /** Called once on a 401 response, e.g. to sign the user out client-side. */
+  /**
+   * Called on a 401 for a request that carried a token. Returns a fresh
+   * access token (the request is then retried once with it), null when the
+   * session has been refused renewal (`onUnauthorized` follows), or throws
+   * when renewal couldn't be attempted, e.g. offline (the session is kept and
+   * the original 401 surfaces). Concurrent 401s share one call. Omit it and a
+   * 401 goes straight to `onUnauthorized`.
+   */
+  refreshAccessToken?: () => Promise<string | null>;
+  /** Called when a 401 can't be recovered, e.g. to sign the user out client-side. */
   onUnauthorized?: () => void;
+  /** Override `fetch` (tests). */
+  fetchImpl?: typeof fetch;
 };
 
 export type ApiClient = {
@@ -94,9 +105,24 @@ function buildUrl(baseUrl: string, path: string, params?: RequestOptions["params
 }
 
 export function createApiClient(config: ApiClientConfig): ApiClient {
-  const { baseUrl, getAccessToken, onUnauthorized } = config;
+  const { baseUrl, getAccessToken, refreshAccessToken, onUnauthorized } = config;
+  const doFetch = config.fetchImpl ?? ((...args: Parameters<typeof fetch>) => fetch(...args));
+  let refreshing: Promise<string | null> | null = null;
 
-  async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  function refreshOnce(): Promise<string | null> {
+    if (!refreshing) {
+      refreshing = refreshAccessToken!().finally(() => {
+        refreshing = null;
+      });
+    }
+    return refreshing;
+  }
+
+  async function request<T>(
+    path: string,
+    options: RequestOptions = {},
+    retried = false
+  ): Promise<T> {
     const { method = "GET", body, params, idempotencyKey, signal } = options;
 
     const bodyIsFormData = isFormData(body);
@@ -107,14 +133,30 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
     const token = await getAccessToken();
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
-    const response = await fetch(buildUrl(baseUrl, path, params), {
+    const response = await doFetch(buildUrl(baseUrl, path, params), {
       method,
       headers,
       body: body === undefined ? undefined : bodyIsFormData ? (body as FormData) : JSON.stringify(body),
       signal,
     });
 
-    if (response.status === 401) onUnauthorized?.();
+    if (response.status === 401 && token) {
+      // An expired access token is routine: renew it and replay the request
+      // once. Only a request that carried a token can have expired (a wrong
+      // OTP code is a 401 too, and isn't a reason to sign anyone out).
+      if (refreshAccessToken && !retried) {
+        let renewed: string | null | undefined;
+        try {
+          renewed = await refreshOnce();
+        } catch {
+          renewed = undefined; // couldn't try: keep the session
+        }
+        if (renewed) return request<T>(path, options, true);
+        if (renewed === null) onUnauthorized?.();
+      } else {
+        onUnauthorized?.();
+      }
+    }
 
     if (response.status === 204) {
       return undefined as T;
