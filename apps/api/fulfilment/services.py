@@ -14,6 +14,7 @@ import billing.services as billing_services
 import custody.services as custody_services
 import growth.commission as growth_commission
 import growth.referrals as growth_referrals
+import notifications.services as notifications_services
 import ordering.services as ordering_services
 from common.errors import ApiError, InvalidStateTransition
 from fulfilment.models import (
@@ -47,6 +48,49 @@ _ASSIGNABLE_STATUS = {
         OrderStatus.DELIVERY_FAILED,
     },
 }
+
+
+def job_for_actor(job_id, user) -> Job | None:
+    """The job `user` may act on, or None. A rider acts only on jobs
+    assigned to them — however old the job is, since an offline queue can
+    be replayed days later (so no date window here, unlike the day list).
+    Admins and founders are held to their hubs. Callers treat None as "no
+    such job": nothing tells a rider whether someone else's job exists."""
+    qs = Job.objects.filter(deleted_at__isnull=True).select_related("hub", "order")
+    if user.role_codes & {"ADMIN", "FOUNDER"}:
+        if not user.is_unrestricted:
+            qs = qs.filter(hub_id__in=user.hub_scope)
+    elif "FIELD" in user.role_codes:
+        qs = qs.filter(assigned_to=user)
+    else:
+        return None
+    try:
+        return qs.filter(pk=job_id).first()
+    except (ValueError, DjangoValidationError):
+        return None
+
+
+def _nudge_riders(route_day: RouteDay, entries: list[dict]) -> None:
+    """Tell each rider they have new jobs, once the assignment has actually
+    committed. A failed push never fails the planning."""
+    counts: dict[str, int] = {}
+    for entry in entries:
+        key = str(entry["assigned_to"])
+        counts[key] = counts.get(key, 0) + 1
+
+    def send() -> None:
+        from identity.models import User
+
+        for user in User.objects.filter(pk__in=counts):
+            n = counts[str(user.pk)]
+            notifications_services.push_to_user(
+                user,
+                title="New jobs",
+                body=f"{n} new {'job' if n == 1 else 'jobs'} on your route for {route_day.date:%d %b}.",
+                data={"event": "jobs.assigned", "date": route_day.date.isoformat()},
+            )
+
+    transaction.on_commit(send)
 
 
 def create_route_day(*, hub, cluster, date, actor=None) -> RouteDay:
@@ -109,6 +153,7 @@ def assign_route_day(
                 order, actor=actor, slot_start=job.slot_start, slot_end=job.slot_end
             )
 
+    _nudge_riders(route_day, [e for e in jobs if e.get("assigned_to")])
     return route_day
 
 
@@ -278,10 +323,9 @@ def apply_offline_op(
     job = None
     job_id = payload.get("job_id")
     if handler and job_id:
-        try:
-            job = Job.objects.filter(pk=job_id).select_related("hub").first()
-        except (ValueError, DjangoValidationError):
-            job = None  # malformed job_id — falls through to REJECTED below
+        # Scoped to the caller's own jobs: a queued op naming anyone
+        # else's job is rejected like an unknown one.
+        job = job_for_actor(job_id, staff)
 
     hub_id = job.hub_id if job else (staff.hub_scope[0] if staff.hub_scope else None)
     if hub_id is None:

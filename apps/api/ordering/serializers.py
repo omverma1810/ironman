@@ -1,6 +1,7 @@
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 
+from ordering import services
 from ordering.models import Channel, Order, OrderEvent, OrderException, OrderLine, ReQuote
 from ordering.stages import stage_for_status, stage_label_for_status
 
@@ -79,21 +80,7 @@ class OrderDetailSerializer(OrderListSerializer):
     address = serializers.SerializerMethodField()
 
     def get_address(self, obj: Order) -> str | None:
-        addr = obj.address
-        if not addr:
-            return None
-        parts: list[str] = []
-        if addr.flat_no:
-            parts.append(f"Flat {addr.flat_no}" + (f", Block {addr.block}" if addr.block else ""))
-        if addr.apartment:
-            parts.append(addr.apartment.name)
-            if addr.apartment.address:
-                parts.append(addr.apartment.address)
-        elif addr.free_text_address:
-            parts.append(addr.free_text_address)
-        if addr.landmark:
-            parts.append(f"Near {addr.landmark}")
-        return ", ".join(parts) if parts else None
+        return services.address_text(obj.address)
 
     class Meta(OrderListSerializer.Meta):
         fields = OrderListSerializer.Meta.fields + [
