@@ -20,6 +20,9 @@ test("signing in with or without +91 is the same account", async ({ page, reques
   // Typed the other way, the API sees the same number.
   await page.getByTestId("phone-input").fill(`+91 ${phone.slice(0, 5)} ${phone.slice(5)}`);
   await page.getByTestId("login-submit").click();
+  // The new code exists once the code screen is up; before that the debug
+  // endpoint still holds the previous sign-in's.
+  await expect(page.getByTestId("code-input")).toBeVisible();
   const { code } = await (await request.get(`${API}/auth/otp/debug`, { params: { phone: `+91${phone}` } })).json();
   await page.getByTestId("code-input").fill(code);
   await page.getByTestId("login-submit").click();
