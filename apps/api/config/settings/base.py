@@ -272,6 +272,11 @@ IRONMAN = {
     "REQUOTE_VARIANCE_PCT": 0.15,
     # 07 §2⑨: grace period before a job counts as late.
     "ON_TIME_GRACE_MINUTES": 15,
+    # docs/08 batch 8.4: "expo" sends real push messages to the customer app
+    # through Expo's push service; anything else only logs them. The access
+    # token is optional (Expo's "enhanced push security").
+    "PUSH_PROVIDER": env("PUSH_PROVIDER", default="log"),
+    "EXPO_ACCESS_TOKEN": env("EXPO_ACCESS_TOKEN", default=""),
     # docs/08 7.6: how long the weekly dashboard keeps the headline figure of
     # each earlier (already finished) week for its sparkline. The test
     # settings set it to 0: figures there are always live.

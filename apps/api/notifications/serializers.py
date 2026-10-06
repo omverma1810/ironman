@@ -51,3 +51,13 @@ class NotificationRequestSerializer(serializers.ModelSerializer):
 class NotificationTestSerializer(serializers.Serializer):
     event_key = serializers.CharField()
     order = serializers.UUIDField()
+
+
+class DeviceRegistrationSerializer(serializers.Serializer):
+    token = serializers.CharField(max_length=200)
+    platform = serializers.ChoiceField(choices=["ios", "android"])
+    app_version = serializers.CharField(max_length=32, required=False, allow_blank=True, default="")
+
+
+class DeviceRemovalSerializer(serializers.Serializer):
+    token = serializers.CharField(max_length=200)

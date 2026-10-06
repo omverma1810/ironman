@@ -11,11 +11,15 @@ to anyone outside a configured allowlist outside production (docs/03
 from __future__ import annotations
 
 import logging
+import re
 
 from django.conf import settings
+from django.utils import timezone
 
+from notifications import push
 from notifications.models import (
     ApprovalStatus,
+    DeviceToken,
     NotificationChannel,
     NotificationDelivery,
     NotificationPref,
@@ -62,6 +66,63 @@ def get_sms_sender() -> NotificationSender:
 
 def _sender_for(channel: str) -> NotificationSender:
     return get_whatsapp_sender() if channel == NotificationChannel.WHATSAPP else get_sms_sender()
+
+
+# ── Devices (docs/08 batch 8.4) ─────────────────────────────────────────────
+
+# Expo's own token shape; refusing anything else keeps junk out of the table
+# and stops one customer registering a URL for the server to call.
+_EXPO_TOKEN = re.compile(r"^Expo(nent)?PushToken\[[A-Za-z0-9_\-]{10,100}\]$")
+
+
+def register_device(user, *, token: str, platform: str, app_version: str = "") -> DeviceToken:
+    """Record this phone as one of the customer's devices. A token belongs to
+    one phone: if it was registered under someone else (a phone handed on, a
+    second account on the same device), it moves to whoever is signed in now."""
+    if not _EXPO_TOKEN.match(token):
+        raise ValueError("That isn't a push token.")
+    device, _ = DeviceToken.objects.update_or_create(
+        token=token,
+        defaults={
+            "user": user,
+            "platform": platform,
+            "app_version": app_version[:32],
+            "is_active": True,
+            "last_seen_at": timezone.now(),
+        },
+    )
+    return device
+
+
+def unregister_device(user, token: str) -> None:
+    DeviceToken.objects.filter(user=user, token=token).delete()
+
+
+def forget_devices(user) -> int:
+    """Every device of this user, gone: signing out everywhere, deleting an account."""
+    deleted, _ = DeviceToken.objects.filter(user=user).delete()
+    return deleted
+
+
+def device_summaries(user) -> list[dict]:
+    """What we hold about a customer's phones, without the token itself
+    (a credential for sending to the device): for the data export."""
+    return [
+        {
+            "platform": d.platform,
+            "app_version": d.app_version,
+            "registered_at": d.created_at.isoformat(),
+        }
+        for d in DeviceToken.objects.filter(user=user).order_by("created_at")
+    ]
+
+
+def active_device_tokens(user) -> list[str]:
+    if user is None:
+        return []
+    return list(
+        DeviceToken.objects.filter(user=user, is_active=True).values_list("token", flat=True)
+    )
 
 
 def _is_allowed_recipient(phone: str) -> bool:
@@ -118,9 +179,92 @@ def notify(event_key: str, order) -> NotificationRequest | None:
         return None
 
 
+def _push_template(event_key: str) -> NotificationTemplate | None:
+    """Push has its own template if one was written; otherwise it says what
+    the SMS says, which is already short and in the customer's words."""
+    for channel in (NotificationChannel.PUSH, NotificationChannel.SMS):
+        template = _select_template(event_key, channel)
+        if template and template.is_usable:
+            return template
+    return None
+
+
+def _try_push(
+    event_key: str, customer, *, order, hub, context: dict, dedupe_key: str
+) -> NotificationRequest | None:
+    """The customer's phone first: it's free, instant, and the one channel
+    that needs no business-messaging approval. Returns the request when a
+    push went out; None when there was nothing to send to or it didn't get
+    through, so the caller carries on to WhatsApp and SMS."""
+    tokens = active_device_tokens(customer.user)
+    if not tokens or not is_opted_in(
+        recipient_kind=RecipientKind.CUSTOMER,
+        recipient_id=customer.id,
+        channel=NotificationChannel.PUSH,
+    ):
+        return None
+    template = _push_template(event_key)
+    if template is None or not _is_allowed_recipient(customer.phone):
+        return None
+
+    request, created = NotificationRequest.objects.get_or_create(
+        dedupe_key=dedupe_key,
+        defaults=dict(
+            hub=hub,
+            order=order,
+            template=template,
+            channel=NotificationChannel.PUSH,
+            recipient_kind=RecipientKind.CUSTOMER,
+            recipient_id=customer.id,
+            payload=context,
+        ),
+    )
+    if not created:
+        return request if request.status == NotificationRequest.Status.SENT else None
+
+    data = {"event": event_key}
+    if order is not None:
+        data["orderId"] = str(order.id)
+    results = push.get_push_sender().send(
+        tokens, title="IronMan", body=template.body.format(**context), data=data
+    )
+    for result in results:
+        if result.unregistered:
+            DeviceToken.objects.filter(token=result.token).update(is_active=False)
+    delivered = [r for r in results if r.ok]
+    request.status = (
+        NotificationRequest.Status.SENT if delivered else NotificationRequest.Status.FAILED
+    )
+    request.save(update_fields=["status"])
+    for result in results:
+        NotificationDelivery.objects.create(
+            request=request,
+            provider="expo",
+            provider_message_id=result.ticket_id,
+            status=(
+                NotificationDelivery.Status.SENT
+                if result.ok
+                else NotificationDelivery.Status.FAILED
+            ),
+            error=result.error,
+        )
+    return request if delivered else None
+
+
 def _notify(event_key: str, order) -> NotificationRequest | None:
     customer = order.customer
     context = _order_context(order)
+
+    pushed = _try_push(
+        event_key,
+        customer,
+        order=order,
+        hub=order.hub,
+        context=context,
+        dedupe_key=f"{order.id}:{event_key}:{NotificationChannel.PUSH}:{customer.id}",
+    )
+    if pushed:
+        return pushed
 
     for channel in _CHANNEL_PRIORITY:
         if not is_opted_in(
@@ -235,6 +379,16 @@ def notify_customer(
     was made) and an outcome: "sent", "duplicate", "opted_out",
     "no_template", "skipped" or "failed". Never raises."""
     try:
+        pushed = _try_push(
+            event_key,
+            customer,
+            order=None,
+            hub=customer.hub,
+            context=context,
+            dedupe_key=f"{dedupe_key}:{NotificationChannel.PUSH}",
+        )
+        if pushed:
+            return pushed, "sent"
         opted_out = True
         for channel in _CHANNEL_PRIORITY:
             if not is_opted_in(

@@ -36,8 +36,8 @@ export default function LoginScreen() {
     setError(null);
     setIsSubmitting(true);
     try {
-      await verifyOtp(e164, code.trim());
-      router.replace("/");
+      const { restored } = await verifyOtp(e164, code.trim());
+      router.replace(restored ? { pathname: "/", params: { restored: "1" } } : "/");
     } catch (err) {
       setError(ApiError.isApiError(err) ? err.message : "That code didn't work. Try again.");
     } finally {

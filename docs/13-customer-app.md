@@ -39,6 +39,34 @@ expo-router, NativeWind, and TanStack Query, in `apps/mobile`. It talks to the s
 - **Times** are shown in India Standard Time, whatever timezone the phone is in, to match the pickup
   windows (which are Indian wall-clock times).
 
+**Batch 8.3 — privacy in the app**
+
+Both app stores require an account to be deletable from inside the app, and the DPDP Act gives the
+customer the right to a copy of their data (`docs/06 §5–6`); the API for both was built in batch 7.5.
+
+- **Download my data.** The same file the website offers, handed over as a share sheet on a phone
+  (save to Files, send to yourself) and as a download in a browser.
+- **Delete my account.** The app first asks what stands in the way (an order in progress, an unpaid
+  invoice, an open issue) and says so plainly. Otherwise: an optional reason, a fresh code to the
+  account's own phone, then the account is closed and the customer signed out at once. Details are
+  deleted after the grace period; signing in again before then restores the account, and the app says so.
+- **Privacy notice and Terms** link to the website's pages from the account tab.
+
+**Batch 8.4 — notifications and release preparation**
+
+- **Push.** After a booking the app offers to turn notifications on (never at launch); the customer
+  can switch them on or off in the account tab, and is pointed to the phone's Settings if they said no.
+  The API stores the phone, and an order update goes to the phone first, then falls back to WhatsApp and
+  SMS (`notifications/services.py`). A push that is rejected, or sent to a phone that no longer exists,
+  falls back too and retires the device. Tapping a message opens that order. Phones are removed at
+  sign-out and with the account, and appear in the data export without their token.
+- **Release.** Build profiles, icons, store text and the checklist of what only the owner can do are in
+  `docs/14-store-release.md`. Nothing has been built with EAS or submitted.
+
+Push is **code-complete but unproven on a device**: it needs an Expo project (`eas init`), the Apple and
+Firebase push keys uploaded to Expo, and `PUSH_PROVIDER=expo` on the API. Until then the app reports
+push as unavailable and the API only logs.
+
 Later batches are listed in `docs/08`.
 
 ## 2. How it is tested
@@ -48,7 +76,8 @@ Later batches are listed in `docs/08`.
 - **End-to-end tests** (`apps/mobile/e2e`, Playwright): the real screens, run as the app's web build
   against the live Django API: sign in, a first booking, a returning customer, an area we don't serve,
   token renewal and a revoked session, tracking, cancelling, rescheduling, booking again, the name
-  reaching staff, and the referral code. In CI they run in the `e2e` job after the console's tests.
+  reaching staff, the referral code, downloading data, deletion refused while an order is open, and
+  deleting and restoring an account. In CI they run in the `e2e` job after the console's tests.
 - **Types and bundle** (`mobile-quality` job): `tsc`, and a full web bundle, which fails on anything
   Metro can't resolve.
 
@@ -56,6 +85,7 @@ Later batches are listed in `docs/08`.
 react-native-web, so layout and logic are exercised, but it is not a phone: nothing here touches
 the iOS or Android keychain (the web build stores tokens in `localStorage`), the camera, push
 notifications, or native navigation gestures. Those need a device or emulator and have not been run.
+The push token handling is unit-tested for routing only; registration and delivery are not testable here.
 Before a store release, run the app on at least one real Android phone and one iPhone.
 
 ## 3. Running it

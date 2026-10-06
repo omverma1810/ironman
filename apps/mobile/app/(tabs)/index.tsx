@@ -1,8 +1,8 @@
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Button, Card, EmptyState, ErrorState, Loading } from "../../components/ui";
+import { Banner, Button, Card, EmptyState, ErrorState, Loading } from "../../components/ui";
 import { formatMoneyMinor } from "../../lib/format";
 import { useMyOrders, usePendingRequotes, useRespondToRequote } from "../../lib/orders";
 import { statusColor, statusLabel } from "../../lib/status";
@@ -10,6 +10,7 @@ import type { OrderListItem } from "../../lib/types";
 
 export default function OrdersScreen() {
   const router = useRouter();
+  const { restored } = useLocalSearchParams<{ restored?: string }>();
   const ordersQuery = useMyOrders();
   const requotesQuery = usePendingRequotes();
   const respondToRequote = useRespondToRequote();
@@ -31,7 +32,13 @@ export default function OrdersScreen() {
     }
   }
 
-  const header =
+  const welcomeBack = restored ? (
+    <View className="pb-3">
+      <Banner tone="success">Welcome back. Your account is restored: nothing was deleted.</Banner>
+    </View>
+  ) : null;
+
+  const requoteSection =
     pendingRequotes.length > 0 ? (
       <View className="gap-3 pb-3">
         <Text accessibilityRole="header" className="font-semibold text-base text-brand-ink">
@@ -70,6 +77,13 @@ export default function OrdersScreen() {
         {respondError ? <Text className="text-sm text-status-danger">{respondError}</Text> : null}
       </View>
     ) : null;
+
+  const header = (
+    <>
+      {welcomeBack}
+      {requoteSection}
+    </>
+  );
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={["left", "right"]}>

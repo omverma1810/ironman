@@ -204,6 +204,8 @@ def request_deletion(user: User, *, code: str, reason: str = "") -> DeletionRequ
     user.is_active = False
     user.save(update_fields=["is_active"])
     revoke_sessions(user)
+    # No more pushes to a closed account's phone (the restore link goes by SMS).
+    notifications_services.forget_devices(user)
     audit.record(
         action="customer.deletion_requested",
         object_type="DeletionRequest",

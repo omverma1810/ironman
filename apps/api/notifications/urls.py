@@ -12,5 +12,6 @@ urlpatterns = [
         views.NotificationPreferenceView.as_view(),
         name="notification-preferences",
     ),
+    path("notifications/devices", views.DeviceView.as_view(), name="notification-devices"),
     path("notifications/test", views.NotificationTestView.as_view(), name="notification-test"),
 ] + router.urls
