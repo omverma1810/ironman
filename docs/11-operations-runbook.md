@@ -124,3 +124,4 @@ phone with an open session):
 - [ ] Re-run the load test on the real stack (`12-load-test.md` §6) and settle the database
       connection-reuse question (§5 there: check whether `DATABASE_URL` uses port 5432 or 6543).
 - [ ] Staff walkthrough using the user manual (`docs/user-manual`).
+- [ ] Customer app: the owner-only steps in `14-store-release.md` §2 (accounts, app identifier, icon, push keys, `PUSH_PROVIDER=expo`).

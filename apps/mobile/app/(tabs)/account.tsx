@@ -1,7 +1,8 @@
 import Constants from "expo-constants";
 import * as Clipboard from "expo-clipboard";
+import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Share, Switch, Text, View } from "react-native";
+import { Linking, Share, Switch, Text, View } from "react-native";
 import { Banner, Button, Card, Field, Hint, Row, Screen, SectionTitle } from "../../components/ui";
 import {
   CHANNEL_LABELS,
@@ -11,7 +12,9 @@ import {
   useSetNotificationPref,
 } from "../../lib/account";
 import { ApiError, useAuth } from "../../lib/auth";
+import { pushState, registerForPush, type PushState } from "../../lib/push";
 import { formatMoneyMinor } from "../../lib/format";
+import { PUBLIC_SITE_URL } from "../../lib/account";
 import type { NotificationChannel } from "../../lib/types";
 
 // Messages the app can honestly offer a choice about today.
@@ -24,6 +27,7 @@ export default function AccountScreen() {
       <ProfileCard />
       <ReferralCard />
       <NotificationsCard />
+      <PrivacyCard />
       <Button label="Log out" variant="secondary" testID="log-out" onPress={logout} />
       <View className="items-center">
         <Text className="text-xs text-gray-500">
@@ -110,14 +114,42 @@ function ReferralCard() {
 function NotificationsCard() {
   const prefs = useNotificationPrefs();
   const setPref = useSetNotificationPref();
+  const [push, setPush] = useState<PushState>("unavailable");
+  useEffect(() => {
+    pushState().then(setPush).catch(() => setPush("unavailable"));
+  }, []);
   // No customer profile yet (nothing booked) means nothing to configure.
   if (!prefs.data) return null;
   const rows = prefs.data.filter((row) => CHANNELS.includes(row.channel));
-  if (rows.length === 0) return null;
+  const pushPref = prefs.data.find((row) => row.channel === "PUSH");
+  if (rows.length === 0 && push === "unavailable") return null;
+
+  async function togglePush(on: boolean) {
+    if (!on) {
+      setPref.mutate({ channel: "PUSH", opted_in: false });
+      return;
+    }
+    const result = await registerForPush({ askIfNeeded: true }).catch(() => "unavailable" as const);
+    setPush(result);
+    if (result === "on") setPref.mutate({ channel: "PUSH", opted_in: true });
+  }
 
   return (
     <Card>
       <SectionTitle>Messages about your orders</SectionTitle>
+      {push !== "unavailable" ? (
+        <View className="min-h-12 flex-row items-center justify-between gap-3">
+          <Text className="flex-1 text-base text-brand-ink">{CHANNEL_LABELS.PUSH}</Text>
+          <Switch
+            accessibilityLabel={CHANNEL_LABELS.PUSH}
+            value={push === "on" && (pushPref?.opted_in ?? true)}
+            onValueChange={togglePush}
+          />
+        </View>
+      ) : null}
+      {push === "denied" ? (
+        <Button label="Turn on in Settings" variant="ghost" onPress={() => Linking.openSettings()} />
+      ) : null}
       {rows.map((row) => (
         <View key={row.channel} className="min-h-12 flex-row items-center justify-between gap-3">
           <Text className="flex-1 text-base text-brand-ink">{CHANNEL_LABELS[row.channel]}</Text>
@@ -129,6 +161,24 @@ function NotificationsCard() {
         </View>
       ))}
       <Hint>Pickup and delivery updates. We'll only message you about your orders.</Hint>
+    </Card>
+  );
+}
+
+function PrivacyCard() {
+  const router = useRouter();
+  return (
+    <Card>
+      <SectionTitle>Privacy</SectionTitle>
+      <Button label="Download or delete my data" variant="secondary" testID="open-privacy" onPress={() => router.push("/account/privacy")} />
+      <View className="flex-row gap-2">
+        <View className="flex-1">
+          <Button label="Privacy notice" variant="ghost" onPress={() => Linking.openURL(`${PUBLIC_SITE_URL}/privacy`)} />
+        </View>
+        <View className="flex-1">
+          <Button label="Terms" variant="ghost" onPress={() => Linking.openURL(`${PUBLIC_SITE_URL}/terms`)} />
+        </View>
+      </View>
     </Card>
   );
 }

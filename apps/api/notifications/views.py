@@ -16,6 +16,8 @@ from notifications.models import (
     RecipientKind,
 )
 from notifications.serializers import (
+    DeviceRegistrationSerializer,
+    DeviceRemovalSerializer,
     NotificationPreferenceSerializer,
     NotificationRequestSerializer,
     NotificationTestSerializer,
@@ -71,6 +73,32 @@ class NotificationPreferenceView(APIView):
             defaults={"opted_in": serializer.validated_data["opted_in"]},
         )
         return self.get(request)
+
+
+@extend_schema_view(
+    post=extend_schema(request=DeviceRegistrationSerializer, responses={204: None}),
+    delete=extend_schema(request=DeviceRemovalSerializer, responses={204: None}),
+)
+class DeviceView(APIView):
+    """POST/DELETE /notifications/devices — docs/08 batch 8.4 [C]: the customer
+    app registers its push token after sign-in and removes it at sign-out."""
+
+    permission_classes = [IsCustomer]
+
+    def post(self, request):
+        serializer = DeviceRegistrationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            services.register_device(request.user, **serializer.validated_data)
+        except ValueError as exc:
+            raise ApiError(str(exc), code="validation_error", status_code=400) from exc
+        return Response(status=204)
+
+    def delete(self, request):
+        serializer = DeviceRemovalSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        services.unregister_device(request.user, serializer.validated_data["token"])
+        return Response(status=204)
 
 
 @extend_schema(request=NotificationTestSerializer, responses={200: NotificationRequestSerializer})

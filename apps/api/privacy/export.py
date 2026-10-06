@@ -14,6 +14,7 @@ from billing.models import Invoice
 from customers.models import Address, ConsentRecord, Customer
 from growth.models import Feedback, ReferralCode
 from identity.models import User
+from notifications import services as notifications_services
 from ordering.models import Order
 
 
@@ -42,6 +43,7 @@ def build(user: User) -> dict:
         "credit": [],
         "feedback": [],
         "referral_code": None,
+        "devices": notifications_services.device_summaries(user),
     }
     if customer is None:
         return data

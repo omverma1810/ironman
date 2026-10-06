@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { api, ApiError } from "./api";
+import { unregisterPush } from "./push";
 import {
   getStoredSession,
   setSession,
@@ -13,7 +14,7 @@ type AuthState = {
   user: Me | null;
   isLoading: boolean;
   requestOtp: (phone: string) => Promise<void>;
-  verifyOtp: (phone: string, code: string) => Promise<void>;
+  verifyOtp: (phone: string, code: string) => Promise<{ restored: boolean }>;
   /** Set the name on the account; staff see it on the customer's orders. */
   updateName: (fullName: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -21,7 +22,14 @@ type AuthState = {
 
 const AuthContext = createContext<AuthState | null>(null);
 
-type OtpVerifyResponse = { access: string; refresh: string; user: Me; created: boolean };
+type OtpVerifyResponse = {
+  access: string;
+  refresh: string;
+  user: Me;
+  created: boolean;
+  /** Signing in during the grace period after asking to delete cancels the deletion. */
+  restored?: boolean;
+};
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<Me | null>(null);
@@ -45,10 +53,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await api.post("/auth/otp/request", { phone, purpose: "LOGIN" });
   }
 
-  async function verifyOtp(phone: string, code: string) {
+  async function verifyOtp(phone: string, code: string): Promise<{ restored: boolean }> {
     const response = await api.post<OtpVerifyResponse>("/auth/otp/verify", { phone, code });
     await setSession({ access: response.access, refresh: response.refresh }, response.user);
     setUser(response.user);
+    return { restored: !!response.restored };
   }
 
   async function updateName(fullName: string) {
@@ -58,6 +67,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function logout() {
+    // While the token that authorises it still exists.
+    await unregisterPush();
     await clearSession();
     setUser(null);
   }

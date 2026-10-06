@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Text, View } from "react-native";
 import { CircleCheck } from "lucide-react-native";
 import { color } from "@ironman/tokens";
+import { PushPrompt } from "../../components/push-prompt";
 import { Button, Screen } from "../../components/ui";
 
 export default function DoneStep() {
@@ -37,6 +38,7 @@ export default function DoneStep() {
           We'll text you when a rider is on the way. You can follow every step from the Orders tab.
         </Text>
       </View>
+      <PushPrompt />
     </Screen>
   );
 }

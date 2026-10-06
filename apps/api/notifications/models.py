@@ -5,7 +5,9 @@ customer got the delivery message four times because Celery retried"."""
 
 from __future__ import annotations
 
+from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 from common.models import AppendOnlyModel, BaseModel, HubScopedModel
 
@@ -160,3 +162,30 @@ class NotificationPref(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.recipient_kind}:{self.recipient_id} {self.channel} opted_in={self.opted_in}"
+
+
+class DeviceToken(BaseModel):
+    """A customer's phone, registered for push messages (docs/08 batch 8.4).
+    The token is Expo's push token for the app on one device; it is removed
+    when the customer signs out or their account is deleted, and deactivated
+    when the push service says the device no longer exists."""
+
+    class Platform(models.TextChoices):
+        IOS = "ios", "iOS"
+        ANDROID = "android", "Android"
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="device_tokens"
+    )
+    token = models.CharField(max_length=200, unique=True)
+    platform = models.CharField(max_length=8, choices=Platform.choices)
+    app_version = models.CharField(max_length=32, blank=True)
+    is_active = models.BooleanField(default=True)
+    last_seen_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "notifications_device_token"
+        indexes = [models.Index(fields=["user", "is_active"])]
+
+    def __str__(self) -> str:
+        return f"{self.platform} device of {self.user_id}"
