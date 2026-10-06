@@ -1,5 +1,8 @@
 # 14 — Releasing the customer app to the stores
 
+> The order of work across *all* the apps, and the field app's private distribution, are in
+> `docs/16-rollout.md`. This page is the customer app's store detail.
+
 What is built, and what only the owner can do. The app code, push channel and build configuration are
 in the repository; the accounts, credentials and store listings are not code, and nothing here has been
 submitted.

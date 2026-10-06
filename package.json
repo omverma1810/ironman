@@ -5,6 +5,7 @@
   "workspaces": [
     "apps/web",
     "apps/mobile",
+    "apps/field",
     "packages/*"
   ],
   "scripts": {
@@ -14,6 +15,8 @@
     "web:test:e2e": "npm run test:e2e --workspace=apps/web",
     "mobile:start": "npm run start --workspace=apps/mobile",
     "mobile:typecheck": "npm run typecheck --workspace=apps/mobile",
-    "postinstall": "node scripts/fix-nativewind-tailwind.js"
+    "postinstall": "node scripts/fix-nativewind-tailwind.js",
+    "field:start": "npm run start --workspace=apps/field",
+    "field:typecheck": "npm run typecheck --workspace=apps/field"
   }
 }

@@ -236,6 +236,11 @@ sync, push job assignment, native maps hand-off, cash ledger. **~14–18 days.**
 **Exit:** a rider completes a full route with no connectivity and syncs cleanly · scan is faster
 than the PWA · battery use acceptable over an 8-hour shift.
 
+> **Status.** Built and tested through the web build (`docs/15`): offline queue, job flow, bag scan
+> (camera on a phone, typed code elsewhere), photo proof, cash handover, push nudge. **Not met:** the exit
+> criteria need a rider's day on a real phone; background sync and OTA updates are not built. Rollout
+> sequence: `docs/16`.
+
 ---
 
 ## 3. Effort summary

@@ -1,0 +1,53 @@
+# Builds the phone apps with EAS (docs/16). Run by hand from the Actions tab:
+# nothing here fires on a push, because a store build is a decision, not a
+# side effect of merging. It needs one repository secret, EXPO_TOKEN (an
+# access token from expo.dev), and the Expo project to exist (`eas init`).
+name: Mobile release
+
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: Which app
+        type: choice
+        options: [field, mobile]
+        required: true
+      profile:
+        description: preview = an installable test build; production = the store build
+        type: choice
+        options: [preview, production]
+        default: preview
+      platform:
+        type: choice
+        options: [android, ios, all]
+        default: android
+
+jobs:
+  build:
+    name: Build ${{ inputs.app }} (${{ inputs.profile }}, ${{ inputs.platform }})
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Check the Expo token is set
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error::Add the EXPO_TOKEN repository secret first (docs/16 §2)."
+            exit 1
+          fi
+      - run: npm ci
+      # The same gates CI runs, so a build is never the first place a type error shows.
+      - run: npm run typecheck --workspace=apps/${{ inputs.app }}
+      - run: npm test --workspace=apps/${{ inputs.app }}
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Build
+        working-directory: apps/${{ inputs.app }}
+        run: eas build --profile ${{ inputs.profile }} --platform ${{ inputs.platform }} --non-interactive --no-wait

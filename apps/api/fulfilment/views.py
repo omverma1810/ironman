@@ -127,6 +127,7 @@ class JobViewSet(viewsets.ReadOnlyModelViewSet):
             .filter(assigned_to=request.user)
             .select_related("order__customer", "order__apartment", "order__address__apartment")
             .prefetch_related("order__lines__garment_type")
+            .annotate(bag_count=Count("order__bags", distinct=True))
         )
         date_param = request.query_params.get("date")
         if date_param:

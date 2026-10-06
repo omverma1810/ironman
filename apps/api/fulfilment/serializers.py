@@ -54,6 +54,7 @@ class JobCardSerializer(JobSerializer):
     batch 9.1). Only `GET /fulfilment/jobs/mine` uses it — the console's
     route-day views keep the lighter `JobSerializer`."""
 
+    date = serializers.DateField(source="route_day.date", read_only=True)
     order_status = serializers.CharField(source="order.status", read_only=True)
     payment_status = serializers.CharField(source="order.payment_status", read_only=True)
     customer_name = serializers.CharField(source="order.customer.name", read_only=True)
@@ -64,9 +65,14 @@ class JobCardSerializer(JobSerializer):
         source="order.special_instructions", read_only=True
     )
     lines = serializers.SerializerMethodField()
+    # How many bags go to this door: the rider scans each one, and the app can
+    # say "2 of 3" without being told the codes themselves.
+    bag_count = serializers.IntegerField(read_only=True)
 
     class Meta(JobSerializer.Meta):
         fields = JobSerializer.Meta.fields + [
+            "date",
+            "bag_count",
             "order_status",
             "payment_status",
             "customer_name",

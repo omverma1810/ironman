@@ -128,6 +128,8 @@ def test_mine_carries_the_whole_job_card(api_client, field_user, pickup_job):
     assert card["customer_phone"]
     assert card["order_ref"] == pickup_job.order.ref
     assert card["lines"] and card["lines"][0]["declared_qty"] == 2
+    assert card["date"] == str(timezone.localdate())
+    assert card["bag_count"] == 0
     for key in ("address", "apartment_name", "special_instructions", "order_status"):
         assert key in card
 
@@ -176,6 +178,15 @@ def test_mine_does_not_grow_with_the_number_of_jobs(
     for _ in range(5):
         add_job()
     assert count() == base
+
+
+def test_a_delivery_card_says_how_many_bags_but_not_their_codes(
+    api_client, field_user, delivery_job, ready_order_bag
+):
+    api_client.force_authenticate(user=field_user)
+    card = api_client.get("/api/v1/fulfilment/jobs/mine/").data[0]
+    assert card["bag_count"] == 1
+    assert ready_order_bag.code not in str(card)
 
 
 # ── bearer sign-in for the app ───────────────────────────────────────────

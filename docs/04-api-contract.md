@@ -55,6 +55,7 @@ Grouped by bounded context. `[C]` customer · `[F]` field · `[O]` operator · `
 POST   /auth/otp/request                  [C][F]  { phone, purpose }
 POST   /auth/otp/verify                   [C][F]  → { access, refresh, user }
 POST   /auth/login                        [O][A][B]  email + password → session cookie
+POST   /auth/staff/token                  [F]     email + password → { access, refresh, user }; the field app's sign-in (batch 9.1)
 POST   /auth/logout
 POST   /auth/refresh                              rotating refresh + reuse detection
 POST   /auth/register                     [C]     phone-first; email optional

@@ -194,7 +194,6 @@ class OtpDebugView(APIView):
         return Response({"code": code})
 
 
-@extend_schema(request=StaffLoginSerializer, responses={200: MeSerializer})
 def _verified_staff(request) -> tuple[User, StaffLoginSerializer]:
     """The shared credential check behind both staff sign-ins (console
     cookie, field-app token): password, verified email, and TOTP where the
@@ -247,6 +246,7 @@ def _record_login(user: User) -> None:
     audit.record(action="login.success", object_type="User", object_id=str(user.id), actor=user)
 
 
+@extend_schema(request=StaffLoginSerializer, responses={200: MeSerializer})
 class StaffLoginView(APIView):
     """POST /auth/login — session-cookie auth for console users
     (docs/06 §2.2). TOTP is opt-in for the pilot (`MFA_REQUIRED_ROLES` is
