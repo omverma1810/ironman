@@ -15,6 +15,7 @@ export default function TabsLayout() {
     );
   }
   if (!user) return <Redirect href="/login" />;
+  if (!user.full_name?.trim()) return <Redirect href="/welcome" />;
 
   return (
     <Tabs

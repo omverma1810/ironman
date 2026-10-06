@@ -1,6 +1,12 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { api, ApiError } from "./api";
-import { getStoredSession, setSession, signOut as clearSession, subscribe } from "./auth-store";
+import {
+  getStoredSession,
+  setSession,
+  signOut as clearSession,
+  subscribe,
+  updateStoredUser,
+} from "./auth-store";
 import type { Me } from "./types";
 
 type AuthState = {
@@ -8,6 +14,8 @@ type AuthState = {
   isLoading: boolean;
   requestOtp: (phone: string) => Promise<void>;
   verifyOtp: (phone: string, code: string) => Promise<void>;
+  /** Set the name on the account; staff see it on the customer's orders. */
+  updateName: (fullName: string) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -43,13 +51,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(response.user);
   }
 
+  async function updateName(fullName: string) {
+    const updated = await api.patch<Me>("/me", { full_name: fullName.trim() });
+    await updateStoredUser(updated);
+    setUser(updated);
+  }
+
   async function logout() {
     await clearSession();
     setUser(null);
   }
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, requestOtp, verifyOtp, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, requestOtp, verifyOtp, updateName, logout }}>
       {children}
     </AuthContext.Provider>
   );

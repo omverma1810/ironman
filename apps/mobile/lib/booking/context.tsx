@@ -6,8 +6,15 @@ type BookingContextValue = { state: BookingState; dispatch: Dispatch<BookingActi
 
 const BookingContext = createContext<BookingContextValue | null>(null);
 
-export function BookingProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(bookingReducer, initialBooking);
+export function BookingProvider({
+  children,
+  initial,
+}: {
+  children: ReactNode;
+  /** A starting basket, e.g. an earlier order being booked again. */
+  initial?: Partial<BookingState>;
+}) {
+  const [state, dispatch] = useReducer(bookingReducer, { ...initialBooking, ...initial });
 
   // A returning customer's area is remembered, so the first step starts
   // already filled in.

@@ -164,7 +164,8 @@ export function Choice({
   return (
     <Pressable
       accessibilityRole="radio"
-      accessibilityState={{ selected, disabled }}
+      accessibilityState={{ checked: selected, selected, disabled }}
+      aria-checked={selected}
       accessibilityLabel={subtitle ? `${title}, ${subtitle}` : title}
       onPress={onPress}
       disabled={disabled}
@@ -294,13 +295,23 @@ export function Banner({ tone, children }: { tone: "error" | "info" | "success";
   );
 }
 
-export function Row({ left, right, bold = false }: { left: string; right: string; bold?: boolean }) {
+export function Row({
+  left,
+  right,
+  bold = false,
+  testID,
+}: {
+  left: string;
+  right: string;
+  bold?: boolean;
+  testID?: string;
+}) {
   return (
     <View className="flex-row items-center justify-between gap-3">
       <Text className={`flex-1 text-sm ${bold ? "font-semibold text-brand-ink" : "text-gray-700"}`}>
         {left}
       </Text>
-      <Text className={`text-sm ${bold ? "font-semibold text-brand-ink" : "text-gray-700"}`}>
+      <Text testID={testID} className={`text-sm ${bold ? "font-semibold text-brand-ink" : "text-gray-700"}`}>
         {right}
       </Text>
     </View>

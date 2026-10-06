@@ -7,6 +7,7 @@ import type {
   OrderListItem,
   Paginated,
   ReQuote,
+  Tracking,
 } from "./types";
 
 export function useMe() {
@@ -59,5 +60,42 @@ export function useSubmitFeedback() {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       queryClient.invalidateQueries({ queryKey: ["order", variables.order] });
     },
+  });
+}
+
+// ── Tracking, cancel, reschedule (docs/08 batch 8.2) ────────────────────
+
+/** The customer-safe timeline for an order, by its tracking token. Refreshed
+ * every 30 seconds while the screen is open: a rider on the way is news. */
+export function useTracking(token: string | undefined) {
+  return useQuery({
+    queryKey: ["tracking", token],
+    queryFn: () => api.get<Tracking>(`/track/${token}/`),
+    enabled: !!token,
+    refetchInterval: 30_000,
+  });
+}
+
+function refreshOrder(queryClient: ReturnType<typeof useQueryClient>, id: string) {
+  queryClient.invalidateQueries({ queryKey: ["orders"] });
+  queryClient.invalidateQueries({ queryKey: ["order", id] });
+  queryClient.invalidateQueries({ queryKey: ["tracking"] });
+}
+
+export function useCancelOrder() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      api.post<OrderDetail>(`/orders/${id}/cancel/`, { reason }),
+    onSuccess: (_data, { id }) => refreshOrder(queryClient, id),
+  });
+}
+
+export function useRescheduleOrder() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, slotId }: { id: string; slotId: string }) =>
+      api.post<OrderDetail>(`/orders/${id}/reschedule/`, { pickup_capacity: slotId }),
+    onSuccess: (_data, { id }) => refreshOrder(queryClient, id),
   });
 }

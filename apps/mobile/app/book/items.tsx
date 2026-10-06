@@ -33,6 +33,16 @@ export default function ItemsStep() {
     if (onlyService && !state.serviceId) dispatch({ type: "service", serviceId: onlyService.id });
   }, [onlyService, state.serviceId, dispatch]);
 
+  // A basket carried over from an earlier order may hold items we no longer
+  // offer; drop those rather than quote something that can't be booked.
+  useEffect(() => {
+    if (!garments.data) return;
+    const offered = new Set(garments.data.map((g) => g.id));
+    for (const id of Object.keys(state.counts)) {
+      if (!offered.has(id)) dispatch({ type: "count", garment: id, qty: 0 });
+    }
+  }, [garments.data, state.counts, dispatch]);
+
   const apartmentId =
     state.address?.kind === "new"
       ? state.address.apartment?.id
