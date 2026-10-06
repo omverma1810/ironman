@@ -1,29 +1,29 @@
-import { useRouter } from "expo-router";
+import { Redirect, useRouter } from "expo-router";
 import { useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  SafeAreaView,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Banner, Button, Field } from "../components/ui";
 import { ApiError, useAuth } from "../lib/auth";
+import { isPlausiblePhone, normalizePhone } from "../lib/phone";
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { requestOtp, verifyOtp } = useAuth();
+  const { user, requestOtp, verifyOtp } = useAuth();
   const [step, setStep] = useState<"phone" | "code">("phone");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  if (user) return <Redirect href="/" />;
+
+  const e164 = normalizePhone(phone);
+
   async function handleRequestOtp() {
     setError(null);
     setIsSubmitting(true);
     try {
-      await requestOtp(phone.trim());
+      await requestOtp(e164);
       setStep("code");
     } catch (err) {
       setError(ApiError.isApiError(err) ? err.message : "Couldn't send the code. Try again.");
@@ -36,7 +36,7 @@ export default function LoginScreen() {
     setError(null);
     setIsSubmitting(true);
     try {
-      await verifyOtp(phone.trim(), code.trim());
+      await verifyOtp(e164, code.trim());
       router.replace("/");
     } catch (err) {
       setError(ApiError.isApiError(err) ? err.message : "That code didn't work. Try again.");
@@ -49,28 +49,37 @@ export default function LoginScreen() {
     <SafeAreaView className="flex-1 bg-white">
       <View className="flex-1 justify-center gap-6 px-6">
         <View className="gap-1">
-          <Text className="font-bold text-3xl text-brand-ink">IronMan</Text>
-          <Text className="text-base text-gray-500">
+          <Text accessibilityRole="header" className="font-bold text-3xl text-brand-ink">
+            IronMan
+          </Text>
+          <Text className="text-base text-gray-600">
             {step === "phone"
-              ? "Enter your phone number to track your laundry."
-              : `Enter the code we sent to ${phone}.`}
+              ? "Enter your phone number to book and track your laundry."
+              : `Enter the code we sent to ${e164}.`}
           </Text>
         </View>
 
         {step === "phone" ? (
-          <TextInput
-            className="rounded-lg border border-gray-300 px-4 py-3 text-base"
-            placeholder="+91 98765 43210"
+          <Field
+            label="Phone number"
+            testID="phone-input"
+            placeholder="98765 43210"
             keyboardType="phone-pad"
+            autoComplete="tel"
+            textContentType="telephoneNumber"
             autoFocus
             value={phone}
             onChangeText={setPhone}
+            hint="We'll text you a code. Indian numbers don't need +91."
           />
         ) : (
-          <TextInput
-            className="rounded-lg border border-gray-300 px-4 py-3 text-center text-2xl tracking-widest"
+          <Field
+            label="Code"
+            testID="code-input"
             placeholder="000000"
             keyboardType="number-pad"
+            autoComplete="one-time-code"
+            textContentType="oneTimeCode"
             maxLength={6}
             autoFocus
             value={code}
@@ -78,27 +87,27 @@ export default function LoginScreen() {
           />
         )}
 
-        {error && <Text className="text-status-danger text-sm">{error}</Text>}
+        {error ? <Banner tone="error">{error}</Banner> : null}
 
-        <Pressable
-          className="items-center rounded-lg bg-brand-yellow py-3 disabled:opacity-50"
-          disabled={isSubmitting || (step === "phone" ? !phone.trim() : code.trim().length < 4)}
+        <Button
+          label={step === "phone" ? "Send code" : "Verify & continue"}
+          testID="login-submit"
+          loading={isSubmitting}
+          disabled={step === "phone" ? !isPlausiblePhone(phone) : code.trim().length < 4}
           onPress={step === "phone" ? handleRequestOtp : handleVerifyOtp}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator />
-          ) : (
-            <Text className="font-semibold text-base text-brand-ink">
-              {step === "phone" ? "Send code" : "Verify & continue"}
-            </Text>
-          )}
-        </Pressable>
+        />
 
-        {step === "code" && (
-          <Pressable onPress={() => setStep("phone")}>
-            <Text className="text-center text-sm text-gray-500">Use a different number</Text>
-          </Pressable>
-        )}
+        {step === "code" ? (
+          <Button
+            label="Use a different number"
+            variant="ghost"
+            onPress={() => {
+              setStep("phone");
+              setCode("");
+              setError(null);
+            }}
+          />
+        ) : null}
       </View>
     </SafeAreaView>
   );

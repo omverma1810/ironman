@@ -7,7 +7,19 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider } from "../lib/auth";
 
 export default function RootLayout() {
-  const [queryClient] = useState(() => new QueryClient());
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            // One retry: a flaky connection shouldn't be an error screen, but
+            // a real failure shouldn't spin for long either.
+            retry: 1,
+            refetchOnReconnect: true,
+          },
+        },
+      })
+  );
 
   return (
     <SafeAreaProvider>
@@ -15,8 +27,9 @@ export default function RootLayout() {
         <AuthProvider>
           <StatusBar style="dark" />
           <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="index" />
+            <Stack.Screen name="(tabs)" />
             <Stack.Screen name="login" />
+            <Stack.Screen name="book" />
             <Stack.Screen name="orders/[id]" options={{ headerShown: true, title: "Order" }} />
           </Stack>
         </AuthProvider>
