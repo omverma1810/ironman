@@ -76,21 +76,24 @@
      console/account/book/track/field surfaces keep --brand-yellow and
      --surface-*, untouched. Scoped under its own "landing-" prefix so
      the two never collide and nothing here leaks into the product UI.
-     Always a dull-black ground / gold text — no light variant. #fdbf0a
-     is the exact gold pulled from the real IronMan logo file; deep/muted
-     are darker and desaturated shades of that same hue, not a different
-     gold, so hover states and secondary text still read as one accent.
-     A lighter ground made #fdbf0a-as-text nearly unreadable (~1.7:1
+     Always a dull-black ground / gold text — no light variant. The accent
+     is a soft gold (#ffe066), lighter than the logo's own #fdbf0a at the
+     client's request (Oct 2026) but the same hue family (48 deg against the
+     logo's 45), so the two still read as one brand. Contrast on the
+     page ground: accent 13.9:1, muted text 7.9:1; the near-black ink on
+     an accent button is 14.7:1. "deep" is the hover shade, about 10%
+     richer; "muted" is the same hue desaturated for secondary text.
+     A lighter ground made gold-as-text nearly unreadable (~1.7:1
      contrast), so the page no longer offers a light theme at all —
      it stays on-brand and legible by only ever being this one look. */
   --landing-ink: #120f0c;
   --landing-paper: #161616;
   --landing-card: #1b1712;
-  --landing-gold: #fdbf0a;
-  --landing-gold-deep: #d9a400;
-  --landing-muted: #a68d3f;
+  --landing-gold: #ffe066;
+  --landing-gold-deep: #ffd83d;
+  --landing-muted: #baab6d;
   --landing-shadow-lift:
-    0 0 0 1px rgba(253, 191, 10, 0.12), 0 20px 40px -12px rgba(0, 0, 0, 0.6);
+    0 0 0 1px rgba(255, 224, 102, 0.12), 0 20px 40px -12px rgba(0, 0, 0, 0.6);
   --landing-radius-blob: 2.5rem;
 }
 
