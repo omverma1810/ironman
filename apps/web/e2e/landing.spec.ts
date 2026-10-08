@@ -8,10 +8,12 @@ import { test, expect } from "./fixtures";
 test.describe("Marketing landing page", () => {
   test("shows the hero and links into the real booking and account flows", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: /expert care for/i })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Every garment, the right kind of care." })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: /crisp clothes/i })).toBeVisible();
+    // Ironing is the hero service, said right under the hero.
+    await expect(page.getByRole("heading", { name: "Ironing is what we do best." })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Everything else, on the same pickup." })).toBeVisible();
 
-    await expect(page.getByRole("link", { name: "Schedule a Pickup" }).first()).toHaveAttribute(
+    await expect(page.getByRole("link", { name: "Book a Pickup" }).first()).toHaveAttribute(
       "href",
       "/book"
     );
@@ -26,7 +28,7 @@ test.describe("Marketing landing page", () => {
     const secondQuestion = page.getByRole("button", { name: "How long does a regular order take?" });
     await secondQuestion.click();
     await expect(
-      page.getByText(/most wash & fold and dry-cleaning orders are ready within/i)
+      page.getByText(/most orders are back at your door within/i)
     ).toBeVisible();
   });
 

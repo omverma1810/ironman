@@ -11,15 +11,14 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "IronMan — Premium Laundry & Dry Cleaning",
+    default: "IronMan — Crisp ironing, picked up and delivered",
     template: "%s · IronMan",
   },
   description:
-    "Doorstep pickup, expert garment care, and transparent digital billing — book a pickup on the web or WhatsApp and track your order in real time.",
+    "Crisp clothes, ready when you are. Ironing picked up from your door and delivered back on time in Hyderabad, plus laundry and dry cleaning on the same pickup.",
   openGraph: {
-    title: "IronMan — Premium Laundry & Dry Cleaning",
-    description:
-      "Doorstep pickup, expert garment care, and transparent digital billing from IronMan.",
+    title: "IronMan — Crisp ironing, picked up and delivered",
+    description: "Crisp clothes, ready when you are. Free pickup and delivery in Hyderabad.",
     type: "website",
   },
 };

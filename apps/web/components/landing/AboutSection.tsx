@@ -2,7 +2,7 @@
 
 import { motion } from "motion/react";
 import { HeartHandshake, Eye, BadgeCheck, type LucideIcon } from "lucide-react";
-import { ABOUT_VALUES, type Value } from "@/lib/landing/content";
+import { ABOUT, ABOUT_VALUES, type Value } from "@/lib/landing/content";
 import { fadeUp, stagger } from "@/lib/landing/animations";
 
 const ICONS: Record<Value["icon"], LucideIcon> = {
@@ -23,22 +23,23 @@ export function AboutSection() {
           className="flex flex-col gap-5"
         >
           <span className="text-sm font-semibold tracking-widest text-landing-gold uppercase">
-            About IronMan
+            {ABOUT.eyebrow}
           </span>
           <h2 className="font-landing-heading text-4xl font-bold text-balance text-landing-gold">
-            Built because guesswork has no place in laundry.
+            {ABOUT.title}
           </h2>
-          <p className="text-landing-muted">
-            IronMan started with a simple complaint: nobody could tell you where their clothes
-            were, what they&rsquo;d be charged, or when they&rsquo;d actually come back. We built
-            our own operating system for the hub floor first — tagging, tracking and billing
-            every garment — and put the same system in your hands as a tracking link and an
-            itemized invoice.
+          <p
+            lang="hi-Latn"
+            className="font-landing-heading text-3xl text-landing-gold italic sm:text-4xl"
+          >
+            &ldquo;{ABOUT.quote}&rdquo;
           </p>
-          <p className="text-landing-muted">
-            No outsourced processing, no &ldquo;we&rsquo;ll call you&rdquo; — every order runs
-            through the same system our own team uses to run the floor.
-          </p>
+          {ABOUT.paragraphs.map((text) => (
+            <p key={text} className="text-landing-muted">
+              {text}
+            </p>
+          ))}
+          <p className="font-landing-heading text-xl font-bold text-landing-gold">{ABOUT.signoff}</p>
         </motion.div>
 
         <motion.div

@@ -51,14 +51,13 @@ export function ProcessSection() {
     <section id="process" className="mx-auto max-w-7xl px-6 py-20 lg:py-28">
       <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
         <span className="text-sm font-semibold tracking-widest text-landing-gold uppercase">
-          Our Process
+          How It Works
         </span>
         <h2 className="font-landing-heading text-4xl font-bold text-balance text-landing-gold">
-          From pickup to your door, tracked at every step.
+          Hand it over. We&rsquo;ll take it from here.
         </h2>
         <p className="text-landing-muted">
-          Nothing here runs on memory or a phone call — every stage below is a real state in our
-          in-house tracking system.
+          Five simple steps, and you can see where your clothes are at every one of them.
         </p>
       </div>
 

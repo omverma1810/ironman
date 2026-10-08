@@ -12,14 +12,14 @@ export function ServicesGrid() {
     <section id="services" className="mx-auto max-w-7xl px-6 py-20 lg:py-28">
       <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
         <span className="text-sm font-semibold tracking-widest text-landing-gold uppercase">
-          Our Services
+          Beyond Ironing
         </span>
         <h2 className="font-landing-heading text-4xl font-bold text-balance text-landing-gold">
-          Every garment, the right kind of care.
+          Everything else, on the same pickup.
         </h2>
         <p className="text-landing-muted">
-          Six specialisms, one pickup — our team routes every item to the right process
-          automatically.
+          Laundry, dry cleaning, sarees, sneakers and more. Hand it all over in one go and we
+          will sort it out.
         </p>
       </div>
 
@@ -65,7 +65,7 @@ export function ServicesGrid() {
                     href="/book"
                     className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-landing-gold"
                   >
-                    Learn more
+                    Book a pickup
                     <ArrowRight
                       className="size-4 transition-transform group-hover:translate-x-1"
                       aria-hidden="true"

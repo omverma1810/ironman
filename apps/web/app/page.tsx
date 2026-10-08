@@ -4,6 +4,7 @@ import { FAQ } from "@/components/landing/FAQ";
 import { Footer } from "@/components/landing/Footer";
 import { Hero } from "@/components/landing/Hero";
 import { ImpactStats } from "@/components/landing/ImpactStats";
+import { IroningSpotlight } from "@/components/landing/IroningSpotlight";
 import { Marquee } from "@/components/landing/Marquee";
 import { Navbar } from "@/components/landing/Navbar";
 import { NumberedFeatures } from "@/components/landing/NumberedFeatures";
@@ -28,11 +29,14 @@ export default function Home() {
         <Navbar />
         <Marquee />
         <main>
+          {/* The feeling and the result first (crisp clothes, on time), the
+              hero service next, how it works after; other services support. */}
           <Hero />
+          <IroningSpotlight />
           <ImpactStats />
-          <ServicesGrid />
           <ProcessSection />
           <NumberedFeatures />
+          <ServicesGrid />
           <AboutSection />
           <Testimonials />
           <PricingTeaser />

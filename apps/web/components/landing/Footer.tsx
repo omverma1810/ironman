@@ -41,7 +41,7 @@ export function Footer() {
         <div className="flex flex-col gap-4">
           <Logo wordmarkClassName="text-landing-gold" />
           <p className="max-w-56 text-sm text-landing-muted">
-            Doorstep laundry and dry cleaning, backed by transparent digital billing.
+            Crisp clothes, picked up and delivered. Ironing first, with laundry and dry cleaning too.
           </p>
           <div className="flex items-center gap-3">
             <a

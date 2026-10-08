@@ -3,12 +3,36 @@
 
 export const NAV_LINKS = [
   { label: "Home", href: "#home" },
+  { label: "Ironing", href: "#ironing" },
+  { label: "How it works", href: "#process" },
   { label: "Services", href: "#services" },
-  { label: "Process", href: "#process" },
   { label: "Pricing", href: "#pricing" },
   { label: "FAQ", href: "#faq" },
-  { label: "Contact", href: "#contact" },
 ] as const;
+
+/** The voice: warm, plain, a little playful. Sell the result (crisp clothes,
+ * on time, no chasing) before the process. Never compare ourselves with, or
+ * talk down to, the local ironing services people already use. */
+export const HERO = {
+  eyebrow: "Ironing, picked up & delivered · Hyderabad",
+  title: "Crisp clothes.",
+  titleAccent: "Ready when you are.",
+  quote: "Bhaiya, zara achhe se kar dena please.",
+  body: "You've said it a hundred times. IronMan makes it the standard: a sharp, even finish on every piece, picked up from your door and back on time, without you having to follow up.",
+  chips: ["Free pickup & delivery", "Back in 24–48 hours", "Price before you book"],
+};
+
+export const IRONING = {
+  eyebrow: "Our hero service",
+  title: "Ironing is what we do best.",
+  body: "Automatic ironing gives every shirt, kurta and saree the same crisp finish, piece after piece. You hand over the pile; it comes back ready to wear.",
+  items: ["Shirts & T-shirts", "Trousers & jeans", "Kurtas", "Sarees", "Bedsheets", "The whole pile"],
+  points: [
+    "The same sharp finish on every piece, every time",
+    "Counted with you at the door, and the same count comes back",
+    "Free pickup and delivery, on a slot that suits you",
+  ],
+};
 
 export const CONTACT_PHONE = "+91 98765 43210";
 export const CONTACT_PHONE_TEL = "+919876543210";
@@ -27,40 +51,40 @@ export type Service = {
 
 export const SERVICES: Service[] = [
   {
-    slug: "dry-cleaning",
-    title: "Premium Dry Cleaning",
-    description: "Gentle solvent care for suits, silks and delicate fabrics.",
-    bullets: ["Fabric-tested solvent process", "Pressed and hung ready to wear"],
-  },
-  {
     slug: "wash-fold",
     title: "Wash & Fold",
-    description: "Everyday laundry, sorted, washed, folded and packed fresh.",
-    bullets: ["Sorted by colour and fabric", "Folded and packed in labelled bags"],
+    description: "Everyday laundry, washed, folded and packed fresh.",
+    bullets: ["Sorted by colour and fabric", "Folded and packed, ready for the shelf"],
   },
   {
-    slug: "designer-garment",
-    title: "Designer Garment Care",
-    description: "Specialist handling for luxury labels and occasion wear.",
-    bullets: ["Hand-finished, label-safe pressing", "Priority handling for occasion wear"],
-  },
-  {
-    slug: "shoe-sneaker",
-    title: "Shoe & Sneaker Care",
-    description: "Deep cleaning and restoration for sneakers and leather.",
-    bullets: ["Sole, upper and lace deep-clean", "Leather conditioning on request"],
+    slug: "dry-cleaning",
+    title: "Dry Cleaning",
+    description: "Gentle care for suits, silks and the clothes you save for best.",
+    bullets: ["Safe for delicate fabrics", "Pressed and hung, ready to wear"],
   },
   {
     slug: "saree-drapery",
-    title: "Saree & Drapery Care",
-    description: "Pressed, polished and packed with heritage-grade care.",
-    bullets: ["Zari and border-safe pressing", "Folded flat, never creased in transit"],
+    title: "Saree Care",
+    description: "Pressed and packed with the care a good saree deserves.",
+    bullets: ["Gentle on zari and borders", "Folded flat, never crushed on the way"],
+  },
+  {
+    slug: "designer-garment",
+    title: "Occasion Wear",
+    description: "Extra care for the outfit you've been saving for the big day.",
+    bullets: ["Finished by hand, label-safe", "Priority handling when it matters"],
+  },
+  {
+    slug: "shoe-sneaker",
+    title: "Sneaker Care",
+    description: "Deep cleaning that brings your favourite pair back to life.",
+    bullets: ["Soles, uppers and laces", "Leather conditioning on request"],
   },
   {
     slug: "express",
-    title: "Express Same-Day",
-    description: "In by morning, back by evening. When you need it fast.",
-    bullets: ["Morning cut-off, evening delivery", "Priority queue at the hub"],
+    title: "Same-Day Express",
+    description: "In by morning, back by evening. For the days that sneak up on you.",
+    bullets: ["Morning pickup, evening delivery", "Moves to the front of the queue"],
   },
 ];
 
@@ -74,39 +98,38 @@ export type NumberedFeature = {
 export const NUMBERED_FEATURES: NumberedFeature[] = [
   {
     number: "01",
-    title: "Free Doorstep Pickup",
-    description: "Schedule in 30 seconds. We collect from your home or office at a slot you choose.",
-    icon: "truck",
-  },
-  {
-    number: "02",
-    title: "Trained Garment Specialists",
-    description:
-      "Fabric-first assessment on intake; every item tagged and tracked through our system.",
+    title: "Crisp, every time",
+    description: "Automatic ironing gives every piece the same sharp finish. Monday's shirt looks like Friday's.",
     icon: "shield",
   },
   {
-    number: "03",
-    title: "Transparent Billing",
-    description: "Itemized digital invoice from our in-house software. No surprises, ever.",
-    icon: "receipt",
+    number: "02",
+    title: "Free pickup & delivery",
+    description: "From your door, on a slot you choose. No extra charge, no trip to make.",
+    icon: "truck",
   },
   {
-    number: "04",
-    title: "Same-Day Express",
-    description: "Cut-off aware routing so urgent orders return the same evening.",
+    number: "03",
+    title: "On time, as promised",
+    description: "We tell you when your clothes are coming back, and that's when they come back.",
     icon: "zap",
   },
   {
-    number: "05",
-    title: "Real-Time Order Tracking",
-    description: "A live tracking link follows your order from pickup to delivery — no app required.",
+    number: "04",
+    title: "Know where your clothes are",
+    description: "A simple link shows every step, from pickup to your door. No need to call and ask.",
     icon: "map-pin",
   },
   {
+    number: "05",
+    title: "Clear prices",
+    description: "See the price before you book. What you see is what you pay.",
+    icon: "receipt",
+  },
+  {
     number: "06",
-    title: "Book On Web Or WhatsApp",
-    description: "Schedule from a browser or straight from a WhatsApp chat — whichever is faster for you.",
+    title: "Book in a message",
+    description: "On WhatsApp or the website, in under a minute. Whichever is easier.",
     icon: "message-circle",
   },
 ];
@@ -119,33 +142,28 @@ export type ProcessStep = {
 
 export const PROCESS_STEPS: ProcessStep[] = [
   {
-    title: "Schedule Pickup",
-    description:
-      "Book a slot on the web or WhatsApp in under a minute. Pick a window that suits your day — we work around you.",
+    title: "Book a pickup",
+    description: "On the website or WhatsApp, in under a minute. Pick a slot that suits your day.",
     icon: "calendar",
   },
   {
-    title: "We Collect & Tag",
-    description:
-      "Every item is counted with you at the door, tagged and logged into our system before it ever leaves your hands.",
+    title: "Hand it over",
+    description: "Our rider counts every piece with you at the door, so you know exactly what's with us.",
     icon: "clipboard-check",
   },
   {
-    title: "Wash, Press & Quality Check",
-    description:
-      "Fabric-first handling through wash, press and a final quality check — tracked stage by stage, not left to guesswork.",
+    title: "We make it crisp",
+    description: "Every piece is ironed to the same sharp finish, then checked once more before it's packed.",
     icon: "sparkles",
   },
   {
-    title: "Packed & Invoiced",
-    description:
-      "An itemized digital invoice is generated before we pack — you see exactly what you're paying for, before delivery day.",
+    title: "You see the bill first",
+    description: "The prices you saw when you booked, itemised, before anything reaches your door.",
     icon: "receipt",
   },
   {
-    title: "Delivered Fresh",
-    description:
-      "Back at your door on schedule. Pay by cash or UPI, or draw down your IronMan store credit if you have a balance.",
+    title: "Back at your door",
+    description: "On time and ready to wear. Pay by cash or UPI when it arrives.",
     icon: "package-check",
   },
 ];
@@ -158,11 +176,13 @@ export type ImpactStat = {
   label: string;
 };
 
+/** Promises we keep on every order, not vanity counts. Replace with real
+ * figures (a Google rating, garments ironed) only once they can be shown to be true. */
 export const IMPACT_STATS: ImpactStat[] = [
-  { value: 10000, suffix: "+", label: "Garments cared for" },
-  { value: 4.9, decimals: 1, suffix: "/5", label: "Average customer rating" },
-  { value: 48, suffix: "hr", label: "Standard turnaround" },
-  { value: 30, suffix: "sec", label: "Average booking time" },
+  { value: 0, prefix: "₹", label: "Pickup & delivery fee" },
+  { value: 48, suffix: " hr", label: "Back at your door, or sooner" },
+  { value: 30, suffix: " sec", label: "To book a pickup" },
+  { value: 100, suffix: "%", label: "Of pieces counted with you at the door" },
 ];
 
 export type Value = {
@@ -171,20 +191,31 @@ export type Value = {
   icon: "heart-handshake" | "eye" | "badge-check";
 };
 
+export const ABOUT = {
+  eyebrow: "Why we started",
+  title: "Built around five words.",
+  quote: "Zara achhe se kar dena.",
+  paragraphs: [
+    "We all know the moment: you hand over your favourite shirt and say, \u201czara achhe se kar dena please.\u201d",
+    "IronMan was built to make that experience simpler, more reliable and more consistent, so the shirt you hand over comes back exactly how you hoped.",
+  ],
+  signoff: "Crisp clothes. Ready when you are.",
+};
+
 export const ABOUT_VALUES: Value[] = [
   {
-    title: "Care first",
-    description: "Every garment gets a fabric-first assessment before it touches a machine.",
+    title: "Crisp, every time",
+    description: "Your clothes come back sharp, clean and ready to wear. Every piece, every order.",
     icon: "heart-handshake",
   },
   {
-    title: "Radical transparency",
-    description: "You see the same itemized invoice and order timeline our own team works from.",
+    title: "No guesswork",
+    description: "Clear pricing. Clear updates. No surprises.",
     icon: "eye",
   },
   {
-    title: "Built to be trusted",
-    description: "Counted at intake, tracked at every stage, confirmed with you before anything changes.",
+    title: "On time, as promised",
+    description: "We pick up when we say and deliver when we say. No chasing needed.",
     icon: "badge-check",
   },
 ];
@@ -195,6 +226,8 @@ export type Testimonial = {
   locality: string;
 };
 
+/** Shown under "Don't just take our word for it", so every quote here must be
+ * a real customer's words, used with their permission. */
 export const TESTIMONIALS: Testimonial[] = [
   {
     quote:
@@ -226,60 +259,39 @@ export const TESTIMONIALS: Testimonial[] = [
     name: "Priya Menon",
     locality: "Basheerbagh",
   },
-  {
-    quote:
-      "Switched from a local dhobi after one bad stain job elsewhere. IronMan's quality check step actually caught an issue before delivery.",
-    name: "Arjun Nair",
-    locality: "Narayanguda",
-  },
-  {
-    quote:
-      "My sneakers looked showroom-fresh after their deep clean. Didn't expect that level of care from a laundry pickup service.",
-    name: "Rohan Kapoor",
-    locality: "Whitefield",
-  },
-  {
-    quote:
-      "The tracking link is what sold me — I could see exactly which stage my order was at without calling anyone.",
-    name: "Priya Menon",
-    locality: "Jayanagar",
-  },
-  {
-    quote:
-      "Switched from a local dhobi after one bad stain job elsewhere. IronMan's quality check step actually caught an issue before delivery.",
-    name: "Arjun Nair",
-    locality: "Koramangala",
-  },
 ];
 
 export type PricingPlan = {
   name: string;
   unit: string;
-  startingAt: string;
+  /** null: the price is shown live as the customer adds items when booking. */
+  startingAt: string | null;
   bullets: string[];
   highlighted: boolean;
+  badge?: string;
 };
 
 export const PRICING_PLANS: PricingPlan[] = [
   {
+    name: "Ironing",
+    unit: "per piece",
+    startingAt: null,
+    bullets: ["Shirts, trousers, kurtas, sarees", "Free pickup and delivery", "Back in 24–48 hours"],
+    highlighted: true,
+    badge: "Our hero",
+  },
+  {
     name: "Wash & Fold",
     unit: "per kg",
     startingAt: "₹79",
-    bullets: ["Sorted by fabric type", "Washed, dried and folded", "Packed in labelled bags"],
+    bullets: ["Sorted by fabric", "Washed, dried and folded", "Packed fresh"],
     highlighted: false,
   },
   {
     name: "Dry Cleaning",
     unit: "per item",
     startingAt: "₹149",
-    bullets: ["Solvent-safe for delicates", "Stain assessment on intake", "Pressed and hung ready"],
-    highlighted: true,
-  },
-  {
-    name: "Premium Care",
-    unit: "per item",
-    startingAt: "₹299",
-    bullets: ["Designer & occasion wear", "Hand-finished pressing", "Priority same-day slot"],
+    bullets: ["Safe for delicates", "Stains looked at on arrival", "Pressed and hung"],
     highlighted: false,
   },
 ];
@@ -291,38 +303,43 @@ export type Faq = {
 
 export const FAQS: Faq[] = [
   {
-    question: "Which areas do you pick up from, and what slots are available?",
+    question: "What can I send for ironing?",
     answer:
-      "We currently serve select apartments and pincodes across Hyderabad, with morning and evening pickup slots. Enter your pincode on the booking page to see live availability for your area.",
+      "Shirts, T-shirts, trousers, jeans, kurtas, sarees, bedsheets — the everyday pile. Add your items when you book and you'll see the price for each one before you confirm.",
   },
   {
     question: "How long does a regular order take?",
     answer:
-      "Most wash & fold and dry-cleaning orders are ready within 24–48 hours of pickup. Express orders picked up before the morning cut-off are delivered the same evening.",
+      "Most orders are back at your door within 24–48 hours of pickup. Express orders picked up before the morning cut-off come back the same evening.",
   },
   {
-    question: "How do you make sure my garments are safe?",
+    question: "Which areas do you pick up from?",
     answer:
-      "Every garment is counted with you at pickup, tagged, and tracked through wash, press and quality check in our system. If a count doesn't match what was declared, we pause the order and get your approval before continuing.",
+      "We currently serve select apartments and pincodes across Hyderabad, with morning and evening slots. Enter your pincode on the booking page to see what's available near you.",
+  },
+  {
+    question: "How do I know nothing goes missing?",
+    answer:
+      "Our rider counts every piece with you at the door, and the same count comes back to you. If anything doesn't add up, we stop and check with you before going any further.",
   },
   {
     question: "How do I pay?",
     answer:
-      "Cash or UPI at the time of delivery, or from your IronMan store credit if you have a balance. You'll always get an itemized digital invoice first.",
+      "Cash or UPI when your clothes come back, or from your IronMan credit if you have some. You'll see an itemised bill before delivery.",
   },
   {
     question: "What's the cut-off for same-day express?",
     answer:
-      "Pickups completed before 9:00 AM qualify for same-evening express delivery, subject to that day's slots. We'll confirm express eligibility when you book.",
+      "Pickups before 9:00 AM can come back the same evening, depending on that day's slots. We'll confirm when you book.",
   },
   {
-    question: "Do you offer any subscription or monthly plans?",
+    question: "Do you offer monthly plans?",
     answer:
-      "Not yet — every order today is billed individually against our live rate card, with no recurring commitment. We're evaluating monthly plans for regular households as we grow.",
+      "Not yet. Every order is priced on its own, with no commitment. We're working on plans for households who send clothes every week.",
   },
   {
-    question: "What happens if an item is lost or damaged?",
+    question: "What if something is damaged?",
     answer:
-      "Every garment is counted and tagged at intake, so a discrepancy is caught early rather than at delivery. If something does go wrong, tell us on the order's tracking page or by phone and our team will work through it with you directly.",
+      "Tell us from your order's tracking page or call us, and our team will sort it out with you directly.",
   },
 ];

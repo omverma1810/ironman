@@ -15,7 +15,7 @@ export function FAQ() {
           Questions
         </span>
         <h2 className="font-landing-heading text-4xl font-bold text-balance text-landing-gold">
-          Frequently asked questions.
+          Questions, answered.
         </h2>
       </div>
 

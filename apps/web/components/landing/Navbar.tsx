@@ -68,7 +68,7 @@ export function Navbar() {
             href="/book"
             className="duration-fast rounded-full bg-landing-gold px-6 py-2.5 text-sm font-semibold text-landing-ink transition hover:scale-103 hover:bg-landing-gold-deep"
           >
-            Schedule a Pickup
+            Book a Pickup
           </Link>
         </div>
 
@@ -116,7 +116,7 @@ export function Navbar() {
               href="/book"
               className="mt-1 rounded-full bg-landing-gold px-6 py-2.5 text-center text-sm font-semibold text-landing-ink"
             >
-              Schedule a Pickup
+              Book a Pickup
             </Link>
           </motion.div>
         )}

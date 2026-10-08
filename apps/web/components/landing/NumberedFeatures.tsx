@@ -37,7 +37,7 @@ export function NumberedFeatures() {
           Why IronMan
         </span>
         <h2 className="font-landing-heading text-4xl font-bold text-balance text-landing-gold">
-          Run like a system, not a favour.
+          Clothing care, made more reliable.
         </h2>
       </div>
 

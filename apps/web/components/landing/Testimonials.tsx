@@ -17,10 +17,10 @@ export function Testimonials() {
       >
         <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
           <span className="text-sm font-semibold tracking-widest text-landing-gold uppercase">
-            Customer Love
+            The IronMan Experience
           </span>
           <h2 className="font-landing-heading text-4xl font-bold text-balance text-landing-gold">
-            Trusted with the clothes people actually care about.
+            Don&rsquo;t just take our word for it.
           </h2>
         </div>
 
@@ -38,7 +38,7 @@ export function Testimonials() {
               .join("");
             return (
               <div
-                key={testimonial.name}
+                key={`${testimonial.name}-${testimonial.locality}`}
                 className="flex w-80 shrink-0 snap-start flex-col gap-4 rounded-2xl border border-landing-gold/15 p-6"
               >
                 <div className="flex gap-1" aria-hidden="true">

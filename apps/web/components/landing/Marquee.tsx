@@ -3,7 +3,7 @@
 import { motion, useReducedMotion } from "motion/react";
 
 const MESSAGE =
-  "FREE DOORSTEP PICKUP • SAME-DAY EXPRESS • PREMIUM DRY CLEANING • DESIGNER GARMENT CARE • ";
+  "CRISP CLOTHES • READY WHEN YOU ARE • FREE PICKUP & DELIVERY • ZARA ACHHE SE • ";
 
 function Track() {
   return (

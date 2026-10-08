@@ -8,7 +8,7 @@ import { whatsappBookingHref } from "@/lib/landing/whatsapp";
 
 export function CTABanner() {
   const whatsappHref = whatsappBookingHref(
-    "Hi IronMan! I'd like to schedule a laundry pickup."
+    "Hi IronMan! I'd like to book an ironing pickup."
   );
 
   return (
@@ -31,10 +31,10 @@ export function CTABanner() {
 
         <div className="relative flex flex-col items-center gap-4">
           <h2 className="font-landing-heading text-4xl font-bold text-balance text-landing-gold">
-            Ready for fresher clothes?
+            Ready for crisp clothes?
           </h2>
           <p className="max-w-md text-landing-ink/70">
-            Book a pickup in under a minute — our team confirms your slot and takes it from there.
+            Book a pickup in under a minute. We&rsquo;ll take it from there.
           </p>
           <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
             {whatsappHref ? (
