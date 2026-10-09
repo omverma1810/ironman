@@ -1,63 +1,46 @@
 "use client";
 
 import { motion } from "motion/react";
-import { MessageCircle, Shirt } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import { CONTACT_PHONE, CONTACT_PHONE_TEL } from "@/lib/landing/content";
 import { fadeUp } from "@/lib/landing/animations";
 import { whatsappBookingHref } from "@/lib/landing/whatsapp";
+import { Heading, LandingButton, Section } from "./ui";
 
 export function CTABanner() {
-  const whatsappHref = whatsappBookingHref(
-    "Hi IronMan! I'd like to book an ironing pickup."
-  );
+  const whatsappHref = whatsappBookingHref("Hi IRON MAN! I'd like to book an ironing pickup.");
 
   return (
-    <section id="contact" className="mx-auto max-w-7xl px-6 py-20 lg:py-28">
+    <Section ground="accent" id="contact" className="overflow-hidden px-6 py-28 lg:py-40">
       <motion.div
         initial="hidden"
         whileInView="show"
         viewport={{ once: true, amount: 0.3 }}
         variants={fadeUp}
-        className="relative overflow-hidden rounded-landing-blob bg-landing-gold px-6 py-16 text-center sm:px-12"
+        className="mx-auto flex max-w-4xl flex-col items-center gap-7 text-center"
       >
-        <div
-          className="pointer-events-none absolute inset-0 grid grid-cols-6 gap-8 p-8 opacity-10"
-          aria-hidden="true"
-        >
-          {Array.from({ length: 18 }).map((_, i) => (
-            <Shirt key={i} className="size-8 text-landing-ink" />
-          ))}
-        </div>
-
-        <div className="relative flex flex-col items-center gap-4">
-          <h2 className="font-landing-heading text-4xl font-bold text-balance text-landing-gold">
-            Ready for crisp clothes?
-          </h2>
-          <p className="max-w-md text-landing-ink/70">
-            Book a pickup in under a minute. We&rsquo;ll take it from there.
-          </p>
-          <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
-            {whatsappHref ? (
-              <a
-                href={whatsappHref}
-                target="_blank"
-                rel="noreferrer"
-                className="duration-fast flex items-center gap-2 rounded-full bg-landing-ink px-6 py-3 text-sm font-semibold text-white transition-transform hover:scale-103"
-              >
-                <MessageCircle className="size-4" aria-hidden="true" />
-                Book on WhatsApp
-              </a>
-            ) : (
-              <a
-                href={`tel:${CONTACT_PHONE_TEL}`}
-                className="duration-fast flex items-center gap-2 rounded-full bg-landing-ink px-6 py-3 text-sm font-semibold text-white transition-transform hover:scale-103"
-              >
-                Call {CONTACT_PHONE}
-              </a>
-            )}
-          </div>
+        <Heading className="text-5xl sm:text-6xl lg:text-8xl">
+          Ready for crisp clothes?
+        </Heading>
+        <p className="max-w-xl text-lg font-medium text-landing-muted sm:text-xl">
+          Book a pickup in under a minute. We&rsquo;ll take it from here.
+        </p>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <LandingButton href="/book" variant="dark">
+            Book a Pickup
+          </LandingButton>
+          {whatsappHref ? (
+            <LandingButton href={whatsappHref} variant="outline" target="_blank" rel="noreferrer">
+              <MessageCircle className="size-4" aria-hidden="true" />
+              Book on WhatsApp
+            </LandingButton>
+          ) : (
+            <LandingButton href={`tel:${CONTACT_PHONE_TEL}`} variant="outline">
+              Call {CONTACT_PHONE}
+            </LandingButton>
+          )}
         </div>
       </motion.div>
-    </section>
+    </Section>
   );
 }

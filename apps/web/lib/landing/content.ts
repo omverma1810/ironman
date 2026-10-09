@@ -5,6 +5,7 @@ export const NAV_LINKS = [
   { label: "Home", href: "#home" },
   { label: "Ironing", href: "#ironing" },
   { label: "How it works", href: "#process" },
+  { label: "Crew", href: "#crew" },
   { label: "Services", href: "#services" },
   { label: "Pricing", href: "#pricing" },
   { label: "FAQ", href: "#faq" },
@@ -18,7 +19,7 @@ export const HERO = {
   title: "Crisp clothes.",
   titleAccent: "Ready when you are.",
   quote: "Bhaiya, zara achhe se kar dena please.",
-  body: "You've said it a hundred times. IronMan makes it the standard: a sharp, even finish on every piece, picked up from your door and back on time, without you having to follow up.",
+  body: "You've said it a hundred times. IRON MAN makes it the standard: a sharp, even finish on every piece, picked up from your door and back on time, without you having to follow up.",
   chips: ["Free pickup & delivery", "Back in 24–48 hours", "Price before you book"],
 };
 
@@ -41,6 +42,63 @@ export const CONTACT_ADDRESS = "Barkatpura, Kacheguda, Hyderabad, Telangana 5000
 export const CONTACT_HOURS = "Mon–Sat, 8:00 AM – 9:00 PM";
 export const CONTACT_INSTAGRAM =
   "https://www.instagram.com/ironmanhyderabad?stkn=MW1qd2tpZm1tMTMyaQ==";
+
+/** The story band: read aloud by the page as you scroll. The closing line
+ * (from `emphasisFrom`) gets the brand highlight. */
+export const STORY = {
+  eyebrow: "The feeling",
+  words:
+    "You hand over your favourite shirt and say, \u201czara achhe se kar dena please.\u201d Then you wait, and wonder. IRON MAN ends the wondering: crisp clothes, picked up and delivered, ready when you are.",
+  /** From this word to the end is highlighted. */
+  emphasisFrom: "crisp",
+};
+
+/** The scroll-scrubbed brand film. Each caption owns a stretch of the scroll
+ * (`from`..`to`, as a share of the film). They describe what the picture
+ * shows: steam, press, finish. */
+export const FILM = {
+  eyebrow: "See it happen",
+  title: "Watch the crisp happen.",
+  captions: [
+    { from: 0.13, to: 0.3, text: "It starts with steam." },
+    { from: 0.31, to: 0.46, text: "Every fibre, relaxed." },
+    { from: 0.5, to: 0.66, text: "Pressed to a crisp edge." },
+    { from: 0.67, to: 0.82, text: "Then checked, and folded." },
+    { from: 0.86, to: 1, text: "Crisp clothes. Ready when you are." },
+  ],
+};
+
+export type CrewMember = {
+  key: "rider" | "presser" | "checker";
+  role: string;
+  line: string;
+  /** A real photo (under /public/crew) replaces the illustration when set. */
+  photo?: string;
+};
+
+/** The people behind an order. Drawn as illustrations until there are real
+ * photos: add the file under /public/crew and set `photo` below. */
+export const CREW: { title: string; body: string; members: CrewMember[] } = {
+  title: "The crew behind your crisp clothes.",
+  body: "From your door to our hub and back again, real people handle every piece.",
+  members: [
+    {
+      key: "rider",
+      role: "Pickup & delivery rider",
+      line: "Counts every piece with you at the door, and brings it back on the slot you chose.",
+    },
+    {
+      key: "presser",
+      role: "Ironing specialist",
+      line: "Gives every shirt, kurta and saree the same sharp, even finish.",
+    },
+    {
+      key: "checker",
+      role: "Quality check",
+      line: "One last look at every piece before it's folded and packed.",
+    },
+  ],
+};
 
 export type Service = {
   slug: string;
@@ -191,17 +249,6 @@ export type Value = {
   icon: "heart-handshake" | "eye" | "badge-check";
 };
 
-export const ABOUT = {
-  eyebrow: "Why we started",
-  title: "Built around five words.",
-  quote: "Zara achhe se kar dena.",
-  paragraphs: [
-    "We all know the moment: you hand over your favourite shirt and say, \u201czara achhe se kar dena please.\u201d",
-    "IronMan was built to make that experience simpler, more reliable and more consistent, so the shirt you hand over comes back exactly how you hoped.",
-  ],
-  signoff: "Crisp clothes. Ready when you are.",
-};
-
 export const ABOUT_VALUES: Value[] = [
   {
     title: "Crisp, every time",
@@ -325,7 +372,7 @@ export const FAQS: Faq[] = [
   {
     question: "How do I pay?",
     answer:
-      "Cash or UPI when your clothes come back, or from your IronMan credit if you have some. You'll see an itemised bill before delivery.",
+      "Cash or UPI when your clothes come back, or from your IRON MAN credit if you have some. You'll see an itemised bill before delivery.",
   },
   {
     question: "What's the cut-off for same-day express?",

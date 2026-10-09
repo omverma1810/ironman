@@ -3,7 +3,7 @@
 import { motion, useReducedMotion } from "motion/react";
 
 const MESSAGE =
-  "CRISP CLOTHES • READY WHEN YOU ARE • FREE PICKUP & DELIVERY • ZARA ACHHE SE • ";
+  "CRISP CLOTHES • READY WHEN YOU ARE • FREE PICKUP & DELIVERY • ZARA ACHHE SE KAR DENA • ";
 
 function Track() {
   return (
@@ -23,7 +23,7 @@ export function Marquee() {
   return (
     // Purely decorative, repeated promotional text — hidden from assistive
     // tech rather than announced twice (once per duplicated track).
-    <div className="overflow-hidden bg-landing-gold py-3 text-landing-ink" aria-hidden="true">
+    <div className="overflow-hidden bg-landing-gold py-3.5 text-landing-ink" aria-hidden="true">
       <motion.div
         className="flex text-xs font-bold uppercase"
         style={{ letterSpacing: "0.2em" }}

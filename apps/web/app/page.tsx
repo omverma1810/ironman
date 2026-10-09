@@ -1,9 +1,10 @@
-import { AboutSection } from "@/components/landing/AboutSection";
 import { CTABanner } from "@/components/landing/CTABanner";
 import { FAQ } from "@/components/landing/FAQ";
 import { Footer } from "@/components/landing/Footer";
 import { Hero } from "@/components/landing/Hero";
 import { ImpactStats } from "@/components/landing/ImpactStats";
+import { Crew } from "@/components/landing/Crew";
+import { FilmScrub } from "@/components/landing/FilmScrub";
 import { IroningSpotlight } from "@/components/landing/IroningSpotlight";
 import { Marquee } from "@/components/landing/Marquee";
 import { Navbar } from "@/components/landing/Navbar";
@@ -11,6 +12,7 @@ import { NumberedFeatures } from "@/components/landing/NumberedFeatures";
 import { PricingTeaser } from "@/components/landing/PricingTeaser";
 import { ProcessSection } from "@/components/landing/ProcessSection";
 import { ServicesGrid } from "@/components/landing/ServicesGrid";
+import { Story } from "@/components/landing/Story";
 import { SmoothScroll } from "@/components/landing/SmoothScroll";
 import { Testimonials } from "@/components/landing/Testimonials";
 import { WhatsAppFloat } from "@/components/landing/WhatsAppFloat";
@@ -25,19 +27,21 @@ import { WhatsAppFloat } from "@/components/landing/WhatsAppFloat";
 export default function Home() {
   return (
     <SmoothScroll>
-      <div className="bg-landing-paper">
+      <div className="landing-dark bg-landing-paper">
         <Navbar />
-        <Marquee />
         <main>
-          {/* The feeling and the result first (crisp clothes, on time), the
-              hero service next, how it works after; other services support. */}
+          {/* The page alternates black, white and the brand yellow, and
+              leads with the feeling and the film before any process. */}
           <Hero />
+          <Marquee />
+          <Story />
+          <FilmScrub />
           <IroningSpotlight />
-          <ImpactStats />
           <ProcessSection />
+          <ImpactStats />
           <NumberedFeatures />
+          <Crew />
           <ServicesGrid />
-          <AboutSection />
           <Testimonials />
           <PricingTeaser />
           <FAQ />

@@ -1,17 +1,11 @@
 "use client";
 
-import { motion, useReducedMotion } from "motion/react";
-import {
-  Calendar,
-  ClipboardCheck,
-  Sparkles,
-  Receipt,
-  PackageCheck,
-  type LucideIcon,
-} from "lucide-react";
+import { useRef, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform } from "motion/react";
+import { Calendar, ClipboardCheck, PackageCheck, Receipt, Sparkles, type LucideIcon } from "lucide-react";
 import { PROCESS_STEPS, type ProcessStep } from "@/lib/landing/content";
-import { fadeUp } from "@/lib/landing/animations";
-import { useScrollParallax } from "@/lib/landing/parallax";
+import { ramp } from "@/lib/landing/scroll";
+import { Eyebrow, Heading, Section } from "./ui";
 
 const ICONS: Record<ProcessStep["icon"], LucideIcon> = {
   calendar: Calendar,
@@ -21,73 +15,93 @@ const ICONS: Record<ProcessStep["icon"], LucideIcon> = {
   "package-check": PackageCheck,
 };
 
-function ProcessIllustration({ step, index }: { step: ProcessStep; index: number }) {
-  const reduce = useReducedMotion();
-  const { ref, y } = useScrollParallax<HTMLDivElement>(24);
-  const Icon = ICONS[step.icon];
-
-  return (
-    <div ref={ref} className="aspect-4/3 overflow-hidden rounded-2xl bg-landing-gold/10 lg:aspect-square">
-      <motion.div
-        style={reduce ? undefined : { y }}
-        className="flex size-full items-center justify-center"
-      >
-        <div className="relative flex size-40 items-center justify-center rounded-full bg-landing-card shadow-landing-lift">
-          <span
-            className="absolute -top-4 -left-4 flex size-10 items-center justify-center rounded-full bg-landing-gold font-landing-heading text-sm font-extrabold text-landing-ink"
-            aria-hidden="true"
-          >
-            {index + 1}
-          </span>
-          <Icon className="size-16 text-landing-gold" aria-hidden="true" />
-        </div>
-      </motion.div>
-    </div>
-  );
-}
-
+/** How an order goes, told as you scroll: the black card on the left stays
+ * put and changes to the step you're reading, while its yellow ring turns
+ * with the page. On a phone each step carries its own icon instead. */
 export function ProcessSection() {
+  const reduce = useReducedMotion();
+  const [active, setActive] = useState(0);
+  const listRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: listRef, offset: ["start center", "end center"] });
+  const ringTurn = useTransform(scrollYProgress, (p) => ramp(p, [0, 1], [0, 270]));
+  const fill = useTransform(scrollYProgress, (p) => `${ramp(p, [0, 1], [0, 100])}%`);
+  const ActiveIcon = ICONS[PROCESS_STEPS[active].icon];
+
   return (
-    <section id="process" className="mx-auto max-w-7xl px-6 py-20 lg:py-28">
-      <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
-        <span className="text-sm font-semibold tracking-widest text-landing-gold uppercase">
-          How It Works
-        </span>
-        <h2 className="font-landing-heading text-4xl font-bold text-balance text-landing-gold">
-          Hand it over. We&rsquo;ll take it from here.
-        </h2>
-        <p className="text-landing-muted">
+    <Section ground="light" id="process" className="px-6 py-24 lg:py-36">
+      <div className="mx-auto flex max-w-3xl flex-col items-center gap-5 text-center">
+        <Eyebrow>How it works</Eyebrow>
+        <Heading>
+          Hand it over. <span className="hl">We&rsquo;ll take it from here.</span>
+        </Heading>
+        <p className="text-lg text-landing-muted">
           Five simple steps, and you can see where your clothes are at every one of them.
         </p>
       </div>
 
-      <div className="mt-16 flex flex-col gap-16 lg:gap-24">
-        {PROCESS_STEPS.map((step, i) => (
-          <motion.div
-            key={step.title}
-            variants={fadeUp}
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, amount: 0.35 }}
-            className={`flex flex-col items-center gap-8 lg:gap-16 ${
-              i % 2 === 1 ? "lg:flex-row-reverse" : "lg:flex-row"
-            }`}
-          >
-            <div className="w-full lg:w-1/2">
-              <ProcessIllustration step={step} index={i} />
+      <div className="mx-auto mt-16 grid max-w-7xl grid-cols-1 gap-10 lg:mt-24 lg:grid-cols-2 lg:gap-20">
+        <div className="hidden lg:block">
+          <div className="sticky top-28 flex aspect-square max-h-140 items-center justify-center overflow-hidden rounded-landing-blob bg-landing-ink p-10 text-white">
+            <motion.svg
+              aria-hidden="true"
+              viewBox="0 0 200 200"
+              style={reduce ? { width: "78%", height: "78%" } : { rotate: ringTurn, width: "78%", height: "78%" }}
+              className="absolute"
+            >
+              <circle cx="100" cy="100" r="94" fill="none" stroke="rgb(255 255 255 / 0.12)" strokeWidth="2" />
+              <circle cx="100" cy="100" r="94" fill="none" stroke="#ffd60a" strokeWidth="4" strokeLinecap="round" strokeDasharray="120 471" />
+            </motion.svg>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={active}
+                initial={{ opacity: 0, y: 24, scale: 0.92 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -24, scale: 0.92 }}
+                transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                className="relative flex flex-col items-center gap-5 text-center"
+              >
+                <span className="flex size-28 items-center justify-center rounded-full bg-landing-gold text-landing-ink">
+                  <ActiveIcon className="size-14" aria-hidden="true" />
+                </span>
+                <span className="font-landing-heading text-7xl leading-none font-black text-white tabular-nums">
+                  {String(active + 1).padStart(2, "0")}
+                </span>
+                <span className="font-landing-heading text-2xl font-extrabold text-landing-gold">
+                  {PROCESS_STEPS[active].title}
+                </span>
+              </motion.div>
+            </AnimatePresence>
+            <div aria-hidden="true" className="absolute inset-x-10 bottom-8 h-1 rounded-full bg-white/15">
+              <motion.div style={{ width: fill }} className="h-full rounded-full bg-landing-gold" />
             </div>
-            <div className="flex w-full flex-col gap-3 lg:w-1/2">
-              <span className="text-sm font-semibold tracking-widest text-landing-gold uppercase">
-                Step {String(i + 1).padStart(2, "0")}
-              </span>
-              <h3 className="font-landing-heading text-2xl font-bold text-landing-gold sm:text-3xl">
-                {step.title}
-              </h3>
-              <p className="max-w-md text-landing-muted">{step.description}</p>
-            </div>
-          </motion.div>
-        ))}
+          </div>
+        </div>
+
+        <div ref={listRef} className="flex flex-col">
+          {PROCESS_STEPS.map((step, i) => {
+            const Icon = ICONS[step.icon];
+            return (
+              <motion.div
+                key={step.title}
+                onViewportEnter={() => setActive(i)}
+                viewport={{ margin: "-45% 0px -45% 0px" }}
+                className="flex flex-col justify-center gap-4 border-t border-landing-line py-10 lg:min-h-svh"
+              >
+                <span className="flex size-12 items-center justify-center rounded-full bg-landing-ink text-landing-gold lg:hidden">
+                  <Icon className="size-6" aria-hidden="true" />
+                </span>
+                <span className="font-landing-label text-sm font-bold tracking-widest text-landing-muted uppercase">
+                  Step {String(i + 1).padStart(2, "0")}
+                </span>
+                <h3 className="font-landing-heading text-3xl font-extrabold tracking-tight text-landing-fg sm:text-5xl">
+                  {step.title}
+                </h3>
+                <p className="max-w-md text-lg text-landing-muted">{step.description}</p>
+              </motion.div>
+            );
+          })}
+        </div>
       </div>
-    </section>
+    </Section>
   );
 }

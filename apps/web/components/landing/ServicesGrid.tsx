@@ -6,18 +6,17 @@ import { ArrowRight, Check } from "lucide-react";
 import { SERVICES } from "@/lib/landing/content";
 import { SERVICE_ILLUSTRATIONS } from "./ServiceIllustrations";
 import { fadeUp, stagger } from "@/lib/landing/animations";
+import { Eyebrow, Heading, Section } from "./ui";
 
 export function ServicesGrid() {
   return (
-    <section id="services" className="mx-auto max-w-7xl px-6 py-20 lg:py-28">
-      <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
-        <span className="text-sm font-semibold tracking-widest text-landing-gold uppercase">
-          Beyond Ironing
-        </span>
-        <h2 className="font-landing-heading text-4xl font-bold text-balance text-landing-gold">
-          Everything else, on the same pickup.
-        </h2>
-        <p className="text-landing-muted">
+    <Section ground="light" id="services" className="px-6 py-24 lg:py-36">
+      <div className="mx-auto flex max-w-3xl flex-col items-center gap-5 text-center">
+        <Eyebrow>Beyond ironing</Eyebrow>
+        <Heading>
+          Everything else, <span className="hl">on one pickup.</span>
+        </Heading>
+        <p className="text-lg text-landing-muted">
           Laundry, dry cleaning, sarees, sneakers and more. Hand it all over in one go and we
           will sort it out.
         </p>
@@ -28,7 +27,7 @@ export function ServicesGrid() {
         initial="hidden"
         whileInView="show"
         viewport={{ once: true, amount: 0.15 }}
-        className="mt-16 grid grid-cols-1 gap-x-6 gap-y-16 md:grid-cols-2 lg:grid-cols-3"
+        className="mx-auto mt-16 grid max-w-7xl grid-cols-1 gap-x-6 gap-y-16 md:grid-cols-2 lg:grid-cols-3"
       >
         {SERVICES.map((service) => {
           const Illustration = SERVICE_ILLUSTRATIONS[service.slug];
@@ -39,7 +38,7 @@ export function ServicesGrid() {
                 transition={{ type: "spring", stiffness: 260, damping: 20 }}
                 className="group"
               >
-                <div className="aspect-4/3 overflow-hidden rounded-t-2xl bg-landing-gold/12">
+                <div className="aspect-4/3 overflow-hidden rounded-t-2xl bg-landing-gold/30">
                   <motion.div
                     className="size-full"
                     whileHover={{ scale: 1.05 }}
@@ -49,21 +48,21 @@ export function ServicesGrid() {
                   </motion.div>
                 </div>
                 <div className="relative z-10 mx-5 -mt-8 flex flex-col gap-3 rounded-2xl bg-landing-card p-6 text-left shadow-landing-lift">
-                  <h3 className="font-landing-heading text-lg font-bold text-landing-gold">
+                  <h3 className="font-landing-heading text-lg font-bold text-landing-fg">
                     {service.title}
                   </h3>
                   <p className="text-sm text-landing-muted">{service.description}</p>
                   <ul className="flex flex-col gap-1.5 text-sm text-landing-muted">
                     {service.bullets.map((bullet) => (
                       <li key={bullet} className="flex items-start gap-2">
-                        <Check className="mt-0.5 size-4 shrink-0 text-landing-gold" aria-hidden="true" />
+                        <Check className="mt-0.5 size-4 shrink-0 text-landing-fg" aria-hidden="true" />
                         {bullet}
                       </li>
                     ))}
                   </ul>
                   <Link
                     href="/book"
-                    className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-landing-gold"
+                    className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-landing-fg"
                   >
                     Book a pickup
                     <ArrowRight
@@ -77,6 +76,6 @@ export function ServicesGrid() {
           );
         })}
       </motion.div>
-    </section>
+    </Section>
   );
 }
