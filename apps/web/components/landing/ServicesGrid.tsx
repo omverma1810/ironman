@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { ArrowRight, Check } from "lucide-react";
@@ -38,16 +39,26 @@ export function ServicesGrid() {
                 transition={{ type: "spring", stiffness: 260, damping: 20 }}
                 className="group"
               >
-                <div className="aspect-4/3 overflow-hidden rounded-t-2xl bg-landing-gold/30">
+                <div className="relative aspect-5/4 overflow-hidden rounded-t-2xl bg-landing-line">
                   <motion.div
                     className="size-full"
                     whileHover={{ scale: 1.05 }}
                     transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
                   >
-                    <Illustration />
+                    {service.photo ? (
+                      <Image
+                        src={service.photo}
+                        alt={service.title}
+                        fill
+                        sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+                        className="object-cover"
+                      />
+                    ) : (
+                      <Illustration />
+                    )}
                   </motion.div>
                 </div>
-                <div className="relative z-10 mx-5 -mt-8 flex flex-col gap-3 rounded-2xl bg-landing-card p-6 text-left shadow-landing-lift">
+                <div className="relative z-10 mx-5 -mt-5 flex flex-col gap-3 rounded-2xl bg-landing-card p-6 text-left shadow-landing-lift">
                   <h3 className="font-landing-heading text-lg font-bold text-landing-fg">
                     {service.title}
                   </h3>

@@ -20,9 +20,12 @@ RUN pip install --no-cache-dir --prefix=/install -r requirements/base.txt gunico
 
 FROM python:3.12-slim AS runtime
 
-# Runtime-only shared libraries weasyprint needs (no compiler, no headers).
+# Runtime-only shared libraries weasyprint needs (no compiler, no headers),
+# plus a font: python-slim ships none, and without one the rupee sign (₹) on
+# invoices, credit notes and payout statements renders as an empty box.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpango-1.0-0 libpangocairo-1.0-0 libcairo2 libgdk-pixbuf-2.0-0 \
+    fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --create-home --uid 1000 appuser
 
