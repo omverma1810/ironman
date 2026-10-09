@@ -41,7 +41,7 @@ export function Footer() {
         <div className="flex flex-col gap-4">
           <Logo />
           <p className="max-w-56 text-sm text-landing-muted">
-            Crisp clothes, ready when you are. Ironing first, picked up and delivered, with laundry and dry cleaning too.
+            Crisp clothes, ready when you are. Automatic ironing first, picked up and delivered, with laundry and dry cleaning too.
           </p>
           <div className="flex items-center gap-3">
             <a

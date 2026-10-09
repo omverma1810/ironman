@@ -10,13 +10,13 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "IronMan — Crisp ironing, picked up and delivered",
+    default: "IRON MAN — Automatic ironing, picked up and delivered",
     template: "%s · IronMan",
   },
   description:
-    "Crisp clothes, ready when you are. Ironing picked up from your door and delivered back on time in Hyderabad, plus laundry and dry cleaning on the same pickup.",
+    "Crisp clothes, ready when you are. Automatic ironing picked up from your door and delivered back on time in Hyderabad, plus laundry and dry cleaning on the same pickup.",
   openGraph: {
-    title: "IronMan — Crisp ironing, picked up and delivered",
+    title: "IRON MAN — Automatic ironing, picked up and delivered",
     description: "Crisp clothes, ready when you are. Free pickup and delivery in Hyderabad.",
     type: "website",
   },
