@@ -4,33 +4,31 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { ChevronDown } from "lucide-react";
 import { FAQS } from "@/lib/landing/content";
+import { Eyebrow, Heading, Section } from "./ui";
 
 export function FAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
-    <section id="faq" className="mx-auto max-w-3xl px-6 py-20 lg:py-28">
-      <div className="flex flex-col items-center gap-4 text-center">
-        <span className="text-sm font-semibold tracking-widest text-landing-gold uppercase">
-          Questions
-        </span>
-        <h2 className="font-landing-heading text-4xl font-bold text-balance text-landing-gold">
-          Frequently asked questions.
-        </h2>
+    <Section ground="dark" id="faq" className="px-6 py-24 lg:py-36">
+      <div className="mx-auto flex max-w-3xl flex-col items-center gap-5 text-center">
+        <Eyebrow>Questions</Eyebrow>
+        <Heading>
+          Questions, <span className="hl">answered.</span>
+        </Heading>
       </div>
-
-      <div className="mt-12 flex flex-col">
+      <div className="mx-auto mt-12 flex max-w-3xl flex-col">
         {FAQS.map((faq, i) => {
           const isOpen = openIndex === i;
           return (
-            <div key={faq.question} className="border-b border-landing-gold/10">
+            <div key={faq.question} className="border-b border-landing-line">
               <button
                 type="button"
                 aria-expanded={isOpen}
                 onClick={() => setOpenIndex(isOpen ? null : i)}
                 className="flex w-full items-center justify-between gap-4 py-5 text-left"
               >
-                <span className="font-landing-heading font-semibold text-landing-gold">
+                <span className="font-landing-heading text-lg font-bold text-landing-fg">
                   {faq.question}
                 </span>
                 <motion.span
@@ -50,7 +48,7 @@ export function FAQ() {
                     transition={{ duration: 0.2 }}
                     className="overflow-hidden"
                   >
-                    <p className="pb-5 text-sm text-landing-muted">{faq.answer}</p>
+                    <p className="pb-6 text-base text-landing-muted">{faq.answer}</p>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -58,6 +56,6 @@ export function FAQ() {
           );
         })}
       </div>
-    </section>
+    </Section>
   );
 }

@@ -5,6 +5,7 @@ import { motion, useInView, useReducedMotion } from "motion/react";
 import { useRef } from "react";
 import { IMPACT_STATS, type ImpactStat } from "@/lib/landing/content";
 import { fadeUp, stagger } from "@/lib/landing/animations";
+import { Section } from "./ui";
 
 function useCountUp(target: number, active: boolean, reduceMotion: boolean, duration = 1.4) {
   const [value, setValue] = useState(reduceMotion ? target : 0);
@@ -32,7 +33,7 @@ function StatCounter({ stat, active }: { stat: ImpactStat; active: boolean }) {
 
   return (
     <div className="flex flex-col items-center gap-2 text-center">
-      <p className="font-landing-heading text-5xl font-bold text-landing-gold tabular-nums sm:text-6xl">
+      <p className="font-landing-heading text-5xl font-black text-landing-gold tabular-nums sm:text-7xl">
         {stat.prefix}
         {value.toFixed(stat.decimals ?? 0)}
         {stat.suffix}
@@ -47,14 +48,14 @@ export function ImpactStats() {
   const inView = useInView(ref, { once: true, amount: 0.4 });
 
   return (
-    <section className="mx-auto max-w-7xl px-6 py-16">
+    <Section ground="dark" className="px-6 py-20 lg:py-28">
       <motion.div
         ref={ref}
         variants={stagger}
         initial="hidden"
         whileInView="show"
         viewport={{ once: true, amount: 0.3 }}
-        className="grid grid-cols-2 gap-8 rounded-landing-blob bg-landing-card px-6 py-12 shadow-landing-lift sm:px-12 lg:grid-cols-4"
+        className="mx-auto grid max-w-7xl grid-cols-2 gap-10 lg:grid-cols-4"
       >
         {IMPACT_STATS.map((stat) => (
           <motion.div key={stat.label} variants={fadeUp}>
@@ -62,6 +63,6 @@ export function ImpactStats() {
           </motion.div>
         ))}
       </motion.div>
-    </section>
+    </Section>
   );
 }

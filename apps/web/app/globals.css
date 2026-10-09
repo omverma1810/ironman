@@ -72,26 +72,63 @@
   --motion-easing: cubic-bezier(0.2, 0.8, 0.2, 1);
 
   /* ---- marketing landing page only (docs/08 batch 4.7 follow-up) ----
-     A deliberately separate palette from the brand tokens above: the
-     console/account/book/track/field surfaces keep --brand-yellow and
-     --surface-*, untouched. Scoped under its own "landing-" prefix so
-     the two never collide and nothing here leaks into the product UI.
-     Always a dull-black ground / gold text — no light variant. #fdbf0a
-     is the exact gold pulled from the real IronMan logo file; deep/muted
-     are darker and desaturated shades of that same hue, not a different
-     gold, so hover states and secondary text still read as one accent.
-     A lighter ground made #fdbf0a-as-text nearly unreadable (~1.7:1
-     contrast), so the page no longer offers a light theme at all —
-     it stays on-brand and legible by only ever being this one look. */
-  --landing-ink: #120f0c;
-  --landing-paper: #161616;
-  --landing-card: #1b1712;
-  --landing-gold: #fdbf0a;
-  --landing-gold-deep: #d9a400;
-  --landing-muted: #a68d3f;
-  --landing-shadow-lift:
-    0 0 0 1px rgba(253, 191, 10, 0.12), 0 20px 40px -12px rgba(0, 0, 0, 0.6);
+     The IRON MAN brand: black, white and one bright yellow. A deliberately
+     separate palette from the product tokens above, under its own "landing-"
+     prefix so nothing here leaks into the console/booking/field screens.
+     --landing-gold is the accent (fills, buttons, the "MAN" of the wordmark);
+     it is never used as text on a light ground, where it can't be read.
+     Sections pick a ground with .landing-dark / .landing-light /
+     .landing-accent, which set the --lp-* values below; components only use
+     the semantic classes (bg-landing-paper, text-landing-fg, ...). */
+  --landing-ink: #0a0a0a;
+  --landing-gold: #ffd60a;
+  --landing-gold-deep: #ffc400;
   --landing-radius-blob: 2.5rem;
+}
+
+/* The three grounds. Contrast: white on dark 19.9:1, ink on light 19.8:1,
+   ink on the yellow 14.4:1, yellow on dark 14.2:1; body (muted) text is at
+   least 7:1 on its own ground in all three. */
+.landing-dark {
+  --lp-bg: #0a0a0a;
+  --lp-card: #161616;
+  --lp-fg: #ffffff;
+  --lp-muted: #bdbdbd;
+  --lp-line: rgba(255, 255, 255, 0.16);
+  --lp-art: var(--landing-gold);
+  --lp-shadow: 0 0 0 1px rgba(255, 255, 255, 0.07), 0 24px 48px -16px rgba(0, 0, 0, 0.7);
+  --lp-hl: var(--landing-gold);
+}
+.landing-light {
+  --lp-bg: #ffffff;
+  --lp-card: #f4f4f1;
+  --lp-fg: #0a0a0a;
+  --lp-muted: #4b4b4b;
+  --lp-line: rgba(10, 10, 10, 0.14);
+  --lp-art: var(--landing-gold);
+  --lp-shadow: 0 0 0 1px rgba(10, 10, 10, 0.06), 0 24px 48px -20px rgba(10, 10, 10, 0.25);
+  --lp-hl: #0a0a0a;
+}
+.landing-accent {
+  --lp-bg: #ffd60a;
+  --lp-card: #ffffff;
+  --lp-fg: #0a0a0a;
+  --lp-muted: #262626;
+  --lp-line: rgba(10, 10, 10, 0.28);
+  --lp-art: #ffffff;
+  --lp-shadow: 0 0 0 1px rgba(10, 10, 10, 0.1), 0 24px 48px -20px rgba(10, 10, 10, 0.35);
+  --lp-hl: #0a0a0a;
+}
+
+/* An emphasised phrase: yellow text on the dark ground; on light and yellow
+   grounds yellow text can't be read, so it becomes ink with a yellow marker
+   (on the yellow ground, plain heavier ink). */
+.hl {
+  color: var(--lp-hl);
+}
+.landing-light .hl {
+  background: linear-gradient(transparent 58%, var(--landing-gold) 58%, var(--landing-gold) 92%, transparent 92%);
+  padding-inline: 0.08em;
 }
 
 .dark {
@@ -176,12 +213,15 @@
   --color-stage-hold: var(--stage-hold);
 
   --color-landing-ink: var(--landing-ink);
-  --color-landing-paper: var(--landing-paper);
-  --color-landing-card: var(--landing-card);
   --color-landing-gold: var(--landing-gold);
   --color-landing-gold-deep: var(--landing-gold-deep);
-  --color-landing-muted: var(--landing-muted);
-  --shadow-landing-lift: var(--landing-shadow-lift);
+  /* These five follow the section's ground (.landing-dark/-light/-accent). */
+  --color-landing-paper: var(--lp-bg);
+  --color-landing-card: var(--lp-card);
+  --color-landing-fg: var(--lp-fg);
+  --color-landing-muted: var(--lp-muted);
+  --color-landing-line: var(--lp-line);
+  --shadow-landing-lift: var(--lp-shadow);
   --radius-landing-blob: var(--landing-radius-blob);
 
   --radius-sm: var(--radius-sm);
@@ -202,12 +242,12 @@
   --font-display: "Inter Tight Variable", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   /* Marketing landing page only — its own heading face, separate from
-     --font-display (Inter Tight) used by every product screen. Fraunces is
-     a "soft" variable serif with real character for headline impact;
-     Plus Jakarta Sans stays as the tracked-caps label face (eyebrows,
-     numbered-feature digits). */
-  --font-landing-heading: "Fraunces Variable", "Plus Jakarta Sans Variable", ui-serif, Georgia,
-    serif;
+     --font-display used by the product screens: the same Inter Tight, but
+     set heavy and tight and, for the big lines, in capitals, which is how
+     the IRON MAN wordmark itself is drawn. Plus Jakarta Sans stays as the
+     tracked label face (eyebrows, buttons). */
+  --font-landing-heading: "Inter Tight Variable", "Inter Variable", ui-sans-serif, system-ui,
+    sans-serif;
   --font-landing-label: "Plus Jakarta Sans Variable", "Inter Tight Variable", ui-sans-serif,
     system-ui, sans-serif;
 
