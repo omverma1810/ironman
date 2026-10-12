@@ -15,25 +15,43 @@ export const NAV_LINKS = [
  * on time, no chasing) before the process. Never compare ourselves with, or
  * talk down to, the local ironing services people already use. */
 export const HERO = {
-  eyebrow: "Ironing, picked up & delivered · Hyderabad",
+  eyebrow: "Automatic ironing, picked up & delivered · Hyderabad",
   title: "Crisp clothes.",
   titleAccent: "Ready when you are.",
   quote: "Bhaiya, zara achhe se kar dena please.",
-  body: "You've said it a hundred times. IRON MAN makes it the standard: a sharp, even finish on every piece, picked up from your door and back on time, without you having to follow up.",
-  chips: ["Free pickup & delivery", "Back in 24–48 hours", "Price before you book"],
+  body: "You've said it a hundred times. IRON MAN makes it the standard: our automatic ironing machines give every piece the same sharp, even finish, picked up from your door and back on time, without you having to follow up.",
+  chips: ["Automatic ironing", "Free pickup & delivery", "Back in 24–48 hours"],
 };
 
 export const IRONING = {
   eyebrow: "Our hero service",
-  title: "Ironing is what we do best.",
-  body: "Automatic ironing gives every shirt, kurta and saree the same crisp finish, piece after piece. You hand over the pile; it comes back ready to wear.",
+  title: "Automatic ironing is what we do best.",
+  body: "No handheld irons here. Your clothes go through professional automatic garment-pressing machines: steam relaxes the fibres, a controlled press sets the crease, and every shirt, kurta and saree gets the same crisp finish, piece after piece.",
   items: ["Shirts & T-shirts", "Trousers & jeans", "Kurtas", "Sarees", "Bedsheets", "The whole pile"],
   points: [
-    "The same sharp finish on every piece, every time",
+    "Machine-pressed, so the finish is the same on every piece",
     "Counted with you at the door, and the same count comes back",
     "Free pickup and delivery, on a slot that suits you",
   ],
 };
+
+/** Stills from IRON MAN's own brand film, shown beside the ironing pitch so
+ * the first thing a visitor sees is a machine, not a handheld iron. Swap in
+ * photographs of the real machines under /public/machine when they exist. */
+export const MACHINES = [
+  {
+    key: "press",
+    src: "/machine/press.jpg",
+    label: "Automatic press",
+    alt: "An automatic garment-pressing plate with a glowing yellow edge, pressing a white shirt",
+  },
+  {
+    key: "robot",
+    src: "/machine/robot.jpg",
+    label: "Steam finishing",
+    alt: "A steam finishing cabinet where robotic arms hold and steam a hanging shirt",
+  },
+] as const;
 
 export const CONTACT_PHONE = "+91 98765 43210";
 export const CONTACT_PHONE_TEL = "+919876543210";
@@ -90,7 +108,7 @@ export const CREW: { title: string; body: string; members: CrewMember[] } = {
     {
       key: "presser",
       role: "Ironing specialist",
-      line: "Gives every shirt, kurta and saree the same sharp, even finish.",
+      line: "Runs our automatic presses, so every shirt, kurta and saree gets the same sharp, even finish.",
     },
     {
       key: "checker",
@@ -100,8 +118,65 @@ export const CREW: { title: string; body: string; members: CrewMember[] } = {
   ],
 };
 
+export type Garment = {
+  slug: "shirts" | "pants" | "blazers" | "kurtas" | "sarees";
+  title: string;
+  line: string;
+  /** Under /public/garments. Replace the file to change the picture. */
+  photo: string;
+  alt: string;
+};
+
+/** What goes through the presses, shirts first: they are most of what people
+ * send. Shirts get the big tile on the page. */
+export const GARMENTS_SECTION = {
+  eyebrow: "What we iron",
+  title: "From everyday shirts to wedding kurtas.",
+  body: "Whatever is in the pile, it is counted with you at the door, pressed the same careful way, and back on time.",
+};
+
+export const GARMENTS: Garment[] = [
+  {
+    slug: "shirts",
+    title: "Shirts",
+    line: "The everyday workhorse. Sharp collars, flat fronts, ready to wear.",
+    photo: "/garments/shirts.jpg",
+    alt: "Crisp pressed white and blue dress shirts on hangers above a stack of folded shirts",
+  },
+  {
+    slug: "pants",
+    title: "Pants",
+    line: "A sharp crease from waist to hem, for formal trousers, chinos and jeans.",
+    photo: "/garments/pants.jpg",
+    alt: "Pressed charcoal and navy trousers with sharp creases on a rail, beige chinos on a valet stand",
+  },
+  {
+    slug: "blazers",
+    title: "Blazers & formals",
+    line: "Blazers, suits and waistcoats with clean lapels and smooth shoulders.",
+    photo: "/garments/blazer.jpg",
+    alt: "A navy blazer and a charcoal jacket pressed and hanging beside a white dress shirt",
+  },
+  {
+    slug: "kurtas",
+    title: "Kurtas & traditional",
+    line: "Kurtas, pyjamas and festive wear, finished with the care they deserve.",
+    photo: "/garments/kurta.jpg",
+    alt: "A cream kurta and a maroon embroidered kurta pressed on hangers with white pyjama trousers",
+  },
+  {
+    slug: "sarees",
+    title: "Sarees",
+    line: "Pleats set, borders protected, folded flat and never crushed on the way.",
+    photo: "/garments/saree.jpg",
+    alt: "A magenta silk saree with a gold border draped on a dress form",
+  },
+];
+
 export type Service = {
   slug: string;
+  /** A real photograph under /public/services replaces the illustration. */
+  photo?: string;
   title: string;
   description: string;
   bullets: [string, string];
@@ -119,18 +194,6 @@ export const SERVICES: Service[] = [
     title: "Dry Cleaning",
     description: "Gentle care for suits, silks and the clothes you save for best.",
     bullets: ["Safe for delicate fabrics", "Pressed and hung, ready to wear"],
-  },
-  {
-    slug: "saree-drapery",
-    title: "Saree Care",
-    description: "Pressed and packed with the care a good saree deserves.",
-    bullets: ["Gentle on zari and borders", "Folded flat, never crushed on the way"],
-  },
-  {
-    slug: "designer-garment",
-    title: "Occasion Wear",
-    description: "Extra care for the outfit you've been saving for the big day.",
-    bullets: ["Finished by hand, label-safe", "Priority handling when it matters"],
   },
   {
     slug: "shoe-sneaker",
@@ -211,7 +274,7 @@ export const PROCESS_STEPS: ProcessStep[] = [
   },
   {
     title: "We make it crisp",
-    description: "Every piece is ironed to the same sharp finish, then checked once more before it's packed.",
+    description: "Every piece goes through our automatic pressing machines for the same sharp finish, then gets checked once more before it's packed.",
     icon: "sparkles",
   },
   {
@@ -349,6 +412,11 @@ export type Faq = {
 };
 
 export const FAQS: Faq[] = [
+  {
+    question: "Is my ironing done by hand or by machine?",
+    answer:
+      "By machine. Professional automatic garment-pressing machines steam and press every piece, so the finish doesn't depend on who is holding the iron.",
+  },
   {
     question: "What can I send for ironing?",
     answer:

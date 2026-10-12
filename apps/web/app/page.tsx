@@ -5,6 +5,7 @@ import { Hero } from "@/components/landing/Hero";
 import { ImpactStats } from "@/components/landing/ImpactStats";
 import { Crew } from "@/components/landing/Crew";
 import { FilmScrub } from "@/components/landing/FilmScrub";
+import { Garments } from "@/components/landing/Garments";
 import { IroningSpotlight } from "@/components/landing/IroningSpotlight";
 import { Marquee } from "@/components/landing/Marquee";
 import { Navbar } from "@/components/landing/Navbar";
@@ -37,6 +38,7 @@ export default function Home() {
           <Story />
           <FilmScrub />
           <IroningSpotlight />
+          <Garments />
           <ProcessSection />
           <ImpactStats />
           <NumberedFeatures />

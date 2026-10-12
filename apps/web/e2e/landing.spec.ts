@@ -15,7 +15,7 @@ test.describe("Marketing landing page", () => {
     ).toBeVisible();
     // Ironing is the hero service, said right under the hero.
     await expect(
-      page.getByRole("heading", { name: "Ironing is what we do best." }),
+      page.getByRole("heading", { name: "Automatic ironing is what we do best." }),
     ).toBeVisible();
     await expect(
       page.getByRole("heading", { name: "Everything else, on one pickup." }),
@@ -27,6 +27,44 @@ test.describe("Marketing landing page", () => {
     await expect(
       page.getByRole("link", { name: "Track My Order" }),
     ).toHaveAttribute("href", "/account");
+  });
+
+  test("says automatic ironing and shows machinery, not a handheld iron", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await expect(page.getByText(/automatic ironing, picked up & delivered/i)).toBeVisible();
+    const machine = page.getByRole("img", { name: /automatic garment-pressing plate/i });
+    await machine.scrollIntoViewIfNeeded();
+    await expect(machine).toBeVisible();
+    await expect(page.getByRole("img", { name: /steam finishing cabinet/i })).toBeVisible();
+    // The mascot is a press robot, and nothing draws a hand iron any more.
+    await expect(page.getByRole("img", { name: /friendly press robot/i })).toBeAttached();
+    await expect(page.getByRole("img", { name: /an iron pressing/i })).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Is my ironing done by hand or by machine?" }),
+    ).toBeVisible();
+  });
+
+  test("shows what we iron, shirts first, with a photo for each garment", async ({ page }) => {
+    await page.goto("/");
+    await expect(
+      page.getByRole("heading", { name: "From everyday shirts to wedding kurtas." }),
+    ).toBeVisible();
+    const tiles = page.locator("#garments li");
+    await expect(tiles).toHaveCount(5);
+    await expect(tiles.first().getByRole("heading", { name: "Shirts" })).toBeAttached();
+    for (const name of [/^crisp pressed white and blue dress shirts/i, /^pressed charcoal and navy trousers/i, /^a navy blazer/i, /^a cream kurta/i, /^a magenta silk saree/i]) {
+      await expect(page.locator("#garments").getByRole("img", { name })).toBeAttached();
+    }
+  });
+
+  test("every price on the page is in rupees", async ({ page }) => {
+    await page.goto("/");
+    const text = await page.locator("body").innerText();
+    expect(text).toContain("₹");
+    expect(text).not.toMatch(/\$\s?\d/);
+    expect(text).not.toMatch(/\bUSD\b|\bdollars?\b/i);
   });
 
   test("the FAQ accordion expands and collapses a question", async ({
