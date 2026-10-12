@@ -18,7 +18,7 @@ export function ServicesGrid() {
           Everything else, <span className="hl">on one pickup.</span>
         </Heading>
         <p className="text-lg text-landing-muted">
-          Laundry, dry cleaning, sarees, sneakers and more. Hand it all over in one go and we
+          Laundry, dry cleaning, sneakers and same-day express. Hand it all over in one go and we
           will sort it out.
         </p>
       </div>
@@ -28,7 +28,7 @@ export function ServicesGrid() {
         initial="hidden"
         whileInView="show"
         viewport={{ once: true, amount: 0.15 }}
-        className="mx-auto mt-16 grid max-w-7xl grid-cols-1 gap-x-6 gap-y-16 md:grid-cols-2 lg:grid-cols-3"
+        className="mx-auto mt-16 grid max-w-7xl grid-cols-1 gap-x-6 gap-y-16 md:grid-cols-2 lg:grid-cols-4"
       >
         {SERVICES.map((service) => {
           const Illustration = SERVICE_ILLUSTRATIONS[service.slug];

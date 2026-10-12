@@ -118,6 +118,61 @@ export const CREW: { title: string; body: string; members: CrewMember[] } = {
   ],
 };
 
+export type Garment = {
+  slug: "shirts" | "pants" | "blazers" | "kurtas" | "sarees";
+  title: string;
+  line: string;
+  /** Under /public/garments. Replace the file to change the picture. */
+  photo: string;
+  alt: string;
+};
+
+/** What goes through the presses, shirts first: they are most of what people
+ * send. Shirts get the big tile on the page. */
+export const GARMENTS_SECTION = {
+  eyebrow: "What we iron",
+  title: "From everyday shirts to wedding kurtas.",
+  body: "Whatever is in the pile, it is counted with you at the door, pressed the same careful way, and back on time.",
+};
+
+export const GARMENTS: Garment[] = [
+  {
+    slug: "shirts",
+    title: "Shirts",
+    line: "The everyday workhorse. Sharp collars, flat fronts, ready to wear.",
+    photo: "/garments/shirts.jpg",
+    alt: "Crisp pressed white and blue dress shirts on hangers above a stack of folded shirts",
+  },
+  {
+    slug: "pants",
+    title: "Pants",
+    line: "A sharp crease from waist to hem, for formal trousers, chinos and jeans.",
+    photo: "/garments/pants.jpg",
+    alt: "Pressed charcoal and navy trousers with sharp creases on a rail, beige chinos on a valet stand",
+  },
+  {
+    slug: "blazers",
+    title: "Blazers & formals",
+    line: "Blazers, suits and waistcoats with clean lapels and smooth shoulders.",
+    photo: "/garments/blazer.jpg",
+    alt: "A navy blazer and a charcoal jacket pressed and hanging beside a white dress shirt",
+  },
+  {
+    slug: "kurtas",
+    title: "Kurtas & traditional",
+    line: "Kurtas, pyjamas and festive wear, finished with the care they deserve.",
+    photo: "/garments/kurta.jpg",
+    alt: "A cream kurta and a maroon embroidered kurta pressed on hangers with white pyjama trousers",
+  },
+  {
+    slug: "sarees",
+    title: "Sarees",
+    line: "Pleats set, borders protected, folded flat and never crushed on the way.",
+    photo: "/garments/saree.jpg",
+    alt: "A magenta silk saree with a gold border draped on a dress form",
+  },
+];
+
 export type Service = {
   slug: string;
   /** A real photograph under /public/services replaces the illustration. */
@@ -139,18 +194,6 @@ export const SERVICES: Service[] = [
     title: "Dry Cleaning",
     description: "Gentle care for suits, silks and the clothes you save for best.",
     bullets: ["Safe for delicate fabrics", "Pressed and hung, ready to wear"],
-  },
-  {
-    slug: "saree-drapery",
-    title: "Saree Care",
-    description: "Pressed and packed with the care a good saree deserves.",
-    bullets: ["Gentle on zari and borders", "Folded flat, never crushed on the way"],
-  },
-  {
-    slug: "designer-garment",
-    title: "Occasion Wear",
-    description: "Extra care for the outfit you've been saving for the big day.",
-    bullets: ["Gentle, label-safe handling", "Priority handling when it matters"],
   },
   {
     slug: "shoe-sneaker",

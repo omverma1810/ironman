@@ -25,16 +25,6 @@ function Ground({ id, from, to }: { id: string; from: string; to: string }) {
   );
 }
 
-function Stand({ x = 200 }: { x?: number }) {
-  return (
-    <>
-      <ellipse cx={x} cy="282" rx="58" ry="9" fill={INK} opacity="0.18" />
-      <rect x={x - 4} y="236" width="8" height="42" rx="3" fill="#6d7480" />
-      <ellipse cx={x} cy="278" rx="40" ry="7" fill="#4b515b" />
-    </>
-  );
-}
-
 function DryCleaningArt() {
   return (
     <svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" className="size-full" role="img" aria-label="A navy suit jacket on a hanger inside a clear garment bag">
@@ -103,71 +93,6 @@ function WashFoldArt() {
   );
 }
 
-function SareeArt() {
-  return (
-    <svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" className="size-full" role="img" aria-label="A magenta silk saree with a gold border, draped on a dress form with the pallu over the shoulder">
-      <Ground id="sr-g" from="#f8ecef" to="#e8cdd7" />
-      <defs>
-        <linearGradient id="sr-silk" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" stopColor="#8d0f4b" />
-          <stop offset="0.45" stopColor="#c21a6c" />
-          <stop offset="1" stopColor="#7a0a41" />
-        </linearGradient>
-      </defs>
-      <Stand />
-      {/* pleated skirt of the saree */}
-      <path d="M168 150 L232 150 L282 252 Q200 268 118 252 Z" fill="url(#sr-silk)" {...line} />
-      <path d="M180 152 L150 258 M192 152 L176 262 M204 152 L202 264 M216 152 L228 262 M228 152 L254 258" stroke="#5e0834" strokeWidth="3" strokeLinecap="round" opacity="0.55" />
-      <path d="M121 238 Q200 254 279 238 L282 252 Q200 268 118 252 Z" fill={GOLD} stroke={INK} strokeWidth="3" strokeLinejoin="round" />
-      <path d="M126 245 Q200 260 274 245" fill="none" stroke="#b8860b" strokeWidth="2.5" strokeDasharray="6 6" />
-      {/* blouse and form */}
-      <path d="M170 150 Q160 100 166 66 Q200 52 234 66 Q240 100 230 150 Z" fill="#f2e2c4" {...line} />
-      <path d="M186 60 Q200 70 214 60" fill="none" stroke={INK} strokeWidth="3" />
-      {/* pallu over the shoulder */}
-      <path d="M166 68 Q214 72 258 168 L292 246 L258 244 Q226 164 176 96 Z" fill="url(#sr-silk)" {...line} />
-      <path d="M176 96 Q226 164 258 244" fill="none" stroke={GOLD} strokeWidth="7" strokeLinecap="round" />
-      <path d="M262 168 L292 246" stroke={GOLD} strokeWidth="5" strokeLinecap="round" opacity="0.9" />
-      <rect x="170" y="144" width="62" height="9" rx="3" fill={GOLD} stroke={INK} strokeWidth="2.5" />
-    </svg>
-  );
-}
-
-function DesignerGarmentArt() {
-  return (
-    <svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" className="size-full" role="img" aria-label="An emerald satin evening gown with a gold belt on a dress form under a soft spotlight">
-      <defs>
-        <radialGradient id="og-g" cx="0.5" cy="0.35" r="0.85">
-          <stop offset="0" stopColor="#fbf6ea" />
-          <stop offset="1" stopColor="#d9cfbb" />
-        </radialGradient>
-        <linearGradient id="og-satin" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" stopColor="#0b5a46" />
-          <stop offset="0.38" stopColor="#1fa07c" />
-          <stop offset="0.55" stopColor="#0e7d5f" />
-          <stop offset="1" stopColor="#084434" />
-        </linearGradient>
-      </defs>
-      <rect width="400" height="300" fill="url(#og-g)" />
-      <Stand />
-      {/* skirt */}
-      <path d="M172 134 L228 134 Q262 200 290 262 Q200 282 110 262 Q138 200 172 134 Z" fill="url(#og-satin)" {...line} />
-      <path d="M186 140 Q170 206 152 268 M200 140 V274 M214 140 Q232 206 250 268" fill="none" stroke="#06382b" strokeWidth="3" strokeLinecap="round" opacity="0.45" />
-      <path d="M196 170 Q190 218 178 262" fill="none" stroke="#bff1de" strokeWidth="4" strokeLinecap="round" opacity="0.5" />
-      {/* bodice */}
-      <path d="M172 134 Q166 100 168 76 Q184 90 200 80 Q216 90 232 76 Q234 100 228 134 Z" fill="url(#og-satin)" {...line} />
-      <path d="M168 76 Q184 98 200 86 Q216 98 232 76" fill="none" stroke={INK} strokeWidth="3" />
-      <path d="M178 76 Q176 56 186 50 M222 76 Q224 56 214 50" fill="none" stroke="#0a4a39" strokeWidth="6" strokeLinecap="round" />
-      {/* gold belt */}
-      <rect x="168" y="128" width="64" height="12" rx="4" fill={GOLD} stroke={INK} strokeWidth="3" />
-      <rect x="192" y="125" width="16" height="18" rx="4" fill="#fff3a6" stroke={INK} strokeWidth="2.5" />
-      {/* sparkle */}
-      {[[96, 70], [312, 96], [330, 200]].map(([x, y], i) => (
-        <path key={i} d={`M${x} ${y - 12} L${x + 3.5} ${y - 3.5} L${x + 12} ${y} L${x + 3.5} ${y + 3.5} L${x} ${y + 12} L${x - 3.5} ${y + 3.5} L${x - 12} ${y} L${x - 3.5} ${y - 3.5} Z`} fill={GOLD} stroke="#b8860b" strokeWidth="1.5" />
-      ))}
-    </svg>
-  );
-}
-
 function SneakerArt() {
   return (
     <svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" className="size-full" role="img" aria-label="A white sneaker with a navy stripe being scrubbed with a brush, with soap bubbles">
@@ -232,8 +157,6 @@ function ExpressArt() {
 export const SERVICE_ILLUSTRATIONS: Record<Service["slug"], React.ComponentType> = {
   "dry-cleaning": DryCleaningArt,
   "wash-fold": WashFoldArt,
-  "designer-garment": DesignerGarmentArt,
   "shoe-sneaker": SneakerArt,
-  "saree-drapery": SareeArt,
   express: ExpressArt,
 };

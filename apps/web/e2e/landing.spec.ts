@@ -46,6 +46,19 @@ test.describe("Marketing landing page", () => {
     ).toBeVisible();
   });
 
+  test("shows what we iron, shirts first, with a photo for each garment", async ({ page }) => {
+    await page.goto("/");
+    await expect(
+      page.getByRole("heading", { name: "From everyday shirts to wedding kurtas." }),
+    ).toBeVisible();
+    const tiles = page.locator("#garments li");
+    await expect(tiles).toHaveCount(5);
+    await expect(tiles.first().getByRole("heading", { name: "Shirts" })).toBeAttached();
+    for (const name of [/^crisp pressed white and blue dress shirts/i, /^pressed charcoal and navy trousers/i, /^a navy blazer/i, /^a cream kurta/i, /^a magenta silk saree/i]) {
+      await expect(page.locator("#garments").getByRole("img", { name })).toBeAttached();
+    }
+  });
+
   test("every price on the page is in rupees", async ({ page }) => {
     await page.goto("/");
     const text = await page.locator("body").innerText();
