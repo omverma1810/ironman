@@ -2,7 +2,7 @@
 
 Read this first when you pick the project up from a new machine or a new Claude session. It says what
 the system is, where everything lives, how work gets shipped, what is live, what is still open, and the
-traps that have already cost time. It is a snapshot (last updated 2026-10-13); where it disagrees with
+traps that have already cost time. It is a snapshot (last updated 2026-10-16); where it disagrees with
 the code or with `docs/`, the code and `docs/` win. **This repository is public: never put secrets,
 passwords, tokens or personal data in this file or anywhere else in it.**
 
@@ -182,3 +182,27 @@ a request will not work.
 3. Check CI on `master` and the last Vercel and Cloud Run deployments before starting.
 4. Ask the owner which item in section 8 to work on, or take the next phase in `docs/08`.
 5. Update this file when something here stops being true.
+
+## 12. Status log (newest first)
+
+Check this against GitHub and the live domain before trusting it; it is only as fresh as its date.
+
+**2026-10-16 check**
+- `master` head is `a2d829c` (PR #67). Nothing has merged since; no open PRs.
+- Working branch `claude/iron-man-software-architecture-vpjwha` is at the commit that adds this file,
+  one commit ahead of `master`, pushed. A preview build of it is READY.
+- Live: Vercel production deployment is `a2d829c` (READY). `https://ironmanindia.co/` returns 200 with the
+  new landing content; `www.ironmanindia.co` redirects (307) to the apex; `console.ironmanindia.co` returns
+  200; the API answers through the site (`/api/v1/healthz` returns `{"status":"ok"}`).
+- API: the last `Deploy API to Cloud Run` run is green for `a2d829c` (includes the fonts fix). The nightly
+  maintenance job has succeeded every night since 10-12.
+- Still public and unresolved: placeholder phone and email, unverified testimonials (see section 8).
+- One preview deployment of the branch shows ERROR with `git_info_fail`. That is Vercel failing to read git
+  metadata, not a build failure; production built the same code fine. Ignore unless it repeats.
+- Housekeeping, nothing urgent: remote branches `batch-4.3-booking-wizard` and
+  `claude/lucid-cannon-isamod` are old and not fully merged into `master`. Confirm they are superseded
+  before deleting.
+
+**2026-10-12**: PR #67 merged and deployed (web and API). **2026-10-09**: PR #66 (landing redesign) merged
+and deployed.
+
