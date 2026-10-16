@@ -64,9 +64,32 @@ export const CONTACT_PHONES = [
 ] as const;
 export const CONTACT_PHONE = CONTACT_PHONES[0].display;
 export const CONTACT_PHONE_TEL = CONTACT_PHONES[0].tel;
-/** No real email address has been given yet, so nothing is shown. Set it and
- * it appears in the footer and on the contact page. */
-export const CONTACT_EMAIL: string | null = null;
+/** The business email. */
+export const CONTACT_EMAIL = "Ironmanindia9999@gmail.com";
+/** The WhatsApp number as wa.me wants it: country code plus number, digits
+ * only. It is the same number as the primary phone. Setting
+ * NEXT_PUBLIC_WHATSAPP_NUMBER (a different Business number, say) overrides it. */
+export const WHATSAPP_NUMBER = "917569935700";
+/** What opens ready-typed in the customer's WhatsApp or mail app, so they only
+ * have to fill in the blanks and press send. */
+export const WHATSAPP_MESSAGES = {
+  book: "Hi IRON MAN! I'd like to book an ironing pickup.\n\nName:\nApartment / area:\nApprox. number of pieces:",
+  question: "Hi IRON MAN! I have a question.",
+} as const;
+export const EMAIL_TEMPLATES = {
+  book: {
+    subject: "Pickup enquiry",
+    body: "Hi IRON MAN,\n\nI'd like to book an ironing pickup.\n\nName:\nPhone:\nApartment / area:\nApprox. number of pieces:\n\nThank you.",
+  },
+  privacy: {
+    subject: "Privacy request",
+    body: "Hi IRON MAN,\n\nI have a question or request about my personal data.\n\nPhone number on my account:\n\nThank you.",
+  },
+  support: {
+    subject: "Question about the terms",
+    body: "Hi IRON MAN,\n\nI have a question about the terms of service.\n\nThank you.",
+  },
+} as const;
 /** Opens the business in Google Maps. */
 export const GOOGLE_MAPS_URL = "https://maps.app.goo.gl/3drAk2XARksBNUfv8?g_st=iw";
 /** The business's Google page, the same link the QR code on the review

@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { CONTACT_EMAIL, EMAIL_TEMPLATES } from "@/lib/landing/content";
+import { mailtoHref } from "@/lib/landing/whatsapp";
 import { Icon } from "@/components/icons/icon";
 
 /** Terms of service (docs/08 batch 4.7). Describes the service as it
@@ -111,10 +113,10 @@ export default function TermsPage() {
           <p>
             Questions about these terms? Email{" "}
             <a
-              href="mailto:support@ironman.example"
+              href={mailtoHref(EMAIL_TEMPLATES.support.subject, EMAIL_TEMPLATES.support.body)}
               className="underline underline-offset-2 hover:text-text-primary"
             >
-              support@ironman.example
+              {CONTACT_EMAIL}
             </a>
             .
           </p>

@@ -93,6 +93,40 @@ test.describe("Marketing landing page", () => {
     expect(html).not.toContain("ironman.example");
   });
 
+  test("the email and WhatsApp links open ready-typed messages to the real address and number", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const mail = page.locator('footer a[href^="mailto:"]');
+    await expect(mail).toHaveText("Ironmanindia9999@gmail.com");
+    const mailUrl = new URL((await mail.getAttribute("href")) ?? "");
+    expect(mailUrl.pathname).toBe("Ironmanindia9999@gmail.com");
+    expect(mailUrl.searchParams.get("subject")).toBe("Pickup enquiry");
+    expect(mailUrl.searchParams.get("body")).toContain("Apartment / area:");
+
+    const wa = page.locator('footer a[href^="https://wa.me/917569935700"]');
+    await expect(wa).toHaveText(/chat on whatsapp/i);
+    expect(new URL((await wa.getAttribute("href")) ?? "").searchParams.get("text")).toContain(
+      "Hi IRON MAN!",
+    );
+  });
+
+  test("the contact page can start a WhatsApp chat, and the legal pages use the real email", async ({
+    page,
+  }) => {
+    await page.goto("/contact");
+    await expect(page.getByRole("link", { name: "Chat on WhatsApp" })).toHaveAttribute(
+      "href",
+      /^https:\/\/wa\.me\/917569935700\?text=/,
+    );
+    await expect(page.locator('main a[href^="mailto:Ironmanindia9999@gmail.com"]')).toBeVisible();
+    for (const path of ["/privacy", "/terms"]) {
+      await page.goto(path);
+      await expect(page.locator('a[href^="mailto:Ironmanindia9999@gmail.com"]')).toBeVisible();
+      expect(await page.content()).not.toContain("ironman.example");
+    }
+  });
+
   test("the contact page lists every number and links to Google Maps", async ({ page }) => {
     await page.goto("/contact");
     await expect(page.getByRole("heading", { level: 1, name: /talk to iron man/i })).toBeVisible();

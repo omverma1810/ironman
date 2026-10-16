@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { CONTACT_EMAIL, EMAIL_TEMPLATES } from "@/lib/landing/content";
+import { mailtoHref } from "@/lib/landing/whatsapp";
 import { Icon } from "@/components/icons/icon";
 
 /**
@@ -152,10 +154,10 @@ export default function PrivacyPage() {
           <p>
             For any question about your data, or to make a request under the section above, email{" "}
             <a
-              href="mailto:privacy@ironman.example"
+              href={mailtoHref(EMAIL_TEMPLATES.privacy.subject, EMAIL_TEMPLATES.privacy.body)}
               className="underline underline-offset-2 hover:text-text-primary"
             >
-              privacy@ironman.example
+              {CONTACT_EMAIL}
             </a>
             .
           </p>

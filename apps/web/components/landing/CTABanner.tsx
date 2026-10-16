@@ -2,13 +2,13 @@
 
 import { motion } from "motion/react";
 import { MessageCircle } from "lucide-react";
-import { CONTACT_PHONE, CONTACT_PHONE_TEL } from "@/lib/landing/content";
+import { WHATSAPP_MESSAGES } from "@/lib/landing/content";
 import { fadeUp } from "@/lib/landing/animations";
-import { whatsappBookingHref } from "@/lib/landing/whatsapp";
+import { whatsappHref } from "@/lib/landing/whatsapp";
 import { Heading, LandingButton, Section } from "./ui";
 
 export function CTABanner() {
-  const whatsappHref = whatsappBookingHref("Hi IRON MAN! I'd like to book an ironing pickup.");
+  const whatsapp = whatsappHref(WHATSAPP_MESSAGES.book);
 
   return (
     <Section ground="accent" id="contact" className="overflow-hidden px-6 py-28 lg:py-40">
@@ -29,16 +29,10 @@ export function CTABanner() {
           <LandingButton href="/book" variant="dark">
             Book a Pickup
           </LandingButton>
-          {whatsappHref ? (
-            <LandingButton href={whatsappHref} variant="outline" target="_blank" rel="noreferrer">
-              <MessageCircle className="size-4" aria-hidden="true" />
-              Book on WhatsApp
-            </LandingButton>
-          ) : (
-            <LandingButton href={`tel:${CONTACT_PHONE_TEL}`} variant="outline">
-              Call {CONTACT_PHONE}
-            </LandingButton>
-          )}
+          <LandingButton href={whatsapp} variant="outline" target="_blank" rel="noopener noreferrer">
+            <MessageCircle className="size-4" aria-hidden="true" />
+            Book on WhatsApp
+          </LandingButton>
         </div>
       </motion.div>
     </Section>

@@ -128,8 +128,8 @@ private again.
   sneakers, same-day express).
 - Contact info (PR #68, merged 2026-10-16, live): three real phone numbers, a `/contact` page, a Google Maps
   button and a Leave a Google review section with the owner's poster.
-- Photography round (PR open for the owner to verify, not merged): the crew and service cards use generated
-  photographs, and the scrubbed film no longer shows the logo (see the status log).
+- Photography round (PR #69, merged 2026-10-16 as `4ce35aa`, live): the crew and service cards use generated
+  photographs (faces out of frame), and the scrubbed film no longer shows the logo.
 - Customer app (`apps/mobile`) and field app (`apps/field`): built and covered by tests on their web
   builds; **nothing is installed on any phone yet.**
 
@@ -142,15 +142,10 @@ rollout plan (phase 9); #66 landing redesign; #67 landing round 2 and the invoic
 
 **Needs the owner (nothing here can be done from the repo):**
 
-- Real email address. Phones are now real (primary +91 75699 35700, plus 78160 05700 and 93460 93130) and
-  the footer hides the email line until `CONTACT_EMAIL` is set in `content.ts`. But `app/privacy/page.tsx`
-  and `app/terms/page.tsx` still show `privacy@ironman.example` and `support@ironman.example`, which are
-  fake addresses; a privacy notice needs a real contact.
-- Address on the page ("Barkatpura, Kacheguda, Hyderabad 500027", `CONTACT_ADDRESS`) differs from the
-  Google listing the Maps link opens ("3-4, 372/S1, Basant Nagar Colony, Lingampally, Kachiguda, Hyderabad
-  500027"). Decide which one to show.
-- WhatsApp: the floating button and the CTA's WhatsApp option stay hidden until `NEXT_PUBLIC_WHATSAPP_NUMBER`
-  is set in Vercel. Say which number is on WhatsApp.
+- Address: the owner decided to keep "Barkatpura, Kacheguda, Hyderabad, Telangana 500027" (`CONTACT_ADDRESS`).
+  The Google listing the Maps button opens still reads "3-4, 372/S1, Basant Nagar Colony, Lingampally,
+  Kachiguda, Hyderabad 500027", so a customer who taps the button sees a different address. The listing is
+  edited in the Google Business Profile, not in this repo.
 - Testimonials on the landing page are unverified and may be invented. Confirm they are real or remove.
 - Brand spelling: the landing page says "IRON MAN", the rest of the product still says "IronMan".
 - Whether production sells wash and fold and dry cleaning. The pricing cards show them; the live catalogue
@@ -203,7 +198,7 @@ a request will not work.
 Check this against GitHub and the live domain before trusting it; it is only as fresh as its date.
 
 **2026-10-16 check**
-- `master` head is `a2d829c` (PR #67). Nothing has merged since; no open PRs.
+- `master` head moved on: see the 2026-10-17 entry. (Written 2026-10-16, when it was `a2d829c`.)
 - Working branch `claude/iron-man-software-architecture-vpjwha` is at the commit that adds this file,
   one commit ahead of `master`, pushed. A preview build of it is READY.
 - Live: Vercel production deployment is `a2d829c` (READY). `https://ironmanindia.co/` returns 200 with the
@@ -218,8 +213,16 @@ Check this against GitHub and the live domain before trusting it; it is only as 
   `claude/lucid-cannon-isamod` are old and not fully merged into `master`. Confirm they are superseded
   before deleting.
 
+**2026-10-17 (later)**: the owner gave the WhatsApp number (`7569935700`, same as the primary phone) and the
+business email (`Ironmanindia9999@gmail.com`). WhatsApp is now on by default (`WHATSAPP_NUMBER` in
+`content.ts`; `NEXT_PUBLIC_WHATSAPP_NUMBER` still overrides it): the floating button, the call-to-action
+banner, the footer and `/contact` open a chat with a booking message already typed, and the email links
+(footer, `/contact`, privacy and terms pages) open a mail with the subject and body already filled. The
+fake `@ironman.example` addresses are gone. PR open for the owner to verify (see below), not merged.
+
 **2026-10-17**: the owner asked for premium images for the crew and service sections and for the logo
-to come out of the scroll film. Done in a PR for the owner to verify (not merged): seven generated photos
+to come out of the scroll film. Done, merged (#69) and verified live (all eight images serve 200; the live
+`film.webm` and `film.mp4` were downloaded and scanned: 127 frames, no logo-like frame): seven generated photos
 (rider, ironing specialist at a robotic finishing cabinet, quality check, wash and fold, dry cleaning,
 sneakers, same-day delivery), the SVG illustrations and the press-bot mascot removed, and the film re-cut
 from machinery-only footage with new captions. #68 is merged and verified live (numbers, `/contact`, review

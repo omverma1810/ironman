@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Clock, Mail, MapPin, Phone } from "lucide-react";
+import { Clock, Mail, MapPin, MessageCircle, Phone } from "lucide-react";
 import { Logo } from "@/components/landing/Navbar";
 import { Eyebrow, Heading, LandingButton, Section } from "@/components/landing/ui";
 import {
@@ -10,9 +10,12 @@ import {
   CONTACT_PHONE,
   CONTACT_PHONES,
   CONTACT_PHONE_TEL,
+  EMAIL_TEMPLATES,
   GOOGLE_MAPS_URL,
   GOOGLE_REVIEW_URL,
+  WHATSAPP_MESSAGES,
 } from "@/lib/landing/content";
+import { mailtoHref, whatsappHref } from "@/lib/landing/whatsapp";
 
 export const metadata: Metadata = {
   title: "Contact",
@@ -57,6 +60,15 @@ export default function ContactPage() {
                 <LandingButton href={`tel:${CONTACT_PHONE_TEL}`} variant="dark">
                   Call now
                 </LandingButton>
+                <LandingButton
+                  href={whatsappHref(WHATSAPP_MESSAGES.question)}
+                  variant="outline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <MessageCircle className="size-4" aria-hidden="true" />
+                  Chat on WhatsApp
+                </LandingButton>
                 <LandingButton href="/book" variant="outline">
                   Book a pickup
                 </LandingButton>
@@ -78,15 +90,13 @@ export default function ContactPage() {
                   </li>
                 ))}
               </ul>
-              {CONTACT_EMAIL ? (
-                <a
-                  href={`mailto:${CONTACT_EMAIL}`}
-                  className="flex items-center gap-3 text-lg font-medium text-landing-fg"
-                >
-                  <Mail className="size-5 text-landing-gold" aria-hidden="true" />
-                  {CONTACT_EMAIL}
-                </a>
-              ) : null}
+              <a
+                href={mailtoHref(EMAIL_TEMPLATES.book.subject, EMAIL_TEMPLATES.book.body)}
+                className="flex items-center gap-3 text-lg font-medium break-all text-landing-fg"
+              >
+                <Mail className="size-5 shrink-0 text-landing-gold" aria-hidden="true" />
+                {CONTACT_EMAIL}
+              </a>
             </div>
 
             <div className="flex flex-col gap-4 rounded-4xl border border-landing-line bg-landing-card p-8">
