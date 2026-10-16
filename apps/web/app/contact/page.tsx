@@ -11,6 +11,7 @@ import {
   CONTACT_PHONES,
   CONTACT_PHONE_TEL,
   EMAIL_TEMPLATES,
+  GOOGLE_MAPS_EMBED_URL,
   GOOGLE_MAPS_URL,
   GOOGLE_REVIEW_URL,
   WHATSAPP_MESSAGES,
@@ -114,6 +115,17 @@ export default function ContactPage() {
                   Open in Google Maps
                 </LandingButton>
               </div>
+            </div>
+
+            <div className="overflow-hidden rounded-4xl border border-landing-line md:col-span-2">
+              <iframe
+                title="IRON MAN on Google Maps"
+                src={GOOGLE_MAPS_EMBED_URL}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                allowFullScreen
+                className="block h-96 w-full border-0"
+              />
             </div>
 
             <p className="text-center text-landing-muted md:col-span-2">

@@ -128,6 +128,7 @@ private again.
   sneakers, same-day express).
 - Contact info (PR #68, merged 2026-10-16, live): three real phone numbers, a `/contact` page, a Google Maps
   button and a Leave a Google review section with the owner's poster.
+- WhatsApp and email deep links (PR #70, merged 2026-10-16, live).
 - Photography round (PR #69, merged 2026-10-16 as `4ce35aa`, live): the crew and service cards use generated
   photographs (faces out of frame), and the scrubbed film no longer shows the logo.
 - Customer app (`apps/mobile`) and field app (`apps/field`): built and covered by tests on their web
@@ -213,12 +214,22 @@ Check this against GitHub and the live domain before trusting it; it is only as 
   `claude/lucid-cannon-isamod` are old and not fully merged into `master`. Confirm they are superseded
   before deleting.
 
+**2026-10-17 (latest)**: the owner sent their own Maps share link
+(`https://maps.app.goo.gl/8tkTwY7t2snCAfxQ9?g_st=ic`), now `GOOGLE_MAPS_URL`. It resolves to the same Google
+listing as the previous link (same place id), so on desktop it still opens Google Maps with the business
+pinned and its card beside it; a link to a business cannot open a bare map. `/contact` also gets an embedded
+Google map (`GOOGLE_MAPS_EMBED_URL`, the keyless `maps?q=...&output=embed` form). It could not be rendered
+in the sandbox (its proxy certificate is rejected by the test browser for every Google page), so the owner
+checks it on the preview; if it does not render, remove the iframe in `app/contact/page.tsx`.
+
 **2026-10-17 (later)**: the owner gave the WhatsApp number (`7569935700`, same as the primary phone) and the
 business email (`Ironmanindia9999@gmail.com`). WhatsApp is now on by default (`WHATSAPP_NUMBER` in
 `content.ts`; `NEXT_PUBLIC_WHATSAPP_NUMBER` still overrides it): the floating button, the call-to-action
 banner, the footer and `/contact` open a chat with a booking message already typed, and the email links
 (footer, `/contact`, privacy and terms pages) open a mail with the subject and body already filled. The
-fake `@ironman.example` addresses are gone. PR open for the owner to verify (see below), not merged.
+fake `@ironman.example` addresses are gone. Merged as PR #70 (`0416168`) and verified live on
+ironmanindia.co: `/`, `/contact`, `/privacy` and `/terms` carry the real email and the `wa.me/917569935700`
+links with their messages, no fake address or old placeholder number remains.
 
 **2026-10-17**: the owner asked for premium images for the crew and service sections and for the logo
 to come out of the scroll film. Done, merged (#69) and verified live (all eight images serve 200; the live
