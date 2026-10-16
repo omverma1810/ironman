@@ -214,6 +214,14 @@ Check this against GitHub and the live domain before trusting it; it is only as 
   `claude/lucid-cannon-isamod` are old and not fully merged into `master`. Confirm they are superseded
   before deleting.
 
+**2026-10-17 (latest)**: the owner sent their own Maps share link
+(`https://maps.app.goo.gl/8tkTwY7t2snCAfxQ9?g_st=ic`), now `GOOGLE_MAPS_URL`. It resolves to the same Google
+listing as the previous link (same place id), so on desktop it still opens Google Maps with the business
+pinned and its card beside it; a link to a business cannot open a bare map. `/contact` also gets an embedded
+Google map (`GOOGLE_MAPS_EMBED_URL`, the keyless `maps?q=...&output=embed` form). It could not be rendered
+in the sandbox (its proxy certificate is rejected by the test browser for every Google page), so the owner
+checks it on the preview; if it does not render, remove the iframe in `app/contact/page.tsx`.
+
 **2026-10-17 (later)**: the owner gave the WhatsApp number (`7569935700`, same as the primary phone) and the
 business email (`Ironmanindia9999@gmail.com`). WhatsApp is now on by default (`WHATSAPP_NUMBER` in
 `content.ts`; `NEXT_PUBLIC_WHATSAPP_NUMBER` still overrides it): the floating button, the call-to-action

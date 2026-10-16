@@ -86,7 +86,7 @@ test.describe("Marketing landing page", () => {
     for (const tel of ["+917569935700", "+917816005700", "+919346093130"]) {
       await expect(page.locator(`footer a[href="tel:${tel}"]`)).toBeVisible();
     }
-    await expect(page.locator('footer a[href^="https://maps.app.goo.gl/3drAk2XARksBNUfv8"]')).toBeVisible();
+    await expect(page.locator('footer a[href^="https://maps.app.goo.gl/8tkTwY7t2snCAfxQ9"]')).toBeVisible();
     // The old placeholders must be gone from what visitors see.
     const html = await page.content();
     expect(html).not.toContain("98765 43210");
@@ -135,8 +135,11 @@ test.describe("Marketing landing page", () => {
       await expect(page.locator(`main a[href="tel:${tel}"]`).first()).toBeVisible();
     }
     const maps = page.getByRole("link", { name: "Open in Google Maps" });
-    await expect(maps).toHaveAttribute("href", "https://maps.app.goo.gl/3drAk2XARksBNUfv8?g_st=iw");
+    await expect(maps).toHaveAttribute("href", "https://maps.app.goo.gl/8tkTwY7t2snCAfxQ9?g_st=ic");
     await expect(maps).toHaveAttribute("target", "_blank");
+    // The map itself is on the page, not just a link to it.
+    const map = page.locator('iframe[title="IRON MAN on Google Maps"]');
+    await expect(map).toHaveAttribute("src", /^https:\/\/www\.google\.com\/maps\?q=.*output=embed$/);
     expect(await page.locator("body").innerText()).not.toContain("ironman.example");
   });
 

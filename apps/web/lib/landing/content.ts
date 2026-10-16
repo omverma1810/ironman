@@ -90,8 +90,13 @@ export const EMAIL_TEMPLATES = {
     body: "Hi IRON MAN,\n\nI have a question about the terms of service.\n\nThank you.",
   },
 } as const;
-/** Opens the business in Google Maps. */
-export const GOOGLE_MAPS_URL = "https://maps.app.goo.gl/3drAk2XARksBNUfv8?g_st=iw";
+/** Opens the business in Google Maps (the owner's own share link: it opens the
+ * Maps app on a phone and Google Maps in the browser). */
+export const GOOGLE_MAPS_URL = "https://maps.app.goo.gl/8tkTwY7t2snCAfxQ9?g_st=ic";
+/** The place the embedded map on /contact pins: the listing's name and address. */
+export const GOOGLE_MAPS_EMBED_URL = `https://www.google.com/maps?q=${encodeURIComponent(
+  "Ironman - Automatic Clothes Iron & Premium Laundry Services, 3-4, 372/S1, Basant Nagar Colony, Lingampally, Kachiguda, Hyderabad, Telangana 500027",
+)}&z=16&output=embed`;
 /** The business's Google page, the same link the QR code on the review
  * poster opens. */
 export const GOOGLE_REVIEW_URL =
