@@ -220,7 +220,7 @@ listing as the previous link (same place id), so on desktop it still opens Googl
 pinned and its card beside it; a link to a business cannot open a bare map. `/contact` also gets an embedded
 Google map (`GOOGLE_MAPS_EMBED_URL`, the keyless `maps?q=...&output=embed` form). It could not be rendered
 in the sandbox (its proxy certificate is rejected by the test browser for every Google page), so the owner
-checks it on the preview; if it does not render, remove the iframe in `app/contact/page.tsx`.
+checked it on the preview and approved it. Merged as PR #71 (`fb489e6`) and verified live on ironmanindia.co (new link on `/` and `/contact`, old link gone, map frame present).
 
 **2026-10-17 (later)**: the owner gave the WhatsApp number (`7569935700`, same as the primary phone) and the
 business email (`Ironmanindia9999@gmail.com`). WhatsApp is now on by default (`WHATSAPP_NUMBER` in
