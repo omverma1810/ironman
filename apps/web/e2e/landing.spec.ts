@@ -59,6 +59,60 @@ test.describe("Marketing landing page", () => {
     }
   });
 
+  test("the landing page logs no console errors while loading and scrolling", async ({ page }) => {
+    const errors: string[] = [];
+    page.on("console", (m) => {
+      if (m.type() === "error") errors.push(m.text().slice(0, 300));
+    });
+    page.on("pageerror", (e) => errors.push(e.message.slice(0, 300)));
+    await page.goto("/");
+    await page.evaluate(async () => {
+      for (let y = 0; y < document.body.scrollHeight; y += 700) {
+        window.scrollTo(0, y);
+        await new Promise((r) => setTimeout(r, 80));
+      }
+    });
+    await page.waitForTimeout(500);
+    expect(errors).toEqual([]);
+  });
+
+  test("contact numbers are the real ones, with the primary in the header menu", async ({ page }) => {
+    await page.goto("/");
+    // The header shows it on desktop; on a phone it sits behind the menu button.
+    await expect(page.locator('header a[href="tel:+917569935700"]').first()).toBeAttached();
+    for (const tel of ["+917569935700", "+917816005700", "+919346093130"]) {
+      await expect(page.locator(`footer a[href="tel:${tel}"]`)).toBeVisible();
+    }
+    await expect(page.locator('footer a[href^="https://maps.app.goo.gl/3drAk2XARksBNUfv8"]')).toBeVisible();
+    // The old placeholders must be gone from what visitors see.
+    const html = await page.content();
+    expect(html).not.toContain("98765 43210");
+    expect(html).not.toContain("ironman.example");
+  });
+
+  test("the contact page lists every number and links to Google Maps", async ({ page }) => {
+    await page.goto("/contact");
+    await expect(page.getByRole("heading", { level: 1, name: /talk to iron man/i })).toBeVisible();
+    await expect(page.getByText("Primary contact for everything")).toBeVisible();
+    for (const tel of ["+917569935700", "+917816005700", "+919346093130"]) {
+      await expect(page.locator(`main a[href="tel:${tel}"]`).first()).toBeVisible();
+    }
+    const maps = page.getByRole("link", { name: "Open in Google Maps" });
+    await expect(maps).toHaveAttribute("href", "https://maps.app.goo.gl/3drAk2XARksBNUfv8?g_st=iw");
+    await expect(maps).toHaveAttribute("target", "_blank");
+    expect(await page.locator("body").innerText()).not.toContain("ironman.example");
+  });
+
+  test("the Google review poster and a review link are on the landing page", async ({ page }) => {
+    await page.goto("/");
+    const poster = page.getByRole("img", { name: /leave us a google review/i });
+    await poster.scrollIntoViewIfNeeded();
+    await expect(poster).toBeVisible();
+    await expect(
+      page.locator("#reviews").getByRole("link", { name: "Leave a Google review" }),
+    ).toHaveAttribute("href", /^https:\/\/local\.google\.com\/place\?placeid=ChIJdzFzlP6ZyzsRrJXV8euu8qg/);
+  });
+
   test("every price on the page is in rupees", async ({ page }) => {
     await page.goto("/");
     const text = await page.locator("body").innerText();

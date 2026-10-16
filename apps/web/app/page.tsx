@@ -11,6 +11,7 @@ import { Marquee } from "@/components/landing/Marquee";
 import { Navbar } from "@/components/landing/Navbar";
 import { NumberedFeatures } from "@/components/landing/NumberedFeatures";
 import { PricingTeaser } from "@/components/landing/PricingTeaser";
+import { ReviewCTA } from "@/components/landing/ReviewCTA";
 import { ProcessSection } from "@/components/landing/ProcessSection";
 import { ServicesGrid } from "@/components/landing/ServicesGrid";
 import { Story } from "@/components/landing/Story";
@@ -45,6 +46,7 @@ export default function Home() {
           <Crew />
           <ServicesGrid />
           <Testimonials />
+          <ReviewCTA />
           <PricingTeaser />
           <FAQ />
           <CTABanner />

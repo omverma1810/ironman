@@ -8,9 +8,9 @@ import { Menu, Phone, X } from "lucide-react";
 import { CONTACT_PHONE, CONTACT_PHONE_TEL, NAV_LINKS } from "@/lib/landing/content";
 import { Wordmark } from "./ui";
 
-export function Logo({ className = "" }: { className?: string }) {
+export function Logo({ className = "", href = "#home" }: { className?: string; href?: string }) {
   return (
-    <Link href="#home" className={`flex items-center gap-2.5 ${className}`}>
+    <Link href={href} className={`flex items-center gap-2.5 ${className}`}>
       <Image
         src="/logo-mark.png"
         alt=""

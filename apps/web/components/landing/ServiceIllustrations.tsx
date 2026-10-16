@@ -139,10 +139,14 @@ function ExpressArt() {
       <circle cx="200" cy="168" r="76" fill="#fbfbfc" stroke={INK} strokeWidth="3" />
       {Array.from({ length: 12 }, (_, i) => {
         const a = (i * Math.PI) / 6;
-        const x1 = 200 + Math.sin(a) * 66;
-        const y1 = 168 - Math.cos(a) * 66;
-        const x2 = 200 + Math.sin(a) * 74;
-        const y2 = 168 - Math.cos(a) * 74;
+        // Rounded: raw Math.sin/cos output differs in the last digits between
+        // the server and the browser, which React reports as a hydration mismatch.
+        const at = (r: number) => ({
+          x: Math.round((200 + Math.sin(a) * r) * 100) / 100,
+          y: Math.round((168 - Math.cos(a) * r) * 100) / 100,
+        });
+        const { x: x1, y: y1 } = at(66);
+        const { x: x2, y: y2 } = at(74);
         return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={INK} strokeWidth={i % 3 === 0 ? 4 : 2} strokeLinecap="round" />;
       })}
       <path d="M200 168 L200 120" stroke={INK} strokeWidth="5" strokeLinecap="round" />

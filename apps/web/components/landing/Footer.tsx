@@ -6,8 +6,8 @@ import {
   CONTACT_EMAIL,
   CONTACT_HOURS,
   CONTACT_INSTAGRAM,
-  CONTACT_PHONE,
-  CONTACT_PHONE_TEL,
+  CONTACT_PHONES,
+  GOOGLE_MAPS_URL,
   NAV_LINKS,
   SERVICES,
 } from "@/lib/landing/content";
@@ -92,24 +92,37 @@ export function Footer() {
             <MapPin className="mt-0.5 size-4 shrink-0 text-landing-gold" aria-hidden="true" />
             {CONTACT_ADDRESS}
           </p>
-          <a
-            href={`tel:${CONTACT_PHONE_TEL}`}
-            className="flex items-center gap-2 text-sm text-landing-muted transition-colors hover:text-landing-fg"
-          >
-            <Phone className="size-4 shrink-0 text-landing-gold" aria-hidden="true" />
-            {CONTACT_PHONE}
-          </a>
-          <a
-            href={`mailto:${CONTACT_EMAIL}`}
-            className="flex items-center gap-2 text-sm text-landing-muted transition-colors hover:text-landing-fg"
-          >
-            <Mail className="size-4 shrink-0 text-landing-gold" aria-hidden="true" />
-            {CONTACT_EMAIL}
-          </a>
+          {CONTACT_PHONES.map((phone) => (
+            <a
+              key={phone.tel}
+              href={`tel:${phone.tel}`}
+              className="flex items-center gap-2 text-sm text-landing-muted transition-colors hover:text-landing-fg"
+            >
+              <Phone className="size-4 shrink-0 text-landing-gold" aria-hidden="true" />
+              {phone.display}
+            </a>
+          ))}
+          {CONTACT_EMAIL ? (
+            <a
+              href={`mailto:${CONTACT_EMAIL}`}
+              className="flex items-center gap-2 text-sm text-landing-muted transition-colors hover:text-landing-fg"
+            >
+              <Mail className="size-4 shrink-0 text-landing-gold" aria-hidden="true" />
+              {CONTACT_EMAIL}
+            </a>
+          ) : null}
           <p className="flex items-center gap-2 text-sm text-landing-muted">
             <Clock className="size-4 shrink-0 text-landing-gold" aria-hidden="true" />
             {CONTACT_HOURS}
           </p>
+          <a
+            href={GOOGLE_MAPS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm font-semibold text-landing-gold transition-colors hover:text-landing-fg"
+          >
+            Open in Google Maps
+          </a>
         </div>
       </div>
 
