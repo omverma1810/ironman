@@ -122,6 +122,7 @@ private again.
   and formals, kurtas and traditional, sarees) with generated garment photos, a press-robot mascot for the
   ironing specialist, a "by hand or by machine?" FAQ, four service cards (wash and fold, dry cleaning,
   sneakers, same-day express).
+- Contact info and Google review poster (PR open, not merged: see the status log).
 - Customer app (`apps/mobile`) and field app (`apps/field`): built and covered by tests on their web
   builds; **nothing is installed on any phone yet.**
 
@@ -134,8 +135,15 @@ rollout plan (phase 9); #66 landing redesign; #67 landing round 2 and the invoic
 
 **Needs the owner (nothing here can be done from the repo):**
 
-- Real phone number and email: `CONTACT_PHONE`, `CONTACT_PHONE_TEL`, `CONTACT_EMAIL` in `content.ts` are
-  placeholders and are public today.
+- Real email address. Phones are now real (primary +91 75699 35700, plus 78160 05700 and 93460 93130) and
+  the footer hides the email line until `CONTACT_EMAIL` is set in `content.ts`. But `app/privacy/page.tsx`
+  and `app/terms/page.tsx` still show `privacy@ironman.example` and `support@ironman.example`, which are
+  fake addresses; a privacy notice needs a real contact.
+- Address on the page ("Barkatpura, Kacheguda, Hyderabad 500027", `CONTACT_ADDRESS`) differs from the
+  Google listing the Maps link opens ("3-4, 372/S1, Basant Nagar Colony, Lingampally, Kachiguda, Hyderabad
+  500027"). Decide which one to show.
+- WhatsApp: the floating button and the CTA's WhatsApp option stay hidden until `NEXT_PUBLIC_WHATSAPP_NUMBER`
+  is set in Vercel. Say which number is on WhatsApp.
 - Testimonials on the landing page are unverified and may be invented. Confirm they are real or remove.
 - Brand spelling: the landing page says "IRON MAN", the rest of the product still says "IronMan".
 - Whether production sells wash and fold and dry cleaning. The pricing cards show them; the live catalogue
@@ -202,6 +210,13 @@ Check this against GitHub and the live domain before trusting it; it is only as 
 - Housekeeping, nothing urgent: remote branches `batch-4.3-booking-wizard` and
   `claude/lucid-cannon-isamod` are old and not fully merged into `master`. Confirm they are superseded
   before deleting.
+
+**2026-10-16 (later)**: PR for the contact update is open for the owner to verify, not merged. It sets the
+three real phone numbers (primary +91 75699 35700), adds a `/contact` page (numbers, hours, Google Maps
+button), a "Contact" nav link, a "Leave a Google review" section with the owner's poster
+(`public/reviews/google-review-poster.webp`, the QR decodes to the business's Google page, which the button
+also opens), and fixes a hydration console error from #67 (rounded the stopwatch tick coordinates). The owner
+has one more change coming: the site's images and the logo-based parallax effect.
 
 **2026-10-12**: PR #67 merged and deployed (web and API). **2026-10-09**: PR #66 (landing redesign) merged
 and deployed.

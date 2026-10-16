@@ -9,6 +9,7 @@ export const NAV_LINKS = [
   { label: "Services", href: "#services" },
   { label: "Pricing", href: "#pricing" },
   { label: "FAQ", href: "#faq" },
+  { label: "Contact", href: "/contact" },
 ] as const;
 
 /** The voice: warm, plain, a little playful. Sell the result (crisp clothes,
@@ -53,9 +54,31 @@ export const MACHINES = [
   },
 ] as const;
 
-export const CONTACT_PHONE = "+91 98765 43210";
-export const CONTACT_PHONE_TEL = "+919876543210";
-export const CONTACT_EMAIL = "hello@ironman.example";
+/** The numbers customers can reach us on. The first is the primary contact
+ * for everything (orders, pickups, support) and is the one shown in the
+ * header, the call buttons and the footer. */
+export const CONTACT_PHONES = [
+  { display: "+91 75699 35700", tel: "+917569935700" },
+  { display: "+91 78160 05700", tel: "+917816005700" },
+  { display: "+91 93460 93130", tel: "+919346093130" },
+] as const;
+export const CONTACT_PHONE = CONTACT_PHONES[0].display;
+export const CONTACT_PHONE_TEL = CONTACT_PHONES[0].tel;
+/** No real email address has been given yet, so nothing is shown. Set it and
+ * it appears in the footer and on the contact page. */
+export const CONTACT_EMAIL: string | null = null;
+/** Opens the business in Google Maps. */
+export const GOOGLE_MAPS_URL = "https://maps.app.goo.gl/3drAk2XARksBNUfv8?g_st=iw";
+/** The business's Google page, the same link the QR code on the review
+ * poster opens. */
+export const GOOGLE_REVIEW_URL =
+  "https://local.google.com/place?placeid=ChIJdzFzlP6ZyzsRrJXV8euu8qg&utm_medium=noren&utm_source=gbp&utm_campaign=2026";
+export const REVIEW_POSTER = {
+  src: "/reviews/google-review-poster.webp",
+  width: 896,
+  height: 1200,
+  alt: "IRON MAN poster: Loved our service? Leave us a Google review. Scan the QR code with your camera to leave a review.",
+};
 export const CONTACT_ADDRESS = "Barkatpura, Kacheguda, Hyderabad, Telangana 500027";
 export const CONTACT_HOURS = "Mon–Sat, 8:00 AM – 9:00 PM";
 export const CONTACT_INSTAGRAM =
