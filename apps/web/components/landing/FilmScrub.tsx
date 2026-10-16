@@ -86,7 +86,7 @@ export function FilmScrub() {
       preload={near ? "auto" : "none"}
       poster="/landing/film-poster.jpg"
       controls={!!reduce}
-      aria-label="IRON MAN brand film: steam, press and finish, ending on the logo"
+      aria-label="The machines at work: feed rollers, steam, a press plate, a robotic finishing cabinet and finishing rollers"
       className="size-full object-cover"
     >
       {near ? (

@@ -2,7 +2,7 @@
 
 Read this first when you pick the project up from a new machine or a new Claude session. It says what
 the system is, where everything lives, how work gets shipped, what is live, what is still open, and the
-traps that have already cost time. It is a snapshot (last updated 2026-10-16); where it disagrees with
+traps that have already cost time. It is a snapshot (last updated 2026-10-17); where it disagrees with
 the code or with `docs/`, the code and `docs/` win. **This repository is public: never put secrets,
 passwords, tokens or personal data in this file or anywhere else in it.**
 
@@ -97,10 +97,14 @@ private again.
 - **Landing scroll effects** use `motion` v13. `useScroll`/`useTransform` must use the **function form**
   (`useTransform(p, (v) => ...)`), not the array form, or tall pinned sections misplay.
 - **Landing video:** WebM (VP9) and MP4 sources under `apps/web/public/landing`; the scrubbed film uses a
-  keyframe every 4 frames; reduced motion and Data Saver fall back to the poster image.
-- **Photos:** each garment tile reads `apps/web/public/garments/<name>.jpg`; the machine stills are under
-  `public/machine`. Replace a file (same name) to change a picture. Each service card also has an optional
-  `photo` field in `content.ts`.
+  keyframe every 4 frames; reduced motion and Data Saver fall back to the poster image. `film.*` is cut from
+  the owner's brand film with every logo frame removed (only machinery), re-encoded with `ffmpeg`
+  (libx264 and libvpx-vp9, `-g 4`). The captions in `FILM` in `content.ts` are timed to that cut, so if the
+  footage changes, retime them. The original film with the logo is in git history.
+- **Photos:** garment tiles read `apps/web/public/garments/`, crew cards `public/crew/`, service cards
+  `public/services/`, and the machine stills `public/machine/`; the paths and alt text live in `content.ts`.
+  Replace a file (same name) to change a picture. The crew and service photos were generated with Figma
+  (`gemini-3.1-flash-image`), faces kept out of frame, and are stand-ins for real photographs.
 - **`next dev` caches optimised images by URL.** If you replace an image file and the page still shows the
   old one, delete `apps/web/.next/cache/images`.
 - **Staff token login** is `POST /auth/staff/token` (riders only), and `/fulfilment/jobs/mine/` needs the
@@ -122,7 +126,10 @@ private again.
   and formals, kurtas and traditional, sarees) with generated garment photos, a press-robot mascot for the
   ironing specialist, a "by hand or by machine?" FAQ, four service cards (wash and fold, dry cleaning,
   sneakers, same-day express).
-- Contact info and Google review poster (PR open, not merged: see the status log).
+- Contact info (PR #68, merged 2026-10-16, live): three real phone numbers, a `/contact` page, a Google Maps
+  button and a Leave a Google review section with the owner's poster.
+- Photography round (PR open for the owner to verify, not merged): the crew and service cards use generated
+  photographs, and the scrubbed film no longer shows the logo (see the status log).
 - Customer app (`apps/mobile`) and field app (`apps/field`): built and covered by tests on their web
   builds; **nothing is installed on any phone yet.**
 
@@ -211,7 +218,14 @@ Check this against GitHub and the live domain before trusting it; it is only as 
   `claude/lucid-cannon-isamod` are old and not fully merged into `master`. Confirm they are superseded
   before deleting.
 
-**2026-10-16 (later)**: PR for the contact update is open for the owner to verify, not merged. It sets the
+**2026-10-17**: the owner asked for premium images for the crew and service sections and for the logo
+to come out of the scroll film. Done in a PR for the owner to verify (not merged): seven generated photos
+(rider, ironing specialist at a robotic finishing cabinet, quality check, wash and fold, dry cleaning,
+sneakers, same-day delivery), the SVG illustrations and the press-bot mascot removed, and the film re-cut
+from machinery-only footage with new captions. #68 is merged and verified live (numbers, `/contact`, review
+section). One of the Figma images had a scooter model badge, which was painted out.
+
+**2026-10-16 (later)**: the contact update (#68, merged and live). It sets the
 three real phone numbers (primary +91 75699 35700), adds a `/contact` page (numbers, hours, Google Maps
 button), a "Contact" nav link, a "Leave a Google review" section with the owner's poster
 (`public/reviews/google-review-poster.webp`, the QR decodes to the business's Google page, which the button

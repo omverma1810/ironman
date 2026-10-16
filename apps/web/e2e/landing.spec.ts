@@ -38,8 +38,11 @@ test.describe("Marketing landing page", () => {
     await machine.scrollIntoViewIfNeeded();
     await expect(machine).toBeVisible();
     await expect(page.getByRole("img", { name: /steam finishing cabinet/i })).toBeVisible();
-    // The mascot is a press robot, and nothing draws a hand iron any more.
-    await expect(page.getByRole("img", { name: /friendly press robot/i })).toBeAttached();
+    // The ironing specialist is shown beside a robotic finishing cabinet, and
+    // nothing draws a hand iron any more.
+    await expect(
+      page.locator("#crew").getByRole("img", { name: /robotic garment finishing cabinet/i }),
+    ).toBeAttached();
     await expect(page.getByRole("img", { name: /an iron pressing/i })).toHaveCount(0);
     await expect(
       page.getByRole("button", { name: "Is my ironing done by hand or by machine?" }),
@@ -211,9 +214,37 @@ test.describe("Landing page: film and scroll effects", () => {
       return video.evaluate((v: HTMLVideoElement) => v.currentTime);
     };
     const early = await at(0.2);
-    const late = await at(0.7);
-    expect(late).toBeGreaterThan(early + 2);
-    await expect(film.getByText("Pressed to a crisp edge.")).toBeVisible();
+    const mid = await at(0.47);
+    // The caption for this stretch is on screen (opacity, not just in the DOM).
+    const caption = film.getByText("A controlled press sets the crease.");
+    await expect
+      .poll(() => caption.evaluate((el) => Number(getComputedStyle(el).opacity)))
+      .toBeGreaterThan(0.9);
+    const late = await at(0.8);
+    expect(mid).toBeGreaterThan(early);
+    expect(late).toBeGreaterThan(early + 1.5);
+  });
+
+  test("the film shows only the machines: no logo in the poster, the captions or the frames", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const video = page.locator("#film video");
+    await expect(video).toHaveAttribute("poster", "/landing/film-poster.jpg");
+    await expect(page.locator("#film")).not.toContainText(/ending on the logo/i);
+    await expect(video).toHaveAttribute("aria-label", /feed rollers, steam, a press plate/i);
+  });
+
+  test("crew and service cards use photographs, not drawings", async ({ page }) => {
+    await page.goto("/");
+    for (const [section, count] of [
+      ["#crew", 3],
+      ["#services", 4],
+    ] as const) {
+      const images = page.locator(`${section} img`);
+      await expect(images).toHaveCount(count);
+      await expect(page.locator(`${section} svg[role="img"]`)).toHaveCount(0);
+    }
   });
 
   test("with reduced motion the film is an ordinary video with controls and nothing is pinned", async ({

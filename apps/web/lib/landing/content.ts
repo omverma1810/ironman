@@ -94,18 +94,21 @@ export const STORY = {
   emphasisFrom: "crisp",
 };
 
-/** The scroll-scrubbed brand film. Each caption owns a stretch of the scroll
- * (`from`..`to`, as a share of the film). They describe what the picture
- * shows: steam, press, finish. */
+/** The scroll-scrubbed film of the machines at work: no logo, just the
+ * process. Each caption owns a stretch of the scroll (`from`..`to`, as a
+ * share of the film) and describes what the picture shows at that point:
+ * the feed rollers, the steam, the press plate, the robotic finishing
+ * cabinet, then the finishing rollers. */
 export const FILM = {
   eyebrow: "See it happen",
   title: "Watch the crisp happen.",
   captions: [
-    { from: 0.13, to: 0.3, text: "It starts with steam." },
-    { from: 0.31, to: 0.46, text: "Every fibre, relaxed." },
-    { from: 0.5, to: 0.66, text: "Pressed to a crisp edge." },
-    { from: 0.67, to: 0.82, text: "Then checked, and folded." },
-    { from: 0.86, to: 1, text: "Crisp clothes. Ready when you are." },
+    { from: 0.03, to: 0.17, text: "Every piece goes in flat." },
+    { from: 0.21, to: 0.37, text: "Steam relaxes every fibre." },
+    { from: 0.41, to: 0.53, text: "A controlled press sets the crease." },
+    { from: 0.56, to: 0.7, text: "Then a steam finish, by machine." },
+    { from: 0.74, to: 0.86, text: "Smooth and even, every time." },
+    { from: 0.89, to: 1.06, text: "Crisp clothes. Ready when you are." },
   ],
 };
 
@@ -113,12 +116,13 @@ export type CrewMember = {
   key: "rider" | "presser" | "checker";
   role: string;
   line: string;
-  /** A real photo (under /public/crew) replaces the illustration when set. */
-  photo?: string;
+  /** The picture, under /public/crew. These are generated stand-ins with no
+   * faces; replace a file (same name) with a real photo of the person. */
+  photo: string;
+  alt: string;
 };
 
-/** The people behind an order. Drawn as illustrations until there are real
- * photos: add the file under /public/crew and set `photo` below. */
+/** The people behind an order. */
 export const CREW: { title: string; body: string; members: CrewMember[] } = {
   title: "The crew behind your crisp clothes.",
   body: "From your door to our hub and back again, real people handle every piece.",
@@ -127,16 +131,22 @@ export const CREW: { title: string; body: string; members: CrewMember[] } = {
       key: "rider",
       role: "Pickup & delivery rider",
       line: "Counts every piece with you at the door, and brings it back on the slot you chose.",
+      photo: "/crew/rider.jpg",
+      alt: "A delivery rider in a black jacket with a yellow stripe, seen from behind beside a scooter with a black delivery box, outside an apartment building",
     },
     {
       key: "presser",
       role: "Ironing specialist",
       line: "Runs our automatic presses, so every shirt, kurta and saree gets the same sharp, even finish.",
+      photo: "/crew/presser.jpg",
+      alt: "A technician in a black uniform with yellow trim, seen from behind, watching a robotic garment finishing cabinet steam a white shirt",
     },
     {
       key: "checker",
       role: "Quality check",
       line: "One last look at every piece before it's folded and packed.",
+      photo: "/crew/checker.jpg",
+      alt: "Gloved hands holding up a pressed light blue shirt for a final quality check, with a rail of pressed shirts behind",
     },
   ],
 };
@@ -198,8 +208,9 @@ export const GARMENTS: Garment[] = [
 
 export type Service = {
   slug: string;
-  /** A real photograph under /public/services replaces the illustration. */
-  photo?: string;
+  /** The picture, under /public/services. Replace a file (same name) to change it. */
+  photo: string;
+  alt: string;
   title: string;
   description: string;
   bullets: [string, string];
@@ -208,24 +219,32 @@ export type Service = {
 export const SERVICES: Service[] = [
   {
     slug: "wash-fold",
+    photo: "/services/wash-fold.jpg",
+    alt: "A neat stack of freshly folded towels and clothes in white, sage and soft blue on a pale wooden bench",
     title: "Wash & Fold",
     description: "Everyday laundry, washed, folded and packed fresh.",
     bullets: ["Sorted by colour and fabric", "Folded and packed, ready for the shelf"],
   },
   {
     slug: "dry-cleaning",
+    photo: "/services/dry-cleaning.jpg",
+    alt: "A champagne silk dress, a camel wool coat and a charcoal suit hanging in clear protective garment covers",
     title: "Dry Cleaning",
     description: "Gentle care for suits, silks and the clothes you save for best.",
     bullets: ["Safe for delicate fabrics", "Pressed and hung, ready to wear"],
   },
   {
     slug: "shoe-sneaker",
+    photo: "/services/sneaker-care.jpg",
+    alt: "A pair of freshly cleaned white leather sneakers with a soft brush and a cloth beside them",
     title: "Sneaker Care",
     description: "Deep cleaning that brings your favourite pair back to life.",
     bullets: ["Soles, uppers and laces", "Leather conditioning on request"],
   },
   {
     slug: "express",
+    photo: "/services/express.jpg",
+    alt: "A black garment delivery bag with yellow handles and a folded white shirt at an apartment doorstep in golden evening light",
     title: "Same-Day Express",
     description: "In by morning, back by evening. For the days that sneak up on you.",
     bullets: ["Morning pickup, evening delivery", "Moves to the front of the queue"],
