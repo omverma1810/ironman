@@ -128,6 +128,7 @@ private again.
   sneakers, same-day express).
 - Contact info (PR #68, merged 2026-10-16, live): three real phone numbers, a `/contact` page, a Google Maps
   button and a Leave a Google review section with the owner's poster.
+- WhatsApp and email deep links (PR #70, merged 2026-10-16, live).
 - Photography round (PR #69, merged 2026-10-16 as `4ce35aa`, live): the crew and service cards use generated
   photographs (faces out of frame), and the scrubbed film no longer shows the logo.
 - Customer app (`apps/mobile`) and field app (`apps/field`): built and covered by tests on their web
@@ -218,7 +219,9 @@ business email (`Ironmanindia9999@gmail.com`). WhatsApp is now on by default (`W
 `content.ts`; `NEXT_PUBLIC_WHATSAPP_NUMBER` still overrides it): the floating button, the call-to-action
 banner, the footer and `/contact` open a chat with a booking message already typed, and the email links
 (footer, `/contact`, privacy and terms pages) open a mail with the subject and body already filled. The
-fake `@ironman.example` addresses are gone. PR open for the owner to verify (see below), not merged.
+fake `@ironman.example` addresses are gone. Merged as PR #70 (`0416168`) and verified live on
+ironmanindia.co: `/`, `/contact`, `/privacy` and `/terms` carry the real email and the `wa.me/917569935700`
+links with their messages, no fake address or old placeholder number remains.
 
 **2026-10-17**: the owner asked for premium images for the crew and service sections and for the logo
 to come out of the scroll film. Done, merged (#69) and verified live (all eight images serve 200; the live
