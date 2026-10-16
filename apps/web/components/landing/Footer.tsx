@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Clock, Mail, MapPin, Phone } from "lucide-react";
+import { Clock, Mail, MapPin, MessageCircle, Phone } from "lucide-react";
 import { Logo } from "./Navbar";
 import {
   CONTACT_ADDRESS,
@@ -7,10 +7,13 @@ import {
   CONTACT_HOURS,
   CONTACT_INSTAGRAM,
   CONTACT_PHONES,
+  EMAIL_TEMPLATES,
   GOOGLE_MAPS_URL,
   NAV_LINKS,
   SERVICES,
+  WHATSAPP_MESSAGES,
 } from "@/lib/landing/content";
+import { mailtoHref, whatsappHref } from "@/lib/landing/whatsapp";
 
 /** lucide-react v1 dropped brand/social glyphs, so this is a small inline
  * substitute rather than pulling in a whole icon-brand package for one
@@ -36,7 +39,7 @@ function InstagramGlyph() {
 
 export function Footer() {
   return (
-    <footer className="landing-dark bg-landing-paper px-6 pt-20 pb-8 text-landing-muted sm:px-12">
+    <footer className="landing-dark bg-landing-paper px-6 pt-20 pb-24 text-landing-muted sm:px-12">
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-12 md:grid-cols-4">
         <div className="flex flex-col gap-4">
           <Logo />
@@ -102,15 +105,22 @@ export function Footer() {
               {phone.display}
             </a>
           ))}
-          {CONTACT_EMAIL ? (
-            <a
-              href={`mailto:${CONTACT_EMAIL}`}
-              className="flex items-center gap-2 text-sm text-landing-muted transition-colors hover:text-landing-fg"
-            >
-              <Mail className="size-4 shrink-0 text-landing-gold" aria-hidden="true" />
-              {CONTACT_EMAIL}
-            </a>
-          ) : null}
+          <a
+            href={whatsappHref(WHATSAPP_MESSAGES.book)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 text-sm text-landing-muted transition-colors hover:text-landing-fg"
+          >
+            <MessageCircle className="size-4 shrink-0 text-landing-gold" aria-hidden="true" />
+            Chat on WhatsApp
+          </a>
+          <a
+            href={mailtoHref(EMAIL_TEMPLATES.book.subject, EMAIL_TEMPLATES.book.body)}
+            className="flex items-center gap-2 text-sm break-all text-landing-muted transition-colors hover:text-landing-fg"
+          >
+            <Mail className="size-4 shrink-0 text-landing-gold" aria-hidden="true" />
+            {CONTACT_EMAIL}
+          </a>
           <p className="flex items-center gap-2 text-sm text-landing-muted">
             <Clock className="size-4 shrink-0 text-landing-gold" aria-hidden="true" />
             {CONTACT_HOURS}

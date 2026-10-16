@@ -2,21 +2,28 @@ import { test, expect } from "./fixtures";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
 
-/** The WhatsApp booking entry point (docs/08 batch 4.8): a customer who
- * followed a wa.me template link back to `/book?src=whatsapp` should book
- * through the exact same wizard as `booking.spec.ts` exercises — the only
- * difference is the order's recorded channel, for attribution. The
- * marketing CTA itself is config-gated (`NEXT_PUBLIC_WHATSAPP_NUMBER`)
- * and unset in this CI environment, same as the real deployment until the
- * WhatsApp Business number clears onboarding — so this file checks that
- * absence explicitly rather than assuming the CTA exists. */
+/** The WhatsApp entry points (docs/08 batch 4.8). The marketing buttons open
+ * a chat with the business number with a booking message already typed. A
+ * customer who followed a wa.me template link back to `/book?src=whatsapp`
+ * should book through the exact same wizard as `booking.spec.ts` exercises:
+ * the only difference is the order's recorded channel, for attribution. */
 
 test.describe("WhatsApp booking entry point", () => {
-  test("the landing page has no WhatsApp CTA while the business number is unconfigured", async ({
+  test("the WhatsApp buttons open a chat with the business number and a ready-typed booking message", async ({
     page,
   }) => {
     await page.goto("/");
-    await expect(page.getByRole("link", { name: "Book on WhatsApp" })).toHaveCount(0);
+    for (const link of [
+      page.getByRole("link", { name: "Book on WhatsApp" }),
+      page.getByRole("link", { name: "Chat with IRON MAN on WhatsApp" }),
+    ]) {
+      const href = (await link.getAttribute("href")) ?? "";
+      const url = new URL(href);
+      expect(`${url.origin}${url.pathname}`).toBe("https://wa.me/917569935700");
+      const text = url.searchParams.get("text") ?? "";
+      expect(text).toContain("Hi IRON MAN!");
+      expect(text).toContain("Apartment / area:");
+    }
   });
 
   test("booking via /book?src=whatsapp records the order on the WhatsApp channel", async ({

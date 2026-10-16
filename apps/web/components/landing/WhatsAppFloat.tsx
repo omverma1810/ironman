@@ -2,21 +2,19 @@
 
 import { motion } from "motion/react";
 import { MessageCircle } from "lucide-react";
-import { whatsappBookingHref } from "@/lib/landing/whatsapp";
+import { WHATSAPP_MESSAGES } from "@/lib/landing/content";
+import { whatsappHref } from "@/lib/landing/whatsapp";
 
-/** Hidden entirely while NEXT_PUBLIC_WHATSAPP_NUMBER is unset (same gate
- * as the CTA banner and the batch 4.8 landing CTA) — a floating WhatsApp
- * button that opens nothing is worse than no button at all. */
+/** Opens a WhatsApp chat with IRON MAN, with a booking message already typed. */
 export function WhatsAppFloat() {
-  const href = whatsappBookingHref("Hi IronMan! I'd like to schedule a laundry pickup.");
-  if (!href) return null;
+  const href = whatsappHref(WHATSAPP_MESSAGES.book);
 
   return (
     <motion.a
       href={href}
       target="_blank"
       rel="noreferrer"
-      aria-label="Chat with IronMan on WhatsApp"
+      aria-label="Chat with IRON MAN on WhatsApp"
       initial={{ scale: 0 }}
       animate={{ scale: 1 }}
       transition={{ type: "spring", stiffness: 260, damping: 20, delay: 1.5 }}
