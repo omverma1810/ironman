@@ -2,7 +2,7 @@
 
 Read this first when you pick the project up from a new machine or a new Claude session. It says what
 the system is, where everything lives, how work gets shipped, what is live, what is still open, and the
-traps that have already cost time. It is a snapshot (last updated 2026-10-17); where it disagrees with
+traps that have already cost time. It is a snapshot (last updated 2026-10-17, after #69 went live); where it disagrees with
 the code or with `docs/`, the code and `docs/` win. **This repository is public: never put secrets,
 passwords, tokens or personal data in this file or anywhere else in it.**
 
@@ -128,8 +128,8 @@ private again.
   sneakers, same-day express).
 - Contact info (PR #68, merged 2026-10-16, live): three real phone numbers, a `/contact` page, a Google Maps
   button and a Leave a Google review section with the owner's poster.
-- Photography round (PR open for the owner to verify, not merged): the crew and service cards use generated
-  photographs, and the scrubbed film no longer shows the logo (see the status log).
+- Photography round (PR #69, merged 2026-10-16 as `4ce35aa`, live): the crew and service cards use generated
+  photographs (faces out of frame), and the scrubbed film no longer shows the logo.
 - Customer app (`apps/mobile`) and field app (`apps/field`): built and covered by tests on their web
   builds; **nothing is installed on any phone yet.**
 
@@ -203,7 +203,7 @@ a request will not work.
 Check this against GitHub and the live domain before trusting it; it is only as fresh as its date.
 
 **2026-10-16 check**
-- `master` head is `a2d829c` (PR #67). Nothing has merged since; no open PRs.
+- `master` head moved on: see the 2026-10-17 entry. (Written 2026-10-16, when it was `a2d829c`.)
 - Working branch `claude/iron-man-software-architecture-vpjwha` is at the commit that adds this file,
   one commit ahead of `master`, pushed. A preview build of it is READY.
 - Live: Vercel production deployment is `a2d829c` (READY). `https://ironmanindia.co/` returns 200 with the
@@ -219,7 +219,8 @@ Check this against GitHub and the live domain before trusting it; it is only as 
   before deleting.
 
 **2026-10-17**: the owner asked for premium images for the crew and service sections and for the logo
-to come out of the scroll film. Done in a PR for the owner to verify (not merged): seven generated photos
+to come out of the scroll film. Done, merged (#69) and verified live (all eight images serve 200; the live
+`film.webm` and `film.mp4` were downloaded and scanned: 127 frames, no logo-like frame): seven generated photos
 (rider, ironing specialist at a robotic finishing cabinet, quality check, wash and fold, dry cleaning,
 sneakers, same-day delivery), the SVG illustrations and the press-bot mascot removed, and the film re-cut
 from machinery-only footage with new captions. #68 is merged and verified live (numbers, `/contact`, review
