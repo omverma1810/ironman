@@ -5,7 +5,6 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { ArrowRight, Check } from "lucide-react";
 import { SERVICES } from "@/lib/landing/content";
-import { SERVICE_ILLUSTRATIONS } from "./ServiceIllustrations";
 import { fadeUp, stagger } from "@/lib/landing/animations";
 import { Eyebrow, Heading, Section } from "./ui";
 
@@ -31,7 +30,6 @@ export function ServicesGrid() {
         className="mx-auto mt-16 grid max-w-7xl grid-cols-1 gap-x-6 gap-y-16 md:grid-cols-2 lg:grid-cols-4"
       >
         {SERVICES.map((service) => {
-          const Illustration = SERVICE_ILLUSTRATIONS[service.slug];
           return (
             <motion.div key={service.slug} variants={fadeUp}>
               <motion.div
@@ -41,21 +39,17 @@ export function ServicesGrid() {
               >
                 <div className="relative aspect-5/4 overflow-hidden rounded-t-2xl bg-landing-line">
                   <motion.div
-                    className="size-full"
+                    className="relative size-full"
                     whileHover={{ scale: 1.05 }}
                     transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
                   >
-                    {service.photo ? (
-                      <Image
-                        src={service.photo}
-                        alt={service.title}
-                        fill
-                        sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
-                        className="object-cover"
-                      />
-                    ) : (
-                      <Illustration />
-                    )}
+                    <Image
+                      src={service.photo}
+                      alt={service.alt}
+                      fill
+                      sizes="(min-width: 1024px) 25vw, (min-width: 768px) 50vw, 100vw"
+                      className="object-cover"
+                    />
                   </motion.div>
                 </div>
                 <div className="relative z-10 mx-5 -mt-5 flex flex-col gap-3 rounded-2xl bg-landing-card p-6 text-left shadow-landing-lift">
